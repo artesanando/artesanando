@@ -1,0 +1,178 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  font-family: var(--font-sans);
+  color: var(--ink);
+}
+a {
+  color: var(--primary);
+}
+a:hover {
+  color: var(--primary-dark);
+}
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 7px 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.nav svg {
+  width: 16px;
+  height: 16px;
+}
+.pill {
+  padding: 9px 18px;
+  border-radius: 99px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+.pill.ghost {
+  background: transparent;
+  border: 1px solid var(--field-border);
+  color: var(--ink-soft);
+}
+.tag {
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 99px;
+}
+.h {
+  font-family: var(--font-serif);
+  font-weight: 600;
+}
+.card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+.progress {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--track);
+}
+.progress > div {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--fill);
+}
+.crumb {
+  font-size: 12px;
+  color: var(--faint);
+  font-weight: 700;
+  cursor: pointer;
+}
+.field {
+  border: 1px solid var(--field-border);
+  border-radius: 12px;
+  background: var(--card);
+  padding: 11px 14px;
+  font-size: 13px;
+}
+.lbl {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+}
+.ov {
+  position: fixed;
+  inset: 0;
+  background: rgba(59, 52, 47, 0.34);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 46px 20px;
+  overflow-y: auto;
+  z-index: 60;
+}
+.modal {
+  background: var(--bg);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(59, 52, 47, 0.3);
+  padding: 26px 28px;
+  width: 100%;
+}
+.x {
+  font-size: 22px;
+  color: var(--faint);
+  cursor: pointer;
+  line-height: 1;
+  background: none;
+  border: none;
+}
+.seg {
+  padding: 7px 16px;
+  border-radius: 99px;
+  border: 1px solid var(--field-border);
+  color: var(--ink-soft);
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.menu {
+  position: absolute;
+  bottom: 70px;
+  left: 22px;
+  right: 22px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(59, 52, 47, 0.2);
+  overflow: hidden;
+  z-index: 30;
+}
+.menu > div {
+  padding: 11px 15px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+.menu > div:hover {
+  background: var(--chip-rose);
+  color: var(--primary-dark);
+}
+.sw {
+  display: inline-block;
+  width: 34px;
+  height: 19px;
+  border-radius: 99px;
+  position: relative;
+  flex: none;
+}
+.sw > span {
+  position: absolute;
+  top: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #fff;
+}
+input.field,
+textarea.field {
+  font-family: inherit;
+  color: var(--ink);
+  width: 100%;
+  outline: none;
+}
+input.field::placeholder,
+textarea.field::placeholder {
+  color: var(--faint);
+}

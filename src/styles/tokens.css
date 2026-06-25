@@ -1,0 +1,67 @@
+/* Paleta terrosa/rosé do Artesanando — extraída do protótipo (css/style.css + js/app.js) */
+:root {
+  /* superfícies */
+  --bg: #f9f2ed;
+  --card: #fffdfb;
+  --sand: #f1eae4;
+  --sand-soft: #fbf6f1;
+  --sand-head: #fbf4ef;
+
+  /* texto */
+  --ink: #3b342f;
+  --ink-soft: #61554d;
+  --muted: #9a8a80;
+  --faint: #b4a49a;
+  --faint-2: #c4b4aa;
+  --faint-3: #cbb9af;
+
+  /* marca */
+  --primary: #b96d7e;
+  --primary-dark: #8e4b57;
+  --accent: #a05666;
+  --fill: #c4798a;
+
+  /* bordas */
+  --border: #ecdcd6;
+  --border-strong: #e2cfc8;
+  --field-border: #dcc7bf;
+  --border-dashed: #e0ccc5;
+  --divider: #f2e4de;
+
+  /* progresso */
+  --track: #eedcd7;
+
+  /* chips por categoria */
+  --chip-rose: #f6e4e6;
+  --chip-rose-border: #e3c6cb;
+  --chip-green: #eaf0e6;
+  --chip-green-border: #b9c9b2;
+  --chip-tan: #f1eae0;
+  --chip-blue: #e7edf2;
+  --chip-warn: #fbe4ce;
+  --chip-soft: #fbeee9;
+
+  /* cores de apoio (avatares, fios, categorias) */
+  --green: #7d9b76;
+  --green-dark: #55704e;
+  --gold: #c9b98f;
+  --gold-dark: #9a7328;
+  --amber: #c08a2e;
+  --blue: #8fa3b8;
+  --blue-dark: #5e7286;
+  --lilac: #b99bc4;
+
+  /* fios (paleta dos criadores) */
+  --yarn-rose: #dfa2ac;
+  --yarn-yellow: #e3c07a;
+  --yarn-sage: #7d9b76;
+  --yarn-green: #a9bfa3;
+  --yarn-lilac: #b99bc4;
+  --yarn-butter: #ecd97c;
+  --yarn-blue: #8fa3b8;
+  --yarn-pink: #c4798a;
+
+  /* tipografia */
+  --font-sans: 'Nunito', system-ui, sans-serif;
+  --font-serif: 'Bitter', serif;
+}
