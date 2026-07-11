@@ -4,10 +4,9 @@ import {
   GRANNY_RINGS_INICIAL,
   MT_ROWS_INICIAL,
   PALETTE,
-  PERMS_INICIAL,
   type ModelKey,
-  type PermRow,
 } from '../mocks/data'
+import { useAuth } from './auth'
 
 /* Estado global de UI portado do protótipo (objeto S de js/app.js).
    Estado que só uma tela usa ficou local na própria tela. */
@@ -34,7 +33,6 @@ export interface Ring {
 }
 
 interface StoreState {
-  papel: 'Administradora' | 'Integrante'
   modal: ModalKind | null
   creatorReturn: ModalKind | null
   finKind: 'entrada' | 'saida'
@@ -48,12 +46,10 @@ interface StoreState {
   layoutRows: number
   layoutBrush: ModelKey
   layoutMap: Record<string, ModelKey>
-  perms: PermRow[]
   mantaTRows: string[][]
 }
 
 const INITIAL: StoreState = {
-  papel: 'Administradora',
   modal: null,
   creatorReturn: null,
   finKind: 'entrada',
@@ -67,7 +63,6 @@ const INITIAL: StoreState = {
   layoutRows: 6,
   layoutBrush: 'A',
   layoutMap: {},
-  perms: PERMS_INICIAL,
   mantaTRows: MT_ROWS_INICIAL,
 }
 
@@ -100,7 +95,6 @@ export interface Store extends StoreState {
   decCols: () => void
   incRows: () => void
   decRows: () => void
-  togglePerm: (p: number, t: number) => void
   moveCell: (band: number, from: number, to: number) => void
   shuffleBand: (band: number) => void
 }
@@ -108,12 +102,13 @@ export interface Store extends StoreState {
 const Ctx = createContext<Store | null>(null)
 
 export function StoreProvider({ children }: { children: ReactNode }) {
+  const { isAdmin } = useAuth()
   const [s, setS] = useState(INITIAL)
   const set = (patch: Partial<StoreState>) => setS((prev) => ({ ...prev, ...patch }))
 
   const store: Store = {
     ...s,
-    isAdmin: s.papel === 'Administradora',
+    isAdmin,
     open: (modal) => set({ modal }),
     close: () => set({ modal: null }),
     setFinKind: (finKind) => set({ finKind }),
@@ -162,17 +157,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     decCols: () => set({ layoutCols: Math.max(3, s.layoutCols - 1) }),
     incRows: () => set({ layoutRows: Math.min(12, s.layoutRows + 1) }),
     decRows: () => set({ layoutRows: Math.max(3, s.layoutRows - 1) }),
-    togglePerm: (p, t) =>
-      set({
-        perms: s.perms.map((row, i) =>
-          i === p
-            ? {
-                ...row,
-                flags: row.flags.map((v, j) => (j === t ? (v ? 0 : 1) : v)) as PermRow['flags'],
-              }
-            : row,
-        ),
-      }),
     moveCell: (band, from, to) => {
       const rows = s.mantaTRows.map((r) => r.slice())
       const row = rows[band]
