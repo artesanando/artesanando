@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../state/auth'
-import { useStore } from '../../state/store'
 import { Avatar } from '../ui/bits'
+import { PAPEL_LABEL } from '../../types/database'
+import { ini } from '../../lib/format'
 import {
   IconBib,
   IconDash,
@@ -24,8 +25,7 @@ const ITEMS = [
 ]
 
 export function Sidebar() {
-  const { papel, isAdmin } = useStore()
-  const { logout } = useAuth()
+  const { profile, isAdmin, logout } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [menu, setMenu] = useState(false)
@@ -110,12 +110,24 @@ export function Sidebar() {
           cursor: 'pointer',
         }}
       >
-        <Avatar color="var(--fill)" size={32} fontSize={12}>
-          R
+        <Avatar color={profile?.avatar_color ?? 'var(--fill)'} size={32} fontSize={12}>
+          {profile ? ini(profile.nome) : '?'}
         </Avatar>
         <div style={{ lineHeight: 1.25, flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 12.5, whiteSpace: 'nowrap' }}>Profa. Regina</div>
-          <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{papel}</div>
+          <div
+            style={{
+              fontWeight: 800,
+              fontSize: 12.5,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {profile?.nome ?? '—'}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+            {profile ? PAPEL_LABEL[profile.papel] : ''}
+          </div>
         </div>
         <span style={{ color: 'var(--faint-2)', fontSize: 11 }}>▾</span>
       </div>
