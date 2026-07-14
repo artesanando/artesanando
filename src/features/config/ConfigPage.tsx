@@ -1,20 +1,36 @@
-import { useStore } from '../../state/store'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ini } from '../../lib/format'
 import { Avatar } from '../../components/ui/bits'
+import { useToast } from '../../components/ui/Toast'
+import { fetchPermissoes, togglePermissao, type PermCol } from './api'
 
-const COLS = ['PROGRESSO', 'DEVOLUÇÕES', 'COMENTÁRIOS', 'FINANCEIRO']
+const COLS: [PermCol, string][] = [
+  ['progresso', 'PROGRESSO'],
+  ['devolucoes', 'DEVOLUÇÕES'],
+  ['comentarios', 'COMENTÁRIOS'],
+  ['financeiro', 'FINANCEIRO'],
+]
 
 export function ConfigPage() {
-  const { perms, togglePerm } = useStore()
+  const qc = useQueryClient()
+  const toast = useToast()
+  const {
+    data: rows,
+    isLoading,
+    isError,
+  } = useQuery({ queryKey: ['permissoes'], queryFn: fetchPermissoes })
+
+  const toggle = useMutation({
+    mutationFn: ({ id, col, value }: { id: string; col: PermCol; value: boolean }) =>
+      togglePermissao(id, col, value),
+    onError: () => toast('Não foi possível alterar a permissão.', 'erro'),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['permissoes'] }),
+  })
 
   return (
     <div
-      style={{
-        padding: '30px 40px',
-        display: 'grid',
-        gridTemplateColumns: '180px 1fr',
-        gap: 34,
-        alignItems: 'start',
-      }}
+      className="pgrid"
+      style={{ padding: '30px 40px', '--cols': '180px 1fr', '--gap': '34px' } as React.CSSProperties}
     >
       <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div className="h" style={{ fontWeight: 500, fontSize: 26, marginBottom: 12 }}>
@@ -55,7 +71,7 @@ export function ConfigPage() {
             marginBottom: 20,
           }}
         >
-          🔒 Apenas administradoras alteram permissões.
+          🔒 Apenas administradoras alteram permissões — o banco recusa qualquer outra escrita.
         </div>
         <div className="card" style={{ borderRadius: 14, overflow: 'hidden' }}>
           <div
@@ -71,15 +87,28 @@ export function ConfigPage() {
             }}
           >
             <div>INTEGRANTE</div>
-            {COLS.map((c) => (
-              <div key={c} style={{ textAlign: 'center' }}>
-                {c}
+            {COLS.map(([, label]) => (
+              <div key={label} style={{ textAlign: 'center' }}>
+                {label}
               </div>
             ))}
           </div>
-          {perms.map((p, pi) => (
+          {isLoading && (
+            <div style={{ padding: '18px', fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>
+          )}
+          {isError && (
+            <div style={{ padding: '18px', fontSize: 13, color: 'var(--accent)' }}>
+              Não foi possível carregar as permissões. Recarregue a página.
+            </div>
+          )}
+          {rows?.length === 0 && (
+            <div style={{ padding: '18px', fontSize: 13, color: 'var(--muted)' }}>
+              Nenhuma integrante cadastrada ainda.
+            </div>
+          )}
+          {rows?.map((p) => (
             <div
-              key={p.nome}
+              key={p.id}
               style={{
                 display: 'grid',
                 gridTemplateColumns: '1.6fr repeat(4,1fr)',
@@ -90,22 +119,29 @@ export function ConfigPage() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Avatar color={p.cor} size={28} fontSize={10}>
-                  {p.ini}
+                <Avatar color={p.avatar_color} size={28} fontSize={10}>
+                  {ini(p.nome)}
                 </Avatar>
                 <b>{p.nome}</b>
               </div>
-              {p.flags.map((v, ti) => (
-                <div key={ti} style={{ textAlign: 'center' }}>
-                  <span
-                    className="sw"
-                    onClick={() => togglePerm(pi, ti)}
-                    style={{ background: v ? 'var(--primary)' : '#E7DCCF', cursor: 'pointer' }}
-                  >
-                    <span style={v ? { right: 2 } : { left: 2 }} />
-                  </span>
-                </div>
-              ))}
+              {COLS.map(([col]) => {
+                const value = p.permissoes?.[col] ?? false
+                return (
+                  <div key={col} style={{ textAlign: 'center' }}>
+                    <span
+                      className="sw"
+                      onClick={() => toggle.mutate({ id: p.id, col, value: !value })}
+                      style={{
+                        background: value ? 'var(--primary)' : '#E7DCCF',
+                        cursor: 'pointer',
+                        opacity: toggle.isPending ? 0.6 : 1,
+                      }}
+                    >
+                      <span style={value ? { right: 2 } : { left: 2 }} />
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           ))}
         </div>
