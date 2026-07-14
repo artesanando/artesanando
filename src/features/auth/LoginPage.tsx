@@ -1,131 +1,134 @@
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useState, type FormEvent } from 'react'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../state/auth'
-import { Lbl } from '../../components/ui/bits'
+import { Lbl, PasswordField } from '../../components/ui/bits'
+import { AuthShell } from './AuthShell'
 
 export function LoginPage() {
-  const { auth, login } = useAuth()
+  const { session, login } = useAuth()
   const navigate = useNavigate()
+  const [usuario, setUsuario] = useState('')
+  const [senha, setSenha] = useState('')
+  const [manter, setManter] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
+  const [enviando, setEnviando] = useState(false)
 
-  if (auth) return <Navigate to="/" replace />
+  if (session) return <Navigate to="/" replace />
 
-  const entrar = () => {
-    login()
-    navigate('/')
+  const entrar = async (e: FormEvent) => {
+    e.preventDefault()
+    setErro(null)
+    if (!usuario || !senha) {
+      setErro('Preencha usuário e senha.')
+      return
+    }
+    setEnviando(true)
+    try {
+      await login(usuario, senha, manter)
+      navigate('/')
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Não foi possível entrar.')
+    } finally {
+      setEnviando(false)
+    }
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <div
-        style={{
-          width: '52%',
-          flex: 'none',
-          background: 'var(--primary)',
-          color: '#fff',
-          padding: '56px 60px',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <div className="h" style={{ fontSize: 24 }}>
-          Artesanando<span style={{ color: '#F3D9DE' }}>.</span>
-        </div>
-        <div style={{ marginTop: 'auto' }}>
-          <div
-            className="h"
-            style={{ fontWeight: 500, fontSize: 38, lineHeight: 1.15, letterSpacing: '-.5px' }}
-          >
-            Cada ponto
-            <br />
-            vira acolhimento.
-          </div>
-          <div
+    <AuthShell>
+      <form onSubmit={entrar}>
+        <Lbl style={{ marginBottom: 7 }}>USUÁRIO</Lbl>
+        <input
+          className="field"
+          style={{ marginBottom: 18, background: 'var(--chip-soft)' }}
+          value={usuario}
+          onChange={(e) => setUsuario(e.target.value)}
+          autoComplete="username"
+          aria-label="Usuário ou email"
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 7 }}>
+          <span className="lbl">SENHA</span>
+          <Link
+            to="/esqueci"
             style={{
-              fontSize: 14,
-              lineHeight: 1.6,
-              color: '#F6DEE3',
-              marginTop: 18,
-              maxWidth: 400,
+              fontSize: 11.5,
+              fontWeight: 700,
+              color: 'var(--accent)',
+              textDecoration: 'none',
             }}
           >
-            Um espaço para organizar mantas, amigurumis, materiais e encontros do nosso projeto de
-            extensão — juntas, no mesmo lugar.
-          </div>
+            esqueci
+          </Link>
         </div>
-      </div>
-      <div
-        style={{
-          flex: 1,
-          padding: '56px 60px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-        }}
-      >
-        <div style={{ maxWidth: 340, width: '100%', margin: '0 auto' }}>
-          <div className="h" style={{ fontWeight: 500, fontSize: 26, marginBottom: 4 }}>
-            Bem-vinda de volta
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 30 }}>
-            Entre com seu usuário e senha
-          </div>
-          <Lbl style={{ marginBottom: 7 }}>USUÁRIO</Lbl>
-          <input className="field" style={{ marginBottom: 18 }} defaultValue="regina.prof" />
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 7 }}>
-            <span className="lbl">SENHA</span>
-            <span
-              style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--accent)', cursor: 'pointer' }}
-            >
-              esqueci
-            </span>
-          </div>
-          <input
-            className="field"
-            type="password"
-            style={{ marginBottom: 14 }}
-            defaultValue="12345678"
-          />
-          <div
+        <PasswordField
+          value={senha}
+          onChange={setSenha}
+          style={{ marginBottom: 14 }}
+          autoComplete="current-password"
+          ariaLabel="Senha"
+        />
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 12.5,
+            color: 'var(--ink-soft)',
+            marginBottom: 18,
+            cursor: 'pointer',
+          }}
+        >
+          <span
+            onClick={(e) => {
+              e.preventDefault()
+              setManter((m) => !m)
+            }}
             style={{
-              display: 'flex',
+              width: 16,
+              height: 16,
+              borderRadius: 5,
+              background: manter ? 'var(--primary)' : 'transparent',
+              border: manter ? 'none' : '1.5px solid var(--field-border)',
+              color: '#fff',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: 8,
-              fontSize: 12.5,
-              color: 'var(--ink-soft)',
-              marginBottom: 24,
+              justifyContent: 'center',
+              fontSize: 10,
+              fontWeight: 800,
+              flex: 'none',
             }}
           >
-            <span
-              style={{
-                width: 16,
-                height: 16,
-                borderRadius: 5,
-                background: 'var(--primary)',
-                color: '#fff',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 10,
-                fontWeight: 800,
-              }}
-            >
-              ✓
-            </span>
-            Manter conectada
-          </div>
-          <button
-            className="pill"
-            style={{ width: '100%', padding: 13, fontSize: 14 }}
-            onClick={entrar}
-          >
-            Entrar
-          </button>
+            {manter ? '✓' : ''}
+          </span>
+          Manter conectada
+        </label>
+        {erro && (
           <div
-            style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', marginTop: 20 }}
+            role="alert"
+            style={{
+              background: 'var(--chip-soft)',
+              border: '1px solid var(--chip-rose-border)',
+              borderRadius: 10,
+              padding: '9px 13px',
+              fontSize: 12.5,
+              color: 'var(--primary-dark)',
+              marginBottom: 14,
+            }}
           >
-            Não tem acesso? Fale com uma <b style={{ color: 'var(--accent)' }}>administradora</b>.
+            {erro}
           </div>
-        </div>
+        )}
+        <button
+          type="submit"
+          className="pill"
+          disabled={enviando}
+          style={{ width: '100%', padding: 13, fontSize: 14, opacity: enviando ? 0.7 : 1 }}
+        >
+          {enviando ? 'Entrando…' : 'Entrar'}
+        </button>
+      </form>
+      <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', marginTop: 20 }}>
+        Não tem acesso? Fale com uma <b style={{ color: 'var(--accent)' }}>administradora</b>.
       </div>
-    </div>
+    </AuthShell>
   )
 }
