@@ -1,8 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
+import { __login, __reset } from './test/fakeSupabase'
+
+vi.mock('./lib/supabase', () => import('./test/fakeSupabase'))
 
 function renderAt(path: string) {
   return render(
@@ -13,43 +16,69 @@ function renderAt(path: string) {
 }
 
 beforeEach(() => {
+  __reset()
+  localStorage.clear()
   sessionStorage.clear()
 })
 
 describe('App', () => {
-  it('mostra a tela de login quando não autenticada', () => {
+  it('mostra a tela de login quando não autenticada', async () => {
     renderAt('/')
-    expect(screen.getByText('Bem-vinda de volta')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Entrar' })).toBeInTheDocument()
   })
 
   it('entra pelo login e mostra o dashboard', async () => {
     renderAt('/login')
+    await userEvent.type(screen.getByLabelText('Usuário ou email'), 'candida.prof')
+    await userEvent.type(screen.getByLabelText('Senha'), '12345678')
     await userEvent.click(screen.getByRole('button', { name: 'Entrar' }))
-    expect(screen.getByText('Boa tarde, Regina')).toBeInTheDocument()
+    expect(await screen.findByText('Boa tarde, Cândida')).toBeInTheDocument()
   })
 
-  it('deep-link /estoque funciona com sessão ativa', () => {
-    sessionStorage.setItem('artesanando:auth', '1')
+  it('senha errada mostra erro e não loga', async () => {
+    renderAt('/login')
+    await userEvent.type(screen.getByLabelText('Usuário ou email'), 'candida.prof')
+    await userEvent.type(screen.getByLabelText('Senha'), 'senha-errada')
+    await userEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Usuário ou senha incorretos')
+    expect(screen.queryByText('Boa tarde, Cândida')).not.toBeInTheDocument()
+  })
+
+  it('deep-link /estoque funciona com sessão ativa', async () => {
+    __login()
     renderAt('/estoque')
-    expect(screen.getByText('Materiais e itens do projeto, organizados por tipo')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Materiais e itens do projeto, organizados por tipo'),
+    ).toBeInTheDocument()
   })
 
-  it('deep-link /projetos/primavera abre a manta de crochê', () => {
-    sessionStorage.setItem('artesanando:auth', '1')
+  it('deep-link /projetos/primavera abre a manta de crochê', async () => {
+    __login()
     renderAt('/projetos/primavera')
-    expect(screen.getByText('Destino: Hospital Infantil · 80 squares · padrões A/B/C · 5 integrantes')).toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        'Destino: Hospital Infantil · 80 squares · padrões A/B/C · 5 integrantes',
+      ),
+    ).toBeInTheDocument()
   })
 
   it('abre o modal de novo projeto pelo dashboard', async () => {
-    sessionStorage.setItem('artesanando:auth', '1')
+    __login()
     renderAt('/')
-    await userEvent.click(screen.getByRole('button', { name: '+ Novo projeto' }))
+    await userEvent.click(await screen.findByRole('button', { name: '+ Novo projeto' }))
     expect(screen.getByText('Defina o tipo para configurar a produção')).toBeInTheDocument()
   })
 
-  it('rota desconhecida cai no 404', () => {
-    sessionStorage.setItem('artesanando:auth', '1')
+  it('sidebar mostra a usuária logada', async () => {
+    __login()
+    renderAt('/')
+    expect(await screen.findByText('Cândida Nunes')).toBeInTheDocument()
+    expect(screen.getByText('Administradora')).toBeInTheDocument()
+  })
+
+  it('rota desconhecida cai no 404', async () => {
+    __login()
     renderAt('/nao-existe')
-    expect(screen.getByText('Página não encontrada')).toBeInTheDocument()
+    expect(await screen.findByText('Página não encontrada')).toBeInTheDocument()
   })
 })
