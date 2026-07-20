@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import type { Devolucao, Emprestimo, EstoqueItem } from '../../types/database'
+import type { Devolucao, Emprestimo, EstoqueCategoria, EstoqueItem } from '../../types/database'
 
 export interface EmprestimoAtivo extends Emprestimo {
   devolucoes: Devolucao[]
@@ -23,6 +23,28 @@ export async function fetchEmprestimosAtivos(): Promise<EmprestimoAtivo[]> {
     .order('data', { ascending: false })
   if (error) throw error
   return (data ?? []) as unknown as EmprestimoAtivo[]
+}
+
+export async function criarItemEstoque(item: {
+  categoria: EstoqueCategoria
+  nome: string
+  detalhe: string | null
+  cor_hex: string | null
+  quantidade: number
+  minimo: number
+}) {
+  const { error } = await supabase.from('estoque_itens').insert(item)
+  if (error) throw error
+}
+
+export async function criarEmprestimo(e: {
+  item_id: string
+  integrante_id: string
+  quantidade: number
+  projeto_nome: string | null
+}) {
+  const { error } = await supabase.from('emprestimos').insert(e)
+  if (error) throw error
 }
 
 /* ---------- Lógica derivada (unit-testada) ---------- */
