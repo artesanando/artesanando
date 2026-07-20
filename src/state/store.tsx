@@ -35,6 +35,7 @@ export interface Ring {
 interface StoreState {
   modal: ModalKind | null
   creatorReturn: ModalKind | null
+  devolucaoId: string | null
   finKind: 'entrada' | 'saida'
   projCat: 'manta' | 'amig'
   projTec: 'croche' | 'trico'
@@ -52,6 +53,7 @@ interface StoreState {
 const INITIAL: StoreState = {
   modal: null,
   creatorReturn: null,
+  devolucaoId: null,
   finKind: 'entrada',
   projCat: 'manta',
   projTec: 'croche',
@@ -70,6 +72,7 @@ export interface Store extends StoreState {
   isAdmin: boolean
   open: (m: ModalKind) => void
   close: () => void
+  openDevolucao: (emprestimoId: string | null) => void
   setFinKind: (k: 'entrada' | 'saida') => void
   openFin: (k: 'entrada' | 'saida') => void
   openDetalhe: (name: string) => void
@@ -110,7 +113,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     ...s,
     isAdmin,
     open: (modal) => set({ modal }),
-    close: () => set({ modal: null }),
+    close: () => set({ modal: null, devolucaoId: null }),
+    openDevolucao: (devolucaoId) => set({ modal: 'devolucao', devolucaoId }),
     setFinKind: (finKind) => set({ finKind }),
     openFin: (finKind) => set({ modal: 'financeiro', finKind }),
     openDetalhe: (detKey) => set({ modal: 'detalhe', detKey }),
