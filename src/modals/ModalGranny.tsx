@@ -1,7 +1,11 @@
+import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../state/store'
+import { useAuth } from '../state/auth'
 import { PALETTE } from '../mocks/data'
 import { Lbl } from '../components/ui/bits'
 import { ModalBox, ModalHeader } from './shared'
+import { criarReceita } from '../features/biblioteca/api'
 
 export function ModalGranny() {
   const {
@@ -13,8 +17,39 @@ export function ModalGranny() {
     grannySetColor,
     backToProjeto,
   } = useStore()
+  const { profile } = useAuth()
+  const qc = useQueryClient()
+  const [nome, setNome] = useState('Novo granny')
+  const [erro, setErro] = useState<string | null>(null)
 
   const total = rings.reduce((s, r) => s + r.n, 0)
+
+  const salvar = useMutation({
+    mutationFn: () =>
+      criarReceita({
+        nome: nome.trim() || 'Granny sem nome',
+        categoria: 'granny',
+        sub: `granny square · ${total} carreiras`,
+        resumo: null,
+        specs: [
+          ['Carreiras', String(total)],
+          ['Cores', String(rings.length)],
+        ],
+        conteudo: {
+          rings: rings.map((r, i) => ({
+            ...r,
+            role: i === 0 ? 'miolo' : i === rings.length - 1 ? 'borda' : 'meio',
+          })),
+        },
+        origem: 'criador',
+        criado_por: profile!.id,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['receitas'] })
+      backToProjeto()
+    },
+    onError: () => setErro('Não foi possível salvar o padrão.'),
+  })
   const nameOf = (i: number) => (i === 0 ? ' · miolo' : i === rings.length - 1 ? ' · borda' : '')
   // prévia: quadrados concêntricos, borda (última) por fora → miolo (primeira) no centro
   const n = rings.length
@@ -29,7 +64,12 @@ export function ModalGranny() {
         sub="Vai para a biblioteca e pode ser usado em qualquer manta"
       />
       <Lbl style={{ marginBottom: 7 }}>NOME</Lbl>
-      <input className="field" style={{ marginBottom: 20 }} defaultValue="Modelo A — Flor de Maio" />
+      <input
+        className="field"
+        style={{ marginBottom: 20 }}
+        value={nome}
+        onChange={(e) => setNome(e.target.value)}
+      />
       <div style={{ display: 'flex', gap: 22, alignItems: 'flex-start' }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -186,12 +226,28 @@ export function ModalGranny() {
           </div>
         </div>
       </div>
+      {erro && (
+        <div
+          role="alert"
+          style={{
+            background: 'var(--chip-soft)',
+            border: '1px solid var(--chip-rose-border)',
+            borderRadius: 10,
+            padding: '9px 13px',
+            fontSize: 12.5,
+            color: 'var(--primary-dark)',
+            marginTop: 16,
+          }}
+        >
+          {erro}
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 22 }}>
         <button className="pill ghost" onClick={backToProjeto}>
           Voltar
         </button>
-        <button className="pill" onClick={backToProjeto}>
-          Salvar padrão
+        <button className="pill" disabled={salvar.isPending} onClick={() => salvar.mutate()}>
+          {salvar.isPending ? 'Salvando…' : 'Salvar padrão'}
         </button>
       </div>
     </ModalBox>

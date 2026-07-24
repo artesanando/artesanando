@@ -1,7 +1,11 @@
+import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../state/store'
+import { useAuth } from '../state/auth'
 import { MODELS, type ModelKey } from '../mocks/data'
 import { Lbl } from '../components/ui/bits'
 import { ModalBox, ModalHeader } from './shared'
+import { criarReceita } from '../features/biblioteca/api'
 
 const KEYS: ModelKey[] = ['A', 'B', 'C']
 
@@ -19,6 +23,10 @@ export function ModalLayout() {
     decRows,
     backToProjeto,
   } = useStore()
+  const { profile } = useAuth()
+  const qc = useQueryClient()
+  const [nome, setNome] = useState('Novo esquema de manta')
+  const [erro, setErro] = useState<string | null>(null)
 
   const cellModel = (r: number, c: number): ModelKey =>
     layoutMap[r + '-' + c] || KEYS[(r + c) % 3]
@@ -32,11 +40,50 @@ export function ModalLayout() {
       cells.push({ r, c, m })
     }
 
+  const salvar = useMutation({
+    mutationFn: () => {
+      const grid: string[][] = []
+      for (let r = 0; r < layoutRows; r++)
+        grid.push(Array.from({ length: layoutCols }, (_, c) => cellModel(r, c)))
+      return criarReceita({
+        nome: nome.trim() || 'Esquema sem nome',
+        categoria: 'manta',
+        sub: `esquema · ${layoutCols}×${layoutRows} squares`,
+        resumo: null,
+        specs: [
+          ['Colunas', String(layoutCols)],
+          ['Linhas', String(layoutRows)],
+          ['Total', String(layoutCols * layoutRows)],
+        ],
+        conteudo: {
+          cells: grid,
+          modelos: Object.fromEntries(
+            KEYS.map((k) => [k, { border: MODELS[k].border, inner: MODELS[k].inner }]),
+          ),
+        },
+        origem: 'criador',
+        criado_por: profile!.id,
+      })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['receitas'] })
+      backToProjeto()
+    },
+    onError: () => setErro('Não foi possível salvar a montagem.'),
+  })
+
   return (
     <ModalBox maxWidth={640}>
       <ModalHeader
         title="Organizar quadrados na manta"
         sub="Escolha um modelo e toque nos quadrados para montar o próprio padrão da manta"
+      />
+      <Lbl style={{ marginBottom: 7 }}>NOME</Lbl>
+      <input
+        className="field"
+        style={{ marginBottom: 16 }}
+        value={nome}
+        onChange={(e) => setNome(e.target.value)}
       />
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <span className="lbl" style={{ marginRight: 2 }}>
@@ -231,12 +278,28 @@ export function ModalLayout() {
           </div>
         </div>
       </div>
+      {erro && (
+        <div
+          role="alert"
+          style={{
+            background: 'var(--chip-soft)',
+            border: '1px solid var(--chip-rose-border)',
+            borderRadius: 10,
+            padding: '9px 13px',
+            fontSize: 12.5,
+            color: 'var(--primary-dark)',
+            marginTop: 16,
+          }}
+        >
+          {erro}
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 22 }}>
         <button className="pill ghost" onClick={backToProjeto}>
           Voltar
         </button>
-        <button className="pill" onClick={backToProjeto}>
-          Salvar montagem
+        <button className="pill" disabled={salvar.isPending} onClick={() => salvar.mutate()}>
+          {salvar.isPending ? 'Salvando…' : 'Salvar montagem'}
         </button>
       </div>
     </ModalBox>
