@@ -1,9 +1,37 @@
+import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
-import { BIB_CAT, BIB_ITEMS, DET } from '../../mocks/data'
+import type { ReceitaCategoria } from '../../types/database'
+import { abrirPdf, fetchReceitas, filtraReceitas } from './api'
+import { CAT_CARD } from './meta'
+import { DetalheView } from '../../modals/DetalheView'
 import { IconPdf } from '../../components/ui/icons'
 
+const CHIPS: [ReceitaCategoria | 'todos', string][] = [
+  ['todos', 'Todos'],
+  ['amigurumi', 'Amigurumis'],
+  ['granny', 'Granny'],
+  ['faixa', 'Faixas'],
+  ['manta', 'Mantas'],
+]
+
 export function BibliotecaPage() {
-  const { isAdmin, open, openDetalhe, openGranny, openFaixa } = useStore()
+  const { isAdmin, open, openGranny, openFaixa } = useStore()
+  const [busca, setBusca] = useState('')
+  const [cat, setCat] = useState<ReceitaCategoria | 'todos'>('todos')
+  const [params, setParams] = useSearchParams()
+
+  const { data: receitas, isLoading, isError } = useQuery({
+    queryKey: ['receitas'],
+    queryFn: fetchReceitas,
+  })
+
+  const filtradas = filtraReceitas(receitas ?? [], busca, cat)
+  const aberta = (receitas ?? []).find((r) => r.id === params.get('receita'))
+
+  const abrir = (id: string) => setParams({ receita: id })
+  const fechar = () => setParams({})
 
   return (
     <div style={{ padding: '30px 40px' }}>
@@ -49,45 +77,45 @@ export function BibliotecaPage() {
           className="field"
           style={{ flex: 1, borderRadius: 99 }}
           placeholder="🔍 Buscar receita ou padrão…"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          aria-label="Buscar receita ou padrão"
         />
-        <span
-          className="tag"
-          style={{
-            background: 'var(--primary)',
-            color: '#fff',
-            padding: '6px 14px',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          Todos
-        </span>
-        {['Amigurumis', 'Granny', 'Faixas'].map((f) => (
+        {CHIPS.map(([k, label]) => (
           <span
-            key={f}
+            key={k}
             className="tag"
+            onClick={() => setCat(k)}
             style={{
-              border: '1px solid var(--field-border)',
-              color: 'var(--ink-soft)',
+              cursor: 'pointer',
               padding: '6px 14px',
               whiteSpace: 'nowrap',
+              ...(cat === k
+                ? { background: 'var(--primary)', color: '#fff' }
+                : { border: '1px solid var(--field-border)', color: 'var(--ink-soft)' }),
             }}
           >
-            {f}
+            {label}
           </span>
         ))}
       </div>
+      {isLoading && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>}
+      {isError && (
+        <div style={{ fontSize: 13, color: 'var(--accent)' }}>
+          Não foi possível carregar a biblioteca. Recarregue a página.
+        </div>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
-        {BIB_ITEMS.map(([name, catKey, sub, pages]) => {
-          const c = BIB_CAT[catKey]
-          const has = !!DET[name]
+        {filtradas.map((r) => {
+          const c = CAT_CARD[r.categoria]
           return (
             <div
-              key={name}
+              key={r.id}
               className="card"
-              onClick={has ? () => openDetalhe(name) : undefined}
+              onClick={() => abrir(r.id)}
               style={{
                 overflow: 'hidden',
-                cursor: has ? 'pointer' : 'default',
+                cursor: 'pointer',
                 display: 'flex',
                 flexDirection: 'column',
               }}
@@ -119,11 +147,9 @@ export function BibliotecaPage() {
                 <div
                   style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.25, margin: '12px 0 4px' }}
                 >
-                  {name}
+                  {r.nome}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  {sub} · {pages}
-                </div>
+                {r.sub && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{r.sub}</div>}
                 <div style={{ flex: 1 }} />
                 <div
                   style={{
@@ -136,60 +162,91 @@ export function BibliotecaPage() {
                     borderTop: '1px solid var(--divider)',
                   }}
                 >
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 5,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: 'var(--accent)',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    <IconPdf />
-                    PDF
-                  </span>
-                  {has && (
+                  {r.pdf_path ? (
                     <span
                       style={{
-                        fontSize: 12,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        fontSize: 11,
                         fontWeight: 700,
-                        color: c.fg,
+                        color: 'var(--accent)',
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      Abrir →
+                      <IconPdf />
+                      PDF
                     </span>
+                  ) : (
+                    <span />
                   )}
+                  <span
+                    style={{ fontSize: 12, fontWeight: 700, color: c.fg, whiteSpace: 'nowrap' }}
+                  >
+                    Abrir →
+                  </span>
                 </div>
               </div>
             </div>
           )
         })}
-        <div
-          onClick={() => open('receita')}
-          style={{
-            border: '2px dashed var(--field-border)',
-            borderRadius: 14,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            color: 'var(--faint)',
-            cursor: 'pointer',
-            minHeight: 150,
-          }}
-        >
-          <div style={{ fontSize: 22 }}>+</div>
-          <div style={{ fontSize: 12, fontWeight: 700, textAlign: 'center' }}>
-            Adicionar
-            <br />
-            receita ou padrão
+        {!isLoading && filtradas.length === 0 && !isError && (
+          <div
+            style={{
+              gridColumn: '1 / -1',
+              fontSize: 13,
+              color: 'var(--muted)',
+              padding: '18px 2px',
+            }}
+          >
+            Nenhuma receita encontrada{busca ? ` para "${busca}"` : ''}.
           </div>
-        </div>
+        )}
+        {isAdmin && (
+          <div
+            onClick={() => open('receita')}
+            style={{
+              border: '2px dashed var(--field-border)',
+              borderRadius: 14,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              color: 'var(--faint)',
+              cursor: 'pointer',
+              minHeight: 150,
+            }}
+          >
+            <div style={{ fontSize: 22 }}>+</div>
+            <div style={{ fontSize: 12, fontWeight: 700, textAlign: 'center' }}>
+              Adicionar
+              <br />
+              receita ou padrão
+            </div>
+          </div>
+        )}
       </div>
+      {aberta && (
+        <div className="ov" onClick={fechar}>
+          <DetalheView
+            nome={aberta.nome}
+            categoria={aberta.categoria}
+            sub={aberta.sub}
+            resumo={aberta.resumo}
+            specs={aberta.specs}
+            conteudo={aberta.conteudo}
+            onClose={fechar}
+            footerExtra={
+              aberta.pdf_path ? (
+                <button className="pill" onClick={() => abrirPdf(aberta.pdf_path!)}>
+                  Abrir PDF
+                </button>
+              ) : undefined
+            }
+          />
+        </div>
+      )}
     </div>
   )
 }
