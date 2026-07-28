@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { FieldSelect, FieldStepper, Lbl, Select, Stepper } from '../components/ui/bits'
+import { Lbl, Select, Stepper } from '../components/ui/bits'
 import { ModalBox, ModalFooter, ModalHeader } from './shared'
 import { supabase } from '../lib/supabase'
 import { useStore } from '../state/store'
@@ -13,6 +13,7 @@ import {
   saldoEmprestimo,
 } from '../features/estoque/api'
 import { criarReceita, uploadPdf } from '../features/biblioteca/api'
+import { fetchLotes, registrarProducao } from '../features/projetos/api'
 import { useAuth } from '../state/auth'
 
 function ErroBox({ children }: { children: ReactNode }) {
@@ -535,56 +536,129 @@ export function ModalDevolucao() {
   )
 }
 
+const ETAPAS_PROD: ['miolo' | 'borda' | 'pronto', string][] = [
+  ['miolo', 'Miolo'],
+  ['borda', 'Borda'],
+  ['pronto', 'Pronto'],
+]
+
 export function ModalProducao() {
+  const { close, projetoId } = useStore()
+  const { profile } = useAuth()
+  const qc = useQueryClient()
+
+  const { data: lotes } = useQuery({
+    queryKey: ['lotes', projetoId],
+    queryFn: () => fetchLotes(projetoId!),
+    enabled: !!projetoId,
+  })
+  const { data: integrantes } = useQuery({ queryKey: ['integrantes-min'], queryFn: fetchIntegrantes })
+
+  const abertos = (lotes ?? []).filter((l) => l.etapa !== 'pronto')
+  const [loteId, setLoteId] = useState('')
+  const [qtd, setQtd] = useState<number | null>(null)
+  const [etapa, setEtapa] = useState<'miolo' | 'borda' | 'pronto'>('borda')
+  const [respId, setRespId] = useState('')
+  const [erro, setErro] = useState<string | null>(null)
+
+  const lote = abertos.find((l) => l.id === loteId) ?? abertos[0]
+  const quantidade = qtd ?? lote?.quantidade ?? 1
+
+  const registrar = useMutation({
+    mutationFn: () => {
+      const resp = (integrantes ?? []).find((p) => p.id === respId)
+      return registrarProducao({
+        lote: lote!,
+        quantidade,
+        etapaConcluida: etapa,
+        responsavelNome: resp?.nome ?? profile!.nome,
+        autorId: profile!.id,
+      })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['lotes', projetoId] })
+      qc.invalidateQueries({ queryKey: ['squares', projetoId] })
+      qc.invalidateQueries({ queryKey: ['atividades', projetoId] })
+      qc.invalidateQueries({ queryKey: ['progresso-geral'] })
+      close()
+    },
+    onError: () => setErro('Não foi possível registrar a produção.'),
+  })
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    setErro(null)
+    if (!lote) {
+      setErro('Nenhum lote em andamento neste projeto.')
+      return
+    }
+    registrar.mutate()
+  }
+
   return (
     <ModalBox maxWidth={520}>
-      <ModalHeader title="Registrar produção" sub="Manta Primavera · quem fez o quê" />
-      <div className="grid2" style={{ marginBottom: 18 }}>
-        <div>
-          <Lbl style={{ marginBottom: 7 }}>PADRÃO / LOTE</Lbl>
-          <FieldSelect>Modelo A</FieldSelect>
+      <ModalHeader title="Registrar produção" sub="Quem fez o quê — move o lote de etapa" />
+      <form onSubmit={submit}>
+        <div className="grid2" style={{ marginBottom: 18 }}>
+          <div>
+            <Lbl style={{ marginBottom: 7 }}>PADRÃO / LOTE</Lbl>
+            <Select
+              ariaLabel="Lote"
+              value={lote?.id ?? ''}
+              onChange={(v) => {
+                setLoteId(v)
+                setQtd(null)
+              }}
+              options={abertos.map((l) => [
+                l.id,
+                `Modelo ${l.modelo?.letra ?? '?'} ×${l.quantidade} · ${l.etapa.replace('_', ' ')}`,
+              ])}
+            />
+          </div>
+          <div>
+            <Lbl style={{ marginBottom: 7 }}>QUANTIDADE</Lbl>
+            <Stepper value={quantidade} onChange={setQtd} min={1} max={lote?.quantidade ?? 1} />
+          </div>
         </div>
-        <div>
-          <Lbl style={{ marginBottom: 7 }}>QUANTIDADE</Lbl>
-          <FieldStepper value="4" />
+        <Lbl style={{ marginBottom: 7 }}>ETAPA CONCLUÍDA</Lbl>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+          {ETAPAS_PROD.map(([k, label]) => (
+            <div
+              key={k}
+              className="seg"
+              onClick={() => setEtapa(k)}
+              style={
+                etapa === k
+                  ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }
+                  : undefined
+              }
+            >
+              {label}
+            </div>
+          ))}
         </div>
-      </div>
-      <Lbl style={{ marginBottom: 7 }}>ETAPA CONCLUÍDA</Lbl>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-        <div className="seg">Miolo</div>
-        <div
-          className="seg"
-          style={{ background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }}
-        >
-          Borda
+        <Lbl style={{ marginBottom: 7 }}>RESPONSÁVEL</Lbl>
+        <div style={{ marginBottom: 24 }}>
+          <Select
+            ariaLabel="Responsável"
+            value={respId}
+            onChange={setRespId}
+            options={[
+              ['', 'Escolher…'],
+              ...(integrantes ?? []).map((p) => [p.id, p.nome] as [string, string]),
+            ]}
+          />
         </div>
-        <div className="seg">Pronto</div>
-      </div>
-      <Lbl style={{ marginBottom: 7 }}>RESPONSÁVEL</Lbl>
-      <div
-        className="field"
-        style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}
-      >
-        <span
-          style={{
-            width: 22,
-            height: 22,
-            borderRadius: '50%',
-            background: 'var(--green)',
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 9,
-            fontWeight: 800,
-          }}
-        >
-          B
-        </span>
-        Beatriz Gomes
-        <span style={{ marginLeft: 'auto', color: 'var(--faint)' }}>▾</span>
-      </div>
-      <ModalFooter okLabel="Registrar" />
+        {erro && <ErroBox>{erro}</ErroBox>}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button type="button" className="pill ghost" onClick={close}>
+            Cancelar
+          </button>
+          <button type="submit" className="pill" disabled={registrar.isPending || !lote}>
+            {registrar.isPending ? 'Registrando…' : 'Registrar'}
+          </button>
+        </div>
+      </form>
     </ModalBox>
   )
 }

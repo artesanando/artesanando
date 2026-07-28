@@ -13,7 +13,6 @@ import {
 import { ModalGranny } from './ModalGranny'
 import { ModalFaixa } from './ModalFaixa'
 import { ModalLayout } from './ModalLayout'
-import { ModalDetalhe } from './ModalDetalhe'
 
 export function ModalRoot() {
   const { modal, close } = useStore()
@@ -31,7 +30,6 @@ export function ModalRoot() {
     granny: <ModalGranny />,
     faixa: <ModalFaixa />,
     layout: <ModalLayout />,
-    detalhe: <ModalDetalhe />,
   }
   return (
     <div className="ov" onClick={close}>

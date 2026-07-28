@@ -85,7 +85,7 @@ export function DashboardPage() {
           </div>
           <div style={{ borderTop: '1px solid var(--border)' }}>
             <div
-              onClick={() => navigate('/projetos/primavera')}
+              onClick={() => navigate('/projetos')}
               style={{ padding: '16px 2px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
             >
               <div
@@ -118,7 +118,7 @@ export function DashboardPage() {
               <Progress pct="79%" style={{ margin: '10px 0 0' }} />
             </div>
             <div
-              onClick={() => navigate('/projetos/nuvem')}
+              onClick={() => navigate('/projetos')}
               style={{ padding: '16px 2px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
             >
               <div
@@ -151,7 +151,7 @@ export function DashboardPage() {
               <Progress pct="37%" style={{ margin: '10px 0 0' }} />
             </div>
             <div
-              onClick={() => navigate('/projetos/capivara')}
+              onClick={() => navigate('/projetos')}
               style={{
                 padding: '16px 2px',
                 borderBottom: '1px solid var(--border)',

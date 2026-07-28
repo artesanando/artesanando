@@ -1,8 +1,22 @@
-import { useState, type CSSProperties } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
-import { buildMapa, MODELS, type ModelKey } from '../../mocks/data'
-import { Avatar, Lbl, Progress } from '../../components/ui/bits'
+import { useAuth } from '../../state/auth'
+import { Lbl, Progress } from '../../components/ui/bits'
+import { Comentarios, Historico } from './Comentarios'
+import {
+  fetchLotes,
+  fetchModelos,
+  fetchSquares,
+  pegarLote,
+  progressoSquares,
+  type Lote,
+  type LoteEtapa,
+  type MantaModelo,
+  type Projeto,
+  type Square,
+} from './api'
 
 const seg = (on: boolean): CSSProperties =>
   on
@@ -27,31 +41,100 @@ const seg = (on: boolean): CSSProperties =>
         whiteSpace: 'nowrap',
       }
 
-function Fluxo() {
-  const col = (
-    titulo: string,
-    n: number,
-    bg: string,
-    tituloCor: string,
-    card: React.ReactNode,
-  ) => (
-    <div style={{ background: bg, borderRadius: 14, padding: 12 }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: 11,
-          fontWeight: 800,
-          color: tituloCor,
-          marginBottom: 10,
-        }}
-      >
-        <span>{titulo}</span>
-        <span>{n}</span>
+const COL_META: Record<LoteEtapa, { titulo: string; bg: string; cor: string }> = {
+  miolo: { titulo: 'MIOLO', bg: '#F4EEE9', cor: 'var(--muted)' },
+  aguardando_borda: { titulo: 'AGUARDANDO BORDA', bg: '#FBF1E7', cor: 'var(--gold-dark)' },
+  borda: { titulo: 'BORDA', bg: '#F4EEE9', cor: 'var(--muted)' },
+  pronto: { titulo: 'PRONTO', bg: '#EEF3EA', cor: 'var(--green-dark)' },
+}
+
+function Fluxo({
+  projeto,
+  lotes,
+  modelos,
+  squares,
+}: {
+  projeto: Projeto
+  lotes: Lote[]
+  modelos: MantaModelo[]
+  squares: Square[]
+}) {
+  const { profile } = useAuth()
+  const qc = useQueryClient()
+
+  const pegar = useMutation({
+    mutationFn: (lote: Lote) => pegarLote(lote, profile!.id),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['lotes', projeto.id] })
+      qc.invalidateQueries({ queryKey: ['squares', projeto.id] })
+      qc.invalidateQueries({ queryKey: ['atividades', projeto.id] })
+    },
+  })
+
+  const loteCard = (l: Lote) => (
+    <div
+      key={l.id}
+      className="card"
+      style={{
+        padding: '11px 12px',
+        marginBottom: 8,
+        borderColor: l.etapa === 'aguardando_borda' ? '#E7D6B8' : undefined,
+      }}
+    >
+      <div style={{ fontWeight: 800, fontSize: 13 }}>
+        Modelo {l.modelo?.letra ?? '?'} ×{l.quantidade}
       </div>
-      {card}
+      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+        {l.responsavel?.nome ?? l.obs ?? '—'}
+      </div>
+      {!l.responsavel_id && l.etapa === 'aguardando_borda' && (
+        <div
+          onClick={() => pegar.mutate(l)}
+          style={{
+            fontSize: 10.5,
+            fontWeight: 800,
+            color: 'var(--gold-dark)',
+            marginTop: 6,
+            cursor: 'pointer',
+          }}
+        >
+          ↳ precisa de alguém · <span style={{ textDecoration: 'underline' }}>Pegar lote</span>
+        </div>
+      )}
     </div>
   )
+
+  const prontosPorModelo = modelos
+    .map((m) => ({
+      modelo: m,
+      prontos: squares.filter((s) => s.modelo_id === m.id && s.etapa === 'pronto').length,
+    }))
+    .filter((x) => x.prontos > 0)
+
+  const coluna = (etapa: LoteEtapa, conteudo: ReactNode, n: number) => {
+    const meta = COL_META[etapa]
+    return (
+      <div style={{ background: meta.bg, borderRadius: 14, padding: 12 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            fontSize: 11,
+            fontWeight: 800,
+            color: meta.cor,
+            marginBottom: 10,
+          }}
+        >
+          <span>{meta.titulo}</span>
+          <span>{n}</span>
+        </div>
+        {conteudo}
+      </div>
+    )
+  }
+
+  const dos = (etapa: LoteEtapa) => lotes.filter((l) => l.etapa === etapa)
+
   return (
     <>
       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
@@ -59,76 +142,59 @@ function Fluxo() {
         outra integrante pegar
       </div>
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4,1fr)',
-          gap: 12,
-          marginBottom: 26,
-        }}
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 26 }}
       >
-        {col(
-          'MIOLO',
-          1,
-          '#F4EEE9',
-          'var(--muted)',
-          <div className="card" style={{ padding: '11px 12px', marginBottom: 8 }}>
-            <div style={{ fontWeight: 800, fontSize: 13 }}>Modelo B ×6</div>
-            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>Duda · carr. 1–8</div>
-          </div>,
+        {coluna('miolo', dos('miolo').map(loteCard), dos('miolo').length)}
+        {coluna(
+          'aguardando_borda',
+          dos('aguardando_borda').map(loteCard),
+          dos('aguardando_borda').length,
         )}
-        {col(
-          'AGUARDANDO BORDA',
-          1,
-          '#FBF1E7',
-          'var(--gold-dark)',
-          <div
-            className="card"
-            style={{ padding: '11px 12px', marginBottom: 8, borderColor: '#E7D6B8' }}
-          >
-            <div style={{ fontWeight: 800, fontSize: 13 }}>Modelo A ×8</div>
-            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>miolo: Ana</div>
-            <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--gold-dark)', marginTop: 6 }}>
-              ↳ precisa de alguém
+        {coluna('borda', dos('borda').map(loteCard), dos('borda').length)}
+        {coluna(
+          'pronto',
+          prontosPorModelo.map(({ modelo, prontos }) => (
+            <div
+              key={modelo.id}
+              className="card"
+              style={{ padding: '11px 12px', marginBottom: 8, borderColor: '#D8E0D2' }}
+            >
+              <div style={{ fontWeight: 800, fontSize: 13 }}>
+                Modelo {modelo.letra} ×{prontos}
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: 'var(--green-dark)',
+                  fontWeight: 700,
+                  marginTop: 2,
+                }}
+              >
+                ✓ {modelo.responsavel?.nome ?? 'concluídos'}
+              </div>
             </div>
-          </div>,
-        )}
-        {col(
-          'BORDA',
-          1,
-          '#F4EEE9',
-          'var(--muted)',
-          <div className="card" style={{ padding: '11px 12px', marginBottom: 8 }}>
-            <div style={{ fontWeight: 800, fontSize: 13 }}>Modelo A ×4</div>
-            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-              Beatriz · carr. 9–12
-            </div>
-          </div>,
-        )}
-        {col(
-          'PRONTO',
-          1,
-          '#EEF3EA',
-          'var(--green-dark)',
-          <div
-            className="card"
-            style={{ padding: '11px 12px', marginBottom: 8, borderColor: '#D8E0D2' }}
-          >
-            <div style={{ fontWeight: 800, fontSize: 13 }}>Modelo C ×16</div>
-            <div style={{ fontSize: 11, color: 'var(--green-dark)', fontWeight: 700, marginTop: 2 }}>
-              ✓ Fernanda
-            </div>
-          </div>,
+          )),
+          prontosPorModelo.length,
         )}
       </div>
     </>
   )
 }
 
-function Mapa({ selSquare, onPick }: { selSquare: number; onPick: (i: number) => void }) {
-  const mapa = buildMapa()
-  const sel = mapa[selSquare] || mapa[0]
-  const selModel = MODELS[sel.m]
-  const selCol = 'L' + (Math.floor(selSquare / 10) + 1) + ' C' + ((selSquare % 10) + 1)
+function Mapa({
+  squares,
+  modelos,
+}: {
+  squares: Square[]
+  modelos: MantaModelo[]
+}) {
+  const [selPos, setSelPos] = useState(26)
+  const porId = Object.fromEntries(modelos.map((m) => [m.id, m]))
+  const sel = squares.find((s) => s.posicao === selPos) ?? squares[0]
+  const selModelo = sel ? porId[sel.modelo_id] : undefined
+  const cols = 10
+  const selCol = sel ? `L${Math.floor(sel.posicao / cols) + 1} C${(sel.posicao % cols) + 1}` : ''
+
   return (
     <>
       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
@@ -144,42 +210,45 @@ function Mapa({ selSquare, onPick }: { selSquare: number; onPick: (i: number) =>
           marginBottom: 26,
         }}
       >
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10,30px)', gap: 3 }}>
-          {mapa.map((sq) => (
-            <div
-              key={sq.i}
-              onClick={() => onPick(sq.i)}
-              title={`square ${sq.i}`}
-              style={{
-                width: 30,
-                height: 30,
-                background: sq.border,
-                opacity: sq.done ? 1 : 0.38,
-                boxShadow: sq.i === selSquare ? '0 0 0 2px var(--ink)' : 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                borderRadius: 2,
-              }}
-            >
-              <div style={{ width: 16, height: 16, background: sq.inner }} />
-            </div>
-          ))}
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols},30px)`, gap: 3 }}>
+          {squares.map((sq) => {
+            const m = porId[sq.modelo_id]
+            const done = sq.etapa === 'pronto'
+            return (
+              <div
+                key={sq.id}
+                onClick={() => setSelPos(sq.posicao)}
+                title={`square ${sq.posicao}`}
+                style={{
+                  width: 30,
+                  height: 30,
+                  background: m?.cor_borda ?? '#ccc',
+                  opacity: done ? 1 : 0.38,
+                  boxShadow: sq.posicao === selPos ? '0 0 0 2px var(--ink)' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  borderRadius: 2,
+                }}
+              >
+                <div style={{ width: 16, height: 16, background: m?.cor_miolo ?? '#eee' }} />
+              </div>
+            )
+          })}
         </div>
         <div style={{ minWidth: 200 }}>
           <div className="h" style={{ fontSize: 15, marginBottom: 10 }}>
             Padrões
           </div>
           <div style={{ borderTop: '1px solid var(--border)', marginBottom: 16 }}>
-            {(['A', 'B', 'C'] as ModelKey[]).map((k) => {
-              const md = MODELS[k]
-              const total = mapa.filter((s) => s.m === k).length
-              const done = mapa.filter((s) => s.m === k && s.done).length
-              const full = done === total
+            {modelos.map((m) => {
+              const doModelo = squares.filter((s) => s.modelo_id === m.id)
+              const done = doModelo.filter((s) => s.etapa === 'pronto').length
+              const full = done === doModelo.length && doModelo.length > 0
               return (
                 <div
-                  key={k}
+                  key={m.id}
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -188,13 +257,11 @@ function Mapa({ selSquare, onPick }: { selSquare: number; onPick: (i: number) =>
                     fontSize: 12.5,
                   }}
                 >
-                  <span
-                    style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}
-                  >
+                  <span style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span
-                      style={{ width: 10, height: 10, borderRadius: 2, background: md.border }}
+                      style={{ width: 10, height: 10, borderRadius: 2, background: m.cor_borda }}
                     />
-                    {md.nome.split('—')[0].trim()}
+                    {m.nome.split('—')[0].trim()}
                   </span>
                   <span
                     style={{
@@ -202,59 +269,77 @@ function Mapa({ selSquare, onPick }: { selSquare: number; onPick: (i: number) =>
                       color: full ? 'var(--green-dark)' : 'var(--accent)',
                     }}
                   >
-                    {done}/{total}
+                    {done}/{doModelo.length}
                     {full ? ' ✓' : ''}
                   </span>
                 </div>
               )
             })}
           </div>
-          <div
-            style={{
-              border: '1px solid var(--border)',
-              borderRadius: 12,
-              background: 'var(--card)',
-              padding: '12px 14px',
-            }}
-          >
-            <Lbl style={{ marginBottom: 8 }}>SELECIONADO · {selCol}</Lbl>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  background: sel.border,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flex: 'none',
-                }}
-              >
-                <div style={{ width: 22, height: 22, background: sel.inner }} />
-              </div>
-              <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
-                <b>{selModel.nome}</b>
-                <br />
-                <span style={{ color: 'var(--muted)' }}>miolo + borda</span>
+          {sel && selModelo && (
+            <div
+              style={{
+                border: '1px solid var(--border)',
+                borderRadius: 12,
+                background: 'var(--card)',
+                padding: '12px 14px',
+              }}
+            >
+              <Lbl style={{ marginBottom: 8 }}>SELECIONADO · {selCol}</Lbl>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    background: selModelo.cor_borda,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flex: 'none',
+                  }}
+                >
+                  <div style={{ width: 22, height: 22, background: selModelo.cor_miolo }} />
+                </div>
+                <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                  <b>{selModelo.nome}</b>
+                  <br />
+                  <span style={{ color: 'var(--muted)' }}>miolo + borda</span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </>
   )
 }
 
-export function MantaCrochePage() {
-  const { isAdmin, open } = useStore()
+export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
+  const { isAdmin, openProducao } = useStore()
   const navigate = useNavigate()
   const [view, setView] = useState<'fluxo' | 'mapa'>('fluxo')
-  const [selSquare, setSelSquare] = useState(26)
+
+  const { data: modelos } = useQuery({
+    queryKey: ['modelos', projeto.id],
+    queryFn: () => fetchModelos(projeto.id),
+  })
+  const { data: squares } = useQuery({
+    queryKey: ['squares', projeto.id],
+    queryFn: () => fetchSquares(projeto.id),
+  })
+  const { data: lotes } = useQuery({
+    queryKey: ['lotes', projeto.id],
+    queryFn: () => fetchLotes(projeto.id),
+  })
+
+  const prog = progressoSquares(squares ?? [])
+  const pct = prog.total === 0 ? 0 : Math.round((prog.done / prog.total) * 100)
+  const letras = (modelos ?? []).map((m) => m.letra).join('/')
 
   return (
     <div style={{ padding: '26px 40px 34px' }}>
       <div className="crumb" onClick={() => navigate('/projetos')} style={{ marginBottom: 8 }}>
-        ‹ Projetos / <span style={{ color: 'var(--ink)' }}>Manta Primavera</span>
+        ‹ Projetos / <span style={{ color: 'var(--ink)' }}>{projeto.nome}</span>
       </div>
       <div
         style={{
@@ -266,7 +351,7 @@ export function MantaCrochePage() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="h" style={{ fontWeight: 500, fontSize: 26 }}>
-            Manta Primavera
+            {projeto.nome}
           </div>
           <span
             className="tag"
@@ -276,19 +361,20 @@ export function MantaCrochePage() {
           </span>
         </div>
         {isAdmin && (
-          <button className="pill" onClick={() => open('producao')}>
+          <button className="pill" onClick={() => openProducao(projeto.id)}>
             + Registrar produção
           </button>
         )}
       </div>
       <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 18 }}>
-        Destino: Hospital Infantil · 80 squares · padrões A/B/C · 5 integrantes
+        {projeto.destino ? `Destino: ${projeto.destino} · ` : ''}
+        {prog.total} squares{letras ? ` · padrões ${letras}` : ''}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26 }}>
-        <Progress pct="79%" style={{ flex: 1, height: 8 }} />
+        <Progress pct={`${pct}%`} style={{ flex: 1, height: 8 }} />
         <div className="h" style={{ fontSize: 19, color: 'var(--accent)', flex: 'none' }}>
-          63
-          <span style={{ color: 'var(--faint)', fontSize: 14 }}>/80 squares</span>
+          {prog.done}
+          <span style={{ color: 'var(--faint)', fontSize: 14 }}>/{prog.total} squares</span>
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
@@ -299,70 +385,21 @@ export function MantaCrochePage() {
           Mapa de montagem
         </div>
       </div>
-      {view === 'fluxo' ? <Fluxo /> : <Mapa selSquare={selSquare} onPick={setSelSquare} />}
+      {view === 'fluxo' ? (
+        <Fluxo
+          projeto={projeto}
+          lotes={lotes ?? []}
+          modelos={modelos ?? []}
+          squares={squares ?? []}
+        />
+      ) : (
+        <Mapa squares={squares ?? []} modelos={modelos ?? []} />
+      )}
       <div
         style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}
       >
-        <div>
-          <div className="h" style={{ fontSize: 16, marginBottom: 12 }}>
-            Comentários
-          </div>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-            <Avatar color="var(--green)" size={26} fontSize={10.5}>
-              B
-            </Avatar>
-            <div
-              className="card"
-              style={{
-                borderRadius: '0 12px 12px 12px',
-                padding: '10px 13px',
-                fontSize: 12.5,
-                lineHeight: 1.5,
-              }}
-            >
-              <b>Beatriz</b> <span style={{ color: 'var(--faint)', fontSize: 11 }}>· hoje</span>
-              <br />
-              Peguei as bordas do Modelo A 👍
-            </div>
-          </div>
-          <div
-            className="field"
-            style={{ borderRadius: 99, color: 'var(--faint)', borderStyle: 'dashed' }}
-          >
-            Escrever um comentário…
-          </div>
-        </div>
-        <div>
-          <div className="h" style={{ fontSize: 16, marginBottom: 12 }}>
-            Histórico de alterações
-          </div>
-          <div
-            style={{
-              borderLeft: '1px solid var(--border-strong)',
-              paddingLeft: 16,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 14,
-            }}
-          >
-            <div style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--ink-soft)' }}>
-              <b style={{ color: 'var(--ink)' }}>Ana</b> concluiu miolo Modelo A ×8
-              <div style={{ color: 'var(--faint)', fontSize: 11 }}>
-                → aguardando borda · hoje 14:32
-              </div>
-            </div>
-            <div style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--ink-soft)' }}>
-              <b style={{ color: 'var(--ink)' }}>Beatriz</b> pegou borda Modelo A ×4
-              <div style={{ color: 'var(--faint)', fontSize: 11 }}>
-                aguardando → borda · hoje 15:01
-              </div>
-            </div>
-            <div style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--ink-soft)' }}>
-              <b style={{ color: 'var(--ink)' }}>Fernanda</b> concluiu Modelo C ×16
-              <div style={{ color: 'var(--faint)', fontSize: 11 }}>→ pronto · ontem</div>
-            </div>
-          </div>
-        </div>
+        <Comentarios projetoId={projeto.id} />
+        <Historico projetoId={projeto.id} titulo="Histórico de alterações" />
       </div>
     </div>
   )

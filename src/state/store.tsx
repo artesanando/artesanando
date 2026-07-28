@@ -1,11 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
-import {
-  FAIXA_SEQ_INICIAL,
-  GRANNY_RINGS_INICIAL,
-  MT_ROWS_INICIAL,
-  PALETTE,
-  type ModelKey,
-} from '../mocks/data'
+import { FAIXA_SEQ_INICIAL, GRANNY_RINGS_INICIAL, PALETTE, type ModelKey } from '../mocks/data'
 import { useAuth } from './auth'
 
 /* Estado global de UI portado do protótipo (objeto S de js/app.js).
@@ -24,7 +18,6 @@ export type ModalKind =
   | 'granny'
   | 'faixa'
   | 'layout'
-  | 'detalhe'
 
 export interface Ring {
   c: string
@@ -36,10 +29,10 @@ interface StoreState {
   modal: ModalKind | null
   creatorReturn: ModalKind | null
   devolucaoId: string | null
+  projetoId: string | null
   finKind: 'entrada' | 'saida'
   projCat: 'manta' | 'amig'
   projTec: 'croche' | 'trico'
-  detKey: string | null
   grannyRings: Ring[]
   faixaSeq: string[]
   faixaCount: number
@@ -47,17 +40,16 @@ interface StoreState {
   layoutRows: number
   layoutBrush: ModelKey
   layoutMap: Record<string, ModelKey>
-  mantaTRows: string[][]
 }
 
 const INITIAL: StoreState = {
   modal: null,
   creatorReturn: null,
   devolucaoId: null,
+  projetoId: null,
   finKind: 'entrada',
   projCat: 'manta',
   projTec: 'croche',
-  detKey: null,
   grannyRings: GRANNY_RINGS_INICIAL,
   faixaSeq: FAIXA_SEQ_INICIAL,
   faixaCount: 8,
@@ -65,7 +57,6 @@ const INITIAL: StoreState = {
   layoutRows: 6,
   layoutBrush: 'A',
   layoutMap: {},
-  mantaTRows: MT_ROWS_INICIAL,
 }
 
 export interface Store extends StoreState {
@@ -73,9 +64,9 @@ export interface Store extends StoreState {
   open: (m: ModalKind) => void
   close: () => void
   openDevolucao: (emprestimoId: string | null) => void
+  openProducao: (projetoId: string) => void
   setFinKind: (k: 'entrada' | 'saida') => void
   openFin: (k: 'entrada' | 'saida') => void
-  openDetalhe: (name: string) => void
   setProjCat: (c: 'manta' | 'amig') => void
   setProjTec: (t: 'croche' | 'trico') => void
   openGranny: (ret: ModalKind | null) => void
@@ -98,8 +89,6 @@ export interface Store extends StoreState {
   decCols: () => void
   incRows: () => void
   decRows: () => void
-  moveCell: (band: number, from: number, to: number) => void
-  shuffleBand: (band: number) => void
 }
 
 const Ctx = createContext<Store | null>(null)
@@ -113,11 +102,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     ...s,
     isAdmin,
     open: (modal) => set({ modal }),
-    close: () => set({ modal: null, devolucaoId: null }),
+    close: () => set({ modal: null, devolucaoId: null, projetoId: null }),
     openDevolucao: (devolucaoId) => set({ modal: 'devolucao', devolucaoId }),
+    openProducao: (projetoId) => set({ modal: 'producao', projetoId }),
     setFinKind: (finKind) => set({ finKind }),
     openFin: (finKind) => set({ modal: 'financeiro', finKind }),
-    openDetalhe: (detKey) => set({ modal: 'detalhe', detKey }),
     setProjCat: (projCat) => set({ projCat }),
     setProjTec: (projTec) => set({ projTec }),
     openGranny: (creatorReturn) => set({ modal: 'granny', creatorReturn }),
@@ -161,23 +150,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     decCols: () => set({ layoutCols: Math.max(3, s.layoutCols - 1) }),
     incRows: () => set({ layoutRows: Math.min(12, s.layoutRows + 1) }),
     decRows: () => set({ layoutRows: Math.max(3, s.layoutRows - 1) }),
-    moveCell: (band, from, to) => {
-      const rows = s.mantaTRows.map((r) => r.slice())
-      const row = rows[band]
-      if (to < 0 || to >= row.length) return
-      const [x] = row.splice(from, 1)
-      row.splice(to, 0, x)
-      set({ mantaTRows: rows })
-    },
-    shuffleBand: (band) => {
-      const rows = s.mantaTRows.map((r) => r.slice())
-      const a = rows[band]
-      for (let k = a.length - 1; k > 0; k--) {
-        const j = Math.floor(Math.random() * (k + 1))
-        ;[a[k], a[j]] = [a[j], a[k]]
-      }
-      set({ mantaTRows: rows })
-    },
   }
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>
