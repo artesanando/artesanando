@@ -13,7 +13,7 @@ import {
   saldoEmprestimo,
 } from '../features/estoque/api'
 import { criarReceita, uploadPdf } from '../features/biblioteca/api'
-import { fetchLotes, registrarProducao } from '../features/projetos/api'
+import { fetchIntegrantesAtivas, fetchLotes, registrarProducao } from '../features/projetos/api'
 import { useAuth } from '../state/auth'
 
 function ErroBox({ children }: { children: ReactNode }) {
@@ -296,20 +296,13 @@ export function ModalReceita() {
   )
 }
 
-async function fetchIntegrantes(): Promise<{ id: string; nome: string }[]> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, nome')
-    .eq('ativo', true)
-    .order('nome')
-  if (error) throw error
-  return (data ?? []) as { id: string; nome: string }[]
-}
-
 export function ModalEmprestimo() {
   const { close } = useStore()
   const qc = useQueryClient()
-  const { data: integrantes } = useQuery({ queryKey: ['integrantes-min'], queryFn: fetchIntegrantes })
+  const { data: integrantes } = useQuery({
+    queryKey: ['integrantes-min'],
+    queryFn: fetchIntegrantesAtivas,
+  })
   const { data: itens } = useQuery({ queryKey: ['estoque'], queryFn: fetchEstoque })
 
   const [integranteId, setIntegranteId] = useState('')
@@ -552,7 +545,10 @@ export function ModalProducao() {
     queryFn: () => fetchLotes(projetoId!),
     enabled: !!projetoId,
   })
-  const { data: integrantes } = useQuery({ queryKey: ['integrantes-min'], queryFn: fetchIntegrantes })
+  const { data: integrantes } = useQuery({
+    queryKey: ['integrantes-min'],
+    queryFn: fetchIntegrantesAtivas,
+  })
 
   const abertos = (lotes ?? []).filter((l) => l.etapa !== 'pronto')
   const [loteId, setLoteId] = useState('')

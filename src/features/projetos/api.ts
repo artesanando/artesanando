@@ -108,6 +108,21 @@ export async function fetchProjeto(id: string): Promise<Projeto | null> {
   return data as Projeto
 }
 
+export async function fetchReceitaNome(id: string): Promise<{ id: string; nome: string } | null> {
+  const { data } = await supabase.from('receitas').select('id, nome').eq('id', id).single()
+  return (data as { id: string; nome: string } | null) ?? null
+}
+
+export async function fetchIntegrantesAtivas(): Promise<{ id: string; nome: string }[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, nome')
+    .eq('ativo', true)
+    .order('nome')
+  if (error) throw error
+  return (data ?? []) as { id: string; nome: string }[]
+}
+
 export async function fetchModelos(projetoId: string): Promise<MantaModelo[]> {
   const { data, error } = await supabase
     .from('manta_modelos')
