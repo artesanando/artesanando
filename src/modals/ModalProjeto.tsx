@@ -1,7 +1,11 @@
-import type { CSSProperties } from 'react'
+import { useState, type CSSProperties, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../state/store'
-import { FieldSelect, FieldStepper, Lbl } from '../components/ui/bits'
-import { ModalBox, ModalFooter, ModalHeader } from './shared'
+import { useAuth } from '../state/auth'
+import { Lbl, Select, Stepper } from '../components/ui/bits'
+import { ModalBox, ModalHeader } from './shared'
+import { criarProjeto, fetchReceitasAmigurumi } from '../features/projetos/api'
 
 const cardOn: CSSProperties = {
   border: '1px solid var(--chip-rose-border)',
@@ -52,138 +56,83 @@ const tec = (on: boolean, c: string): CSSProperties =>
         fontWeight: 700,
       }
 
-function ModeloRow({
-  bg1,
-  bg2,
-  nome,
-  cores,
-  qtd,
-  last,
-}: {
-  bg1: string
-  bg2: string
-  nome: string
-  cores: string[]
-  qtd: number
-  last?: boolean
-}) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '12px 14px',
-        borderBottom: last ? undefined : '1px solid var(--divider)',
-        fontSize: 13,
-      }}
-    >
-      <div
-        style={{
-          width: 34,
-          height: 34,
-          borderRadius: 8,
-          background: `repeating-linear-gradient(-45deg,${bg1} 0 5px,${bg2} 5px 10px)`,
-          flex: 'none',
-        }}
-      />
-      <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 700 }}>{nome}</div>
-        <div style={{ display: 'flex', gap: 5, marginTop: 6 }}>
-          {cores.map((c) => (
-            <span
-              key={c}
-              style={{ width: 13, height: 13, borderRadius: '50%', background: c }}
-            />
-          ))}
-        </div>
-      </div>
-      <span
-        style={{
-          border: '1px solid var(--field-border)',
-          borderRadius: 8,
-          padding: '4px 12px',
-          fontWeight: 800,
-          color: 'var(--accent)',
-        }}
-      >
-        {qtd}
-      </span>
-    </div>
-  )
-}
-
-function RespRow({ ini, cor, nome, qtd, last }: { ini: string; cor: string; nome: string; qtd: number; last?: boolean }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '11px 14px',
-        borderBottom: last ? undefined : '1px solid var(--divider)',
-        fontSize: 13,
-      }}
-    >
-      <div
-        style={{
-          width: 28,
-          height: 28,
-          borderRadius: '50%',
-          background: cor,
-          color: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: 800,
-          fontSize: 10,
-          flex: 'none',
-        }}
-      >
-        {ini}
-      </div>
-      <span style={{ flex: 1, fontWeight: 700 }}>{nome}</span>
-      <span
-        style={{
-          border: '1px solid var(--field-border)',
-          borderRadius: 8,
-          padding: '4px 12px',
-          fontWeight: 800,
-          color: 'var(--gold-dark)',
-        }}
-      >
-        {qtd}
-      </span>
-    </div>
-  )
-}
-
 export function ModalProjeto() {
-  const { projCat, projTec, setProjCat, setProjTec, openGranny, openFaixa, openLayout } = useStore()
+  const { projCat, projTec, setProjCat, setProjTec, openFaixa, faixaSeq, faixaCount, close } =
+    useStore()
+  const { profile } = useAuth()
+  const navigate = useNavigate()
+  const qc = useQueryClient()
+
+  const [nome, setNome] = useState('')
+  const [destino, setDestino] = useState('')
+  const [emoji, setEmoji] = useState('🧶')
+  const [receitaId, setReceitaId] = useState('')
+  const [meta, setMeta] = useState(12)
+  const [erro, setErro] = useState<string | null>(null)
+
   const manta = projCat === 'manta'
+  const { data: receitas } = useQuery({
+    queryKey: ['receitas-amigurumi'],
+    queryFn: fetchReceitasAmigurumi,
+    enabled: !manta,
+  })
+
+  const criar = useMutation({
+    mutationFn: () =>
+      criarProjeto({
+        nome: nome.trim(),
+        tipo: manta ? (projTec === 'croche' ? 'manta_croche' : 'manta_trico') : 'amigurumi',
+        destino: destino.trim() || null,
+        emoji: manta ? (projTec === 'croche' ? '🌸' : '☁️') : emoji,
+        receita_id: !manta && receitaId ? receitaId : null,
+        meta: !manta ? meta : null,
+        created_by: profile!.id,
+        faixaSeq,
+        faixaCount,
+      }),
+    onSuccess: (id) => {
+      qc.invalidateQueries({ queryKey: ['projetos'] })
+      qc.invalidateQueries({ queryKey: ['progresso-geral'] })
+      close()
+      navigate(`/projetos/${id}`)
+    },
+    onError: () => setErro('Não foi possível criar o projeto.'),
+  })
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    setErro(null)
+    if (!nome.trim()) {
+      setErro('Dê um nome ao projeto.')
+      return
+    }
+    criar.mutate()
+  }
 
   return (
     <ModalBox maxWidth={600}>
       <ModalHeader title="Novo projeto" sub="Defina o tipo para configurar a produção" />
-      <div className="grid2" style={{ gap: 10, marginBottom: 20 }}>
-        <div onClick={() => setProjCat('manta')} style={manta ? cardOn : cardOff}>
-          <div style={{ fontWeight: 800, fontSize: 14 }}>Manta</div>
-          <div style={{ fontSize: 11.5, marginTop: 2 }}>dividida entre integrantes</div>
+      <form onSubmit={submit}>
+        <div className="grid2" style={{ gap: 10, marginBottom: 20 }}>
+          <div onClick={() => setProjCat('manta')} style={manta ? cardOn : cardOff}>
+            <div style={{ fontWeight: 800, fontSize: 14 }}>Manta</div>
+            <div style={{ fontSize: 11.5, marginTop: 2 }}>dividida entre integrantes</div>
+          </div>
+          <div onClick={() => setProjCat('amig')} style={!manta ? cardAmigOn : cardOff}>
+            <div style={{ fontWeight: 800, fontSize: 14 }}>Amigurumi</div>
+            <div style={{ fontSize: 11.5, marginTop: 2 }}>unidades por integrante</div>
+          </div>
         </div>
-        <div onClick={() => setProjCat('amig')} style={!manta ? cardAmigOn : cardOff}>
-          <div style={{ fontWeight: 800, fontSize: 14 }}>Amigurumi</div>
-          <div style={{ fontSize: 11.5, marginTop: 2 }}>unidades por integrante</div>
-        </div>
-      </div>
-      <Lbl style={{ marginBottom: 7 }}>{manta ? 'NOME DO PROJETO' : 'NOME DO TIPO'}</Lbl>
-      <input
-        className="field"
-        style={{ marginBottom: 18 }}
-        defaultValue={manta ? 'Manta Primavera' : 'Amigurumi Capivara'}
-      />
-      {manta ? (
-        <>
-          <div className="grid2" style={{ marginBottom: 18 }}>
+        <Lbl style={{ marginBottom: 7 }}>{manta ? 'NOME DO PROJETO' : 'NOME DO TIPO'}</Lbl>
+        <input
+          className="field"
+          style={{ marginBottom: 18 }}
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          placeholder={manta ? 'Manta Primavera' : 'Capivara'}
+        />
+        <div className="grid2" style={{ marginBottom: 18 }}>
+          {manta ? (
             <div>
               <Lbl style={{ marginBottom: 7 }}>TÉCNICA</Lbl>
               <div style={{ display: 'flex', gap: 6 }}>
@@ -201,75 +150,48 @@ export function ModalProjeto() {
                 </span>
               </div>
             </div>
+          ) : (
             <div>
-              <Lbl style={{ marginBottom: 7 }}>DESTINO</Lbl>
-              <FieldSelect>Hospital Infantil</FieldSelect>
+              <Lbl style={{ marginBottom: 7 }}>RECEITA</Lbl>
+              <Select
+                ariaLabel="Receita"
+                value={receitaId}
+                onChange={setReceitaId}
+                options={[
+                  ['', 'Escolher…'],
+                  ...(receitas ?? []).map((r) => [r.id, r.nome] as [string, string]),
+                ]}
+              />
             </div>
+          )}
+          <div>
+            <Lbl style={{ marginBottom: 7 }}>DESTINO</Lbl>
+            <input
+              className="field"
+              value={destino}
+              onChange={(e) => setDestino(e.target.value)}
+              placeholder="Hospital Infantil"
+            />
           </div>
-          {projTec === 'croche' ? (
-            <>
-              <Lbl style={{ marginBottom: 9 }}>PADRÕES DE GRANNY SQUARE</Lbl>
-              <div className="card" style={{ overflow: 'hidden', marginBottom: 10 }}>
-                <ModeloRow
-                  bg1="#F6E4E6"
-                  bg2="#F1D8DB"
-                  nome="Modelo A — Flor de Maio"
-                  cores={['#DFA2AC', '#A9BFA3', '#F0E3C8']}
-                  qtd={40}
-                />
-                <ModeloRow
-                  bg1="#EFE7F2"
-                  bg2="#E3D6EC"
-                  nome="Modelo B — Sunburst"
-                  cores={['#B99BC4', '#E3C07A', '#DFA2AC']}
-                  qtd={24}
-                />
-                <ModeloRow
-                  bg1="#EAF0E6"
-                  bg2="#DEE8D8"
-                  nome="Modelo C — Clássico"
-                  cores={['#A9BFA3', '#7D9B76', '#F0E3C8']}
-                  qtd={16}
-                  last
-                />
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 20,
-                }}
-              >
-                <div style={{ display: 'flex', gap: 16 }}>
-                  <span
-                    onClick={() => openGranny('projeto')}
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 800,
-                      color: 'var(--accent)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    + Criar padrão de granny
-                  </span>
-                  <span
-                    onClick={() => openLayout('projeto')}
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 800,
-                      color: 'var(--green-dark)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    ▦ Organizar quadrados na manta
-                  </span>
-                </div>
-                <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>
-                  Total: <b style={{ color: 'var(--ink)' }}>80 squares</b>
-                </span>
-              </div>
-            </>
+        </div>
+        {manta ? (
+          projTec === 'croche' ? (
+            <div
+              style={{
+                background: 'var(--chip-rose)',
+                border: '1px solid var(--chip-rose-border)',
+                borderRadius: 12,
+                padding: '14px 16px',
+                marginBottom: 20,
+                fontSize: 12,
+                color: 'var(--primary-dark)',
+                lineHeight: 1.6,
+              }}
+            >
+              A manta nasce com os padrões <b>A/B/C</b> (40 + 24 + 16 ={' '}
+              <b style={{ color: 'var(--ink)' }}>80 squares</b>), todos em "a fazer" — a produção é
+              registrada aos poucos pelos lotes.
+            </div>
           ) : (
             <div
               style={{
@@ -280,98 +202,82 @@ export function ModalProjeto() {
                 marginBottom: 20,
               }}
             >
-              <div style={{ fontSize: 12, color: '#5E6E55', marginBottom: 12 }}>
-                As faixas de tricô usam o mesmo padrão — defina a <b>quantidade</b> e as{' '}
-                <b>cores</b>.
+              <div style={{ fontSize: 12, color: '#5E6E55', marginBottom: 10 }}>
+                A manta nasce com <b>{faixaCount} faixas</b> usando a sequência de cores do padrão
+                atual.
               </div>
-              <div className="grid2">
-                <div>
-                  <Lbl style={{ marginBottom: 7 }}>FAIXAS</Lbl>
-                  <FieldStepper value="8" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    borderRadius: 6,
+                    overflow: 'hidden',
+                    border: '1px solid var(--field-border)',
+                    flex: 1,
+                    height: 22,
+                  }}
+                >
+                  {faixaSeq.map((c, i) => (
+                    <div key={i} style={{ flex: 1, background: c }} />
+                  ))}
                 </div>
-                <div>
-                  <Lbl style={{ marginBottom: 7 }}>CORES</Lbl>
-                  <div
-                    className="field"
-                    style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-                  >
-                    {['#A9BFA3', '#DFA2AC', '#F0E3C8'].map((c) => (
-                      <span
-                        key={c}
-                        style={{ width: 16, height: 16, borderRadius: '50%', background: c }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div
-                onClick={() => openFaixa('projeto')}
-                style={{
-                  marginTop: 12,
-                  fontSize: 12,
-                  fontWeight: 800,
-                  color: 'var(--green-dark)',
-                  cursor: 'pointer',
-                }}
-              >
-                + Editar padrão de cores das faixas
+                <span
+                  onClick={() => openFaixa('projeto')}
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: 'var(--green-dark)',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  + Editar padrão
+                </span>
               </div>
             </div>
-          )}
-        </>
-      ) : (
-        <>
-          <div className="grid2" style={{ marginBottom: 18 }}>
-            <div>
-              <Lbl style={{ marginBottom: 7 }}>RECEITA</Lbl>
-              <FieldSelect>Capivara da Lú</FieldSelect>
-            </div>
-            <div>
-              <Lbl style={{ marginBottom: 7 }}>DESTINO</Lbl>
-              <FieldSelect>Dia das Crianças</FieldSelect>
-            </div>
-          </div>
-          <div className="grid2" style={{ marginBottom: 18 }}>
+          )
+        ) : (
+          <div className="grid2" style={{ marginBottom: 20 }}>
             <div>
               <Lbl style={{ marginBottom: 7 }}>META DE UNIDADES</Lbl>
-              <FieldStepper value="12" />
+              <Stepper value={meta} onChange={setMeta} min={1} max={99} />
             </div>
             <div>
-              <Lbl style={{ marginBottom: 7 }}>FIO PRINCIPAL</Lbl>
-              <div className="field" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span
-                  style={{ width: 14, height: 14, borderRadius: '50%', background: '#8B6A4F' }}
-                />
-                Soft · marrom
-              </div>
+              <Lbl style={{ marginBottom: 7 }}>EMOJI</Lbl>
+              <input
+                className="field"
+                value={emoji}
+                onChange={(e) => setEmoji(e.target.value)}
+                maxLength={4}
+              />
             </div>
           </div>
-          <Lbl style={{ marginBottom: 9 }}>RESPONSÁVEIS</Lbl>
-          <div className="card" style={{ overflow: 'hidden', marginBottom: 10 }}>
-            <RespRow ini="AL" cor="#C4798A" nome="Ana Luiza" qtd={3} />
-            <RespRow ini="B" cor="#7D9B76" nome="Beatriz" qtd={3} />
-            <RespRow ini="C" cor="#C9B98F" nome="Camila" qtd={4} last />
-          </div>
+        )}
+        {erro && (
           <div
+            role="alert"
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 20,
+              background: 'var(--chip-soft)',
+              border: '1px solid var(--chip-rose-border)',
+              borderRadius: 10,
+              padding: '9px 13px',
+              fontSize: 12.5,
+              color: 'var(--primary-dark)',
+              marginBottom: 14,
             }}
           >
-            <span
-              style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)', cursor: 'pointer' }}
-            >
-              + Adicionar integrante
-            </span>
-            <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>
-              Distribuídas: <b style={{ color: 'var(--ink)' }}>10 de 12</b>
-            </span>
+            {erro}
           </div>
-        </>
-      )}
-      <ModalFooter okLabel="Criar projeto" />
+        )}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button type="button" className="pill ghost" onClick={close}>
+            Cancelar
+          </button>
+          <button type="submit" className="pill" disabled={criar.isPending}>
+            {criar.isPending ? 'Criando…' : 'Criar projeto'}
+          </button>
+        </div>
+      </form>
     </ModalBox>
   )
 }

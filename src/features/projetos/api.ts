@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import type { Receita } from '../../types/database'
 
 /* ---------- Tipos ---------- */
 
@@ -106,6 +107,16 @@ export async function fetchProjeto(id: string): Promise<Projeto | null> {
   const { data, error } = await supabase.from('projetos').select('*').eq('id', id).single()
   if (error) return null
   return data as Projeto
+}
+
+export async function fetchReceitasAmigurumi(): Promise<Pick<Receita, 'id' | 'nome'>[]> {
+  const { data, error } = await supabase
+    .from('receitas')
+    .select('id, nome')
+    .eq('categoria', 'amigurumi')
+    .order('nome')
+  if (error) throw error
+  return (data ?? []) as Pick<Receita, 'id' | 'nome'>[]
 }
 
 export async function fetchReceitaNome(id: string): Promise<{ id: string; nome: string } | null> {
