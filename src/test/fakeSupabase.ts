@@ -91,6 +91,143 @@ const RECEITAS_FAKE = [
   },
 ]
 
+const PROJETOS_FAKE = [
+  {
+    id: 'p1',
+    semestre_id: null,
+    nome: 'Manta Primavera',
+    tipo: 'manta_croche',
+    destino: 'Hospital Infantil',
+    emoji: '🌸',
+    receita_id: null,
+    meta: null,
+    status: 'ativo',
+    created_by: 'u1',
+  },
+  {
+    id: 'p2',
+    semestre_id: null,
+    nome: 'Manta Nuvem',
+    tipo: 'manta_trico',
+    destino: 'Hospital Infantil',
+    emoji: '☁️',
+    receita_id: null,
+    meta: null,
+    status: 'ativo',
+    created_by: 'u1',
+  },
+  {
+    id: 'p3',
+    semestre_id: null,
+    nome: 'Polvo Rosa',
+    tipo: 'amigurumi',
+    destino: 'Maternidade',
+    emoji: '🐙',
+    receita_id: 'r1',
+    meta: 20,
+    status: 'ativo',
+    created_by: 'u1',
+  },
+]
+
+const MODELOS_FAKE = [
+  {
+    id: 'm1',
+    projeto_id: 'p1',
+    letra: 'A',
+    nome: 'Modelo A — Flor de Maio',
+    cor_borda: '#C4798A',
+    cor_miolo: '#DFA2AC',
+    responsavel_id: null,
+    total: 4,
+    responsavel: null,
+  },
+]
+
+const SQUARES_FAKE = [
+  { id: 's1', projeto_id: 'p1', modelo_id: 'm1', posicao: 0, etapa: 'pronto', lote_id: null },
+  { id: 's2', projeto_id: 'p1', modelo_id: 'm1', posicao: 1, etapa: 'pronto', lote_id: null },
+  { id: 's3', projeto_id: 'p1', modelo_id: 'm1', posicao: 2, etapa: 'aguardando_borda', lote_id: 'l1' },
+  { id: 's4', projeto_id: 'p1', modelo_id: 'm1', posicao: 3, etapa: 'afazer', lote_id: null },
+]
+
+const LOTES_FAKE = [
+  {
+    id: 'l1',
+    projeto_id: 'p1',
+    modelo_id: 'm1',
+    quantidade: 1,
+    etapa: 'aguardando_borda',
+    responsavel_id: null,
+    obs: 'miolo: Ana',
+    responsavel: null,
+    modelo: { letra: 'A', nome: 'Modelo A — Flor de Maio' },
+  },
+]
+
+const FAIXAS_FAKE = [
+  {
+    id: 'f1',
+    projeto_id: 'p2',
+    ordem: 1,
+    responsavel_id: 'u1',
+    status: 'feita',
+    cores: ['#ECD97C', '#A9BFA3', '#DFA2AC'],
+    responsavel: { nome: 'Alan Turing', avatar_color: '#C9B98F' },
+  },
+  {
+    id: 'f2',
+    projeto_id: 'p2',
+    ordem: 2,
+    responsavel_id: 'u1',
+    status: 'afazer',
+    cores: ['#A9BFA3', '#ECD97C', '#DFA2AC'],
+    responsavel: { nome: 'Ada Lovelace', avatar_color: '#A9BFA3' },
+  },
+]
+
+const UNIDADES_FAKE = [
+  {
+    id: 'un1',
+    projeto_id: 'p3',
+    numero: 1,
+    responsavel_id: 'u4',
+    status: 'concluida',
+    responsavel: { nome: 'Grace Hopper' },
+  },
+  {
+    id: 'un2',
+    projeto_id: 'p3',
+    numero: 2,
+    responsavel_id: 'u4',
+    status: 'em_producao',
+    responsavel: { nome: 'Grace Hopper' },
+  },
+]
+
+const COMENTARIOS_FAKE = [
+  {
+    id: 'c1',
+    projeto_id: 'p1',
+    autor_id: 'u5',
+    texto: 'Peguei as bordas do Modelo A 👍',
+    created_at: '2026-07-14T12:00:00Z',
+    autor: { nome: 'Edsger Dijkstra', avatar_color: '#7D9B76' },
+  },
+]
+
+const ATIVIDADES_FAKE = [
+  {
+    id: 'a1',
+    autor_id: 'u6',
+    tipo: 'producao',
+    projeto_id: 'p1',
+    payload: { texto: 'concluiu miolo Modelo A ×8', detalhe: '→ aguardando borda' },
+    created_at: '2026-07-14T12:00:00Z',
+    autor: { nome: 'Barbara Liskov' },
+  },
+]
+
 const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
   profiles: { single: ADMIN_PROFILE, list: [ADMIN_PROFILE] },
   estoque_itens: { single: ESTOQUE_FAKE[0], list: ESTOQUE_FAKE },
@@ -99,6 +236,14 @@ const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
   receitas: { single: RECEITAS_FAKE[0], list: RECEITAS_FAKE },
   permissoes: { single: null, list: [] },
   semestres: { single: null, list: [] },
+  projetos: { single: PROJETOS_FAKE[0], list: PROJETOS_FAKE },
+  manta_modelos: { single: MODELOS_FAKE[0], list: MODELOS_FAKE },
+  squares: { single: SQUARES_FAKE[0], list: SQUARES_FAKE },
+  lotes: { single: LOTES_FAKE[0], list: LOTES_FAKE },
+  faixas: { single: FAIXAS_FAKE[0], list: FAIXAS_FAKE },
+  unidades: { single: UNIDADES_FAKE[0], list: UNIDADES_FAKE },
+  comentarios: { single: COMENTARIOS_FAKE[0], list: COMENTARIOS_FAKE },
+  atividades: { single: ATIVIDADES_FAKE[0], list: ATIVIDADES_FAKE },
 }
 
 export function __login() {
@@ -114,21 +259,34 @@ export const supabaseConfigured = true
 export function setKeepConnected() {}
 
 /* builder encadeável mínimo: filtros devolvem o próprio builder;
-   single() e o thenable resolvem com os dados fake da tabela */
+   single() resolve a linha filtrada por eq/id e o thenable resolve a
+   lista filtrada pelos eq() acumulados */
 function builder(table: string) {
   const data = TABLES[table] ?? { single: null, list: [] }
+  const filtros: [string, unknown][] = []
+  const filtrada = () =>
+    data.list.filter((row) =>
+      filtros.every(([k, v]) => (row as Record<string, unknown>)[k] === v),
+    )
   const b = {
     select: () => b,
-    eq: () => b,
+    eq: (col: string, val: unknown) => {
+      filtros.push([col, val])
+      return b
+    },
     is: () => b,
+    in: () => b,
     order: () => b,
     insert: () => b,
     update: () => b,
     delete: () => b,
     maybeSingle: async () => ({ data: null, error: null }),
-    single: async () => ({ data: data.single, error: null }),
+    single: async () => {
+      const hit = filtros.length > 0 ? (filtrada()[0] ?? null) : data.single
+      return hit ? { data: hit, error: null } : { data: null, error: { message: 'não achou' } }
+    },
     then: (onOk: (v: { data: unknown[]; error: null }) => unknown) =>
-      Promise.resolve({ data: data.list, error: null }).then(onOk),
+      Promise.resolve({ data: filtrada(), error: null }).then(onOk),
   }
   return b
 }

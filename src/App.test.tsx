@@ -57,16 +57,6 @@ describe('auth', () => {
 })
 
 describe('navegação', () => {
-  it('deep-link /projetos/primavera abre a manta de crochê', async () => {
-    __login()
-    renderAt('/projetos/primavera')
-    expect(
-      await screen.findByText(
-        'Destino: Hospital Infantil · 80 squares · padrões A/B/C · 5 integrantes',
-      ),
-    ).toBeInTheDocument()
-  })
-
   it('abre o modal de novo projeto pelo dashboard', async () => {
     __login()
     renderAt('/')
@@ -78,6 +68,43 @@ describe('navegação', () => {
     __login()
     renderAt('/nao-existe')
     expect(await screen.findByText('Página não encontrada')).toBeInTheDocument()
+  })
+})
+
+describe('projetos (M3)', () => {
+  it('lista os projetos do banco', async () => {
+    __login()
+    renderAt('/projetos')
+    expect(await screen.findByText('Manta Primavera')).toBeInTheDocument()
+    expect(screen.getByText('Manta Nuvem')).toBeInTheDocument()
+    expect(screen.getByText('Polvo Rosa')).toBeInTheDocument()
+  })
+
+  it('cada tipo de projeto abre a própria tela', async () => {
+    __login()
+    renderAt('/projetos/p1')
+    expect(await screen.findByText('CROCHÊ')).toBeInTheDocument()
+    expect(screen.getByText('Fluxo por etapa')).toBeInTheDocument()
+  })
+
+  it('polvo rosa abre o polvo, não a capivara', async () => {
+    __login()
+    renderAt('/projetos/p3')
+    expect((await screen.findAllByText('Amigurumi Polvo Rosa')).length).toBeGreaterThan(0)
+    expect(await screen.findByText(/#1–2 · Grace Hopper/)).toBeInTheDocument()
+  })
+
+  it('faixa feita fica somente-leitura', async () => {
+    __login()
+    renderAt('/projetos/p2')
+    expect(await screen.findByText('FEITA · SOMENTE LEITURA')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Embaralhar ordem' })).toBeDisabled()
+  })
+
+  it('lote sem responsável mostra o pegar lote', async () => {
+    __login()
+    renderAt('/projetos/p1')
+    expect(await screen.findByText('Pegar lote')).toBeInTheDocument()
   })
 })
 
