@@ -28,15 +28,6 @@ export const MODELS: Record<ModelKey, ModelDef> = {
   C: { nome: 'Modelo C — Clássico', border: '#7D9B76', inner: '#A9BFA3', resp: 'Fernanda' },
 }
 
-export const CHAMADA: [string, string, 0 | 1][] = [
-  ['Ana Luiza Prado', '#C4798A', 1],
-  ['Beatriz Gomes', '#7D9B76', 1],
-  ['Camila Rocha', '#C9B98F', 0],
-  ['Duda Ferreira', '#8FA3B8', 1],
-  ['Elisa Martins', '#B99BC4', 1],
-  ['Fernanda Dias', '#C9B98F', 1],
-]
-
 export const GRANNY_RINGS_INICIAL = [
   { c: '#DFA2AC', name: 'Rosé', n: 5 },
   { c: '#E3C07A', name: 'Amarelo', n: 3 },
