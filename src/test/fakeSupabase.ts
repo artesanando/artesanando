@@ -228,6 +228,52 @@ const ATIVIDADES_FAKE = [
   },
 ]
 
+const ENCONTROS_FAKE = [
+  {
+    id: 'en1',
+    semestre_id: null,
+    data: '2026-07-07',
+    hora: '14:00',
+    local: 'Sala 203',
+    pauta: 'Bordas do Modelo A',
+  },
+  {
+    id: 'en2',
+    semestre_id: null,
+    data: '2099-07-14',
+    hora: '14:00',
+    local: 'Sala 203',
+    pauta: 'Montagem da Manta Primavera',
+  },
+]
+
+const PRESENCAS_FAKE = [
+  { encontro_id: 'en1', integrante_id: 'u1', presente: true, marcado_por: 'u1' },
+  { encontro_id: 'en1', integrante_id: 'u7', presente: true, marcado_por: 'u7' },
+  { encontro_id: 'en1', integrante_id: 'u2', presente: true, marcado_por: 'u7' },
+]
+
+const MOVIMENTACOES_FAKE = [
+  {
+    id: 'mv1',
+    data: '2026-07-08',
+    descricao: 'Bazar beneficente',
+    categoria: 'doacao',
+    tipo: 'entrada',
+    valor_centavos: 42000,
+    criado_por: 'u7',
+  },
+  {
+    id: 'mv2',
+    data: '2026-07-05',
+    descricao: '12 novelos Círculo Balloon',
+    categoria: 'material',
+    tipo: 'saida',
+    valor_centavos: 24000,
+    criado_por: 'u1',
+  },
+]
+
 const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
   profiles: { single: ADMIN_PROFILE, list: [ADMIN_PROFILE] },
   estoque_itens: { single: ESTOQUE_FAKE[0], list: ESTOQUE_FAKE },
@@ -244,6 +290,9 @@ const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
   unidades: { single: UNIDADES_FAKE[0], list: UNIDADES_FAKE },
   comentarios: { single: COMENTARIOS_FAKE[0], list: COMENTARIOS_FAKE },
   atividades: { single: ATIVIDADES_FAKE[0], list: ATIVIDADES_FAKE },
+  encontros: { single: ENCONTROS_FAKE[0], list: ENCONTROS_FAKE },
+  presencas: { single: PRESENCAS_FAKE[0], list: PRESENCAS_FAKE },
+  movimentacoes: { single: MOVIMENTACOES_FAKE[0], list: MOVIMENTACOES_FAKE },
 }
 
 export function __login() {
@@ -279,6 +328,7 @@ function builder(table: string) {
     order: () => b,
     insert: () => b,
     update: () => b,
+    upsert: () => b,
     delete: () => b,
     maybeSingle: async () => ({ data: null, error: null }),
     single: async () => {

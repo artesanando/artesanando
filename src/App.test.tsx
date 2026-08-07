@@ -118,6 +118,35 @@ describe('estoque (M2)', () => {
   })
 })
 
+describe('financeiro (M4)', () => {
+  it('deriva o saldo e lista as movimentações', async () => {
+    __login()
+    renderAt('/financeiro')
+    expect(await screen.findByText('R$ 180,00')).toBeInTheDocument()
+    expect(screen.getByText('Bazar beneficente')).toBeInTheDocument()
+    expect(screen.getByText(/− 240,00/)).toBeInTheDocument()
+  })
+})
+
+describe('presença (M4)', () => {
+  it('mostra o próximo encontro e a chamada do último', async () => {
+    __login()
+    renderAt('/presenca')
+    expect(await screen.findByText('PRÓXIMO ENCONTRO')).toBeInTheDocument()
+    expect(await screen.findByLabelText('Marcar presença de Cândida Nunes')).toBeInTheDocument()
+  })
+})
+
+describe('integrantes (M4)', () => {
+  it('lista integrantes reais e mostra o painel derivado', async () => {
+    __login()
+    renderAt('/integrantes')
+    expect(await screen.findByText(/@candida\.prof/)).toBeInTheDocument()
+    expect(screen.getByText('ENTREGAS NO SEMESTRE')).toBeInTheDocument()
+    expect(screen.getByText('FREQUÊNCIA')).toBeInTheDocument()
+  })
+})
+
 describe('biblioteca (M2)', () => {
   it('lista receitas do banco', async () => {
     __login()
