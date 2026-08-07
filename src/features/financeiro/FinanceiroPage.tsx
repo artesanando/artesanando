@@ -1,14 +1,20 @@
+import { useQuery } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
 import { Lbl } from '../../components/ui/bits'
-
-const MOVS: { data: string; desc: string; cat: string; catTone: 'in' | 'out'; valor: string; tone: 'in' | 'out' }[] = [
-  { data: '08 jul', desc: 'Bazar beneficente', cat: 'doação', catTone: 'in', valor: '+ 420,00', tone: 'in' },
-  { data: '05 jul', desc: '12 novelos Círculo Balloon', cat: 'material', catTone: 'out', valor: '− 240,00', tone: 'out' },
-  { data: '02 jul', desc: 'Doação — Profa. Regina', cat: 'doação', catTone: 'in', valor: '+ 260,00', tone: 'in' },
-]
+import { fmtCentavos, fmtDataCurta, hojeIso } from '../../lib/format'
+import { fetchMovimentacoes, saldo, totalDoMes } from './api'
 
 export function FinanceiroPage() {
   const { isAdmin, openFin } = useStore()
+  const { data: movs, isLoading, isError } = useQuery({
+    queryKey: ['movimentacoes'],
+    queryFn: fetchMovimentacoes,
+  })
+
+  const mesRef = hojeIso().slice(0, 7)
+  const kpiSaldo = saldo(movs ?? [])
+  const entradasMes = totalDoMes(movs ?? [], 'entrada', mesRef)
+  const saidasMes = totalDoMes(movs ?? [], 'saida', mesRef)
 
   return (
     <div style={{ padding: '30px 40px' }}>
@@ -57,19 +63,19 @@ export function FinanceiroPage() {
         >
           <Lbl style={{ color: 'var(--accent)' }}>SALDO ATUAL</Lbl>
           <div className="h" style={{ fontSize: 34, color: 'var(--primary-dark)', marginTop: 4 }}>
-            R$ 1.240,50
+            {fmtCentavos(kpiSaldo)}
           </div>
         </div>
         <div className="card" style={{ borderRadius: 16, padding: '20px 22px' }}>
           <Lbl>ENTRADAS · MÊS</Lbl>
           <div className="h" style={{ fontSize: 26, color: 'var(--green-dark)', marginTop: 6 }}>
-            + R$ 680
+            + {fmtCentavos(entradasMes)}
           </div>
         </div>
         <div className="card" style={{ borderRadius: 16, padding: '20px 22px' }}>
           <Lbl>SAÍDAS · MÊS</Lbl>
           <div className="h" style={{ fontSize: 26, color: 'var(--accent)', marginTop: 6 }}>
-            − R$ 240
+            − {fmtCentavos(saidasMes)}
           </div>
         </div>
       </div>
@@ -92,42 +98,60 @@ export function FinanceiroPage() {
           <div>CATEGORIA</div>
           <div style={{ textAlign: 'right' }}>VALOR</div>
         </div>
-        {MOVS.map((m, i) => (
-          <div
-            key={i}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '.9fr 2.4fr 1.2fr 1fr',
-              padding: '13px 20px',
-              borderBottom: i < MOVS.length - 1 ? '1px solid var(--divider)' : undefined,
-              fontSize: 13,
-              alignItems: 'center',
-            }}
-          >
-            <div style={{ color: 'var(--muted)', fontWeight: 700 }}>{m.data}</div>
-            <div style={{ fontWeight: 700 }}>{m.desc}</div>
-            <div>
-              <span
-                className="tag"
-                style={{
-                  background: m.catTone === 'in' ? 'var(--chip-green)' : 'var(--chip-rose)',
-                  color: m.catTone === 'in' ? 'var(--green-dark)' : 'var(--accent)',
-                }}
-              >
-                {m.cat}
-              </span>
-            </div>
+        {isLoading && (
+          <div style={{ padding: '14px 20px', fontSize: 13, color: 'var(--muted)' }}>
+            Carregando…
+          </div>
+        )}
+        {isError && (
+          <div style={{ padding: '14px 20px', fontSize: 13, color: 'var(--accent)' }}>
+            Não foi possível carregar o caixa. Recarregue a página.
+          </div>
+        )}
+        {(movs ?? []).length === 0 && !isLoading && !isError && (
+          <div style={{ padding: '14px 20px', fontSize: 13, color: 'var(--muted)' }}>
+            Nenhuma movimentação registrada.
+          </div>
+        )}
+        {(movs ?? []).map((m, i, arr) => {
+          const entrada = m.tipo === 'entrada'
+          return (
             <div
+              key={m.id}
               style={{
-                textAlign: 'right',
-                fontWeight: 800,
-                color: m.tone === 'in' ? 'var(--green-dark)' : 'var(--accent)',
+                display: 'grid',
+                gridTemplateColumns: '.9fr 2.4fr 1.2fr 1fr',
+                padding: '13px 20px',
+                borderBottom: i < arr.length - 1 ? '1px solid var(--divider)' : undefined,
+                fontSize: 13,
+                alignItems: 'center',
               }}
             >
-              {m.valor}
+              <div style={{ color: 'var(--muted)', fontWeight: 700 }}>{fmtDataCurta(m.data)}</div>
+              <div style={{ fontWeight: 700 }}>{m.descricao}</div>
+              <div>
+                <span
+                  className="tag"
+                  style={{
+                    background: entrada ? 'var(--chip-green)' : 'var(--chip-rose)',
+                    color: entrada ? 'var(--green-dark)' : 'var(--accent)',
+                  }}
+                >
+                  {m.categoria}
+                </span>
+              </div>
+              <div
+                style={{
+                  textAlign: 'right',
+                  fontWeight: 800,
+                  color: entrada ? 'var(--green-dark)' : 'var(--accent)',
+                }}
+              >
+                {entrada ? '+' : '−'} {fmtCentavos(m.valor_centavos).replace('R$ ', '')}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
