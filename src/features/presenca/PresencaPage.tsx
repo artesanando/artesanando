@@ -1,16 +1,61 @@
+import { useNavigate, useParams } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
-import { CHAMADA } from '../../mocks/data'
-import { ini } from '../../lib/format'
+import { useAuth } from '../../state/auth'
 import { Avatar, Lbl, Progress } from '../../components/ui/bits'
-
-const ANTERIORES: [string, string, string, boolean][] = [
-  ['07 jul', '89%', '16 presentes', true],
-  ['30 jun', '78%', '14 presentes', false],
-  ['23 jun', '67%', '12 presentes', false],
-]
+import { fmtDataCurta, fmtDataLonga, hojeIso, ini } from '../../lib/format'
+import {
+  encontrosPassados,
+  fetchEncontros,
+  fetchIntegrantesAtivas,
+  fetchPresencas,
+  marcarPresenca,
+  mediaPresentes,
+  presentesDe,
+  proximoEncontro,
+} from './api'
 
 export function PresencaPage() {
   const { isAdmin, open } = useStore()
+  const { profile } = useAuth()
+  const navigate = useNavigate()
+  const { encontroId } = useParams()
+  const qc = useQueryClient()
+  const hoje = hojeIso()
+
+  const { data: encontros, isLoading } = useQuery({
+    queryKey: ['encontros'],
+    queryFn: fetchEncontros,
+  })
+  const { data: presencas } = useQuery({ queryKey: ['presencas'], queryFn: fetchPresencas })
+  const { data: integrantes } = useQuery({
+    queryKey: ['integrantes-chamada'],
+    queryFn: fetchIntegrantesAtivas,
+  })
+
+  const passados = encontrosPassados(encontros ?? [], hoje)
+  const proximo = proximoEncontro(encontros ?? [], hoje)
+  const selecionado =
+    (encontros ?? []).find((e) => e.id === encontroId) ?? passados[0] ?? proximo
+
+  const marcar = useMutation({
+    mutationFn: (opts: { integranteId: string; presente: boolean }) =>
+      marcarPresenca({
+        encontro_id: selecionado!.id,
+        integrante_id: opts.integranteId,
+        presente: opts.presente,
+        marcado_por: profile!.id,
+      }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['presencas'] }),
+  })
+
+  const presenteDe = (integranteId: string) =>
+    (presencas ?? []).some(
+      (p) => p.encontro_id === selecionado?.id && p.integrante_id === integranteId && p.presente,
+    )
+
+  const totalIntegrantes = (integrantes ?? []).length
+  const presentesSel = selecionado ? presentesDe(presencas ?? [], selecionado.id) : 0
 
   return (
     <div style={{ padding: '30px 40px' }}>
@@ -27,7 +72,8 @@ export function PresencaPage() {
             Presença
           </div>
           <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
-            12 encontros no semestre · média de 14 presentes
+            {passados.length} encontros no semestre · média de{' '}
+            {mediaPresentes(encontros ?? [], presencas ?? [], hoje)} presentes
           </div>
         </div>
         {isAdmin && (
@@ -36,6 +82,7 @@ export function PresencaPage() {
           </button>
         )}
       </div>
+      {isLoading && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>}
       <div
         style={{
           display: 'grid',
@@ -45,121 +92,155 @@ export function PresencaPage() {
         }}
       >
         <div>
-          <div
-            style={{
-              border: '1px solid var(--chip-rose-border)',
-              background: 'var(--chip-rose)',
-              borderRadius: 14,
-              padding: '16px 18px',
-              marginBottom: 16,
-            }}
-          >
-            <Lbl style={{ color: 'var(--accent)' }}>PRÓXIMO ENCONTRO</Lbl>
-            <div className="h" style={{ fontSize: 20, margin: '6px 0 2px' }}>
-              Terça, 14 de julho · 14h
+          {proximo && (
+            <div
+              onClick={() => navigate(`/presenca/${proximo.id}`)}
+              style={{
+                border: '1px solid var(--chip-rose-border)',
+                background: 'var(--chip-rose)',
+                borderRadius: 14,
+                padding: '16px 18px',
+                marginBottom: 16,
+                cursor: 'pointer',
+              }}
+            >
+              <Lbl style={{ color: 'var(--accent)' }}>PRÓXIMO ENCONTRO</Lbl>
+              <div className="h" style={{ fontSize: 20, margin: '6px 0 2px' }}>
+                {fmtDataLonga(proximo.data)}
+                {proximo.hora ? ` · ${proximo.hora.slice(0, 5)}h` : ''}
+              </div>
+              <div style={{ fontSize: 12.5, color: '#8E6B70' }}>
+                {proximo.local ?? ''}
+                {proximo.pauta ? ` · pauta: ${proximo.pauta}` : ''}
+              </div>
             </div>
-            <div style={{ fontSize: 12.5, color: '#8E6B70' }}>
-              Sala 203 · pauta: montagem da Manta Primavera
-            </div>
-          </div>
+          )}
           <div className="h" style={{ fontSize: 16, marginBottom: 10 }}>
             Encontros anteriores
           </div>
           <div style={{ borderTop: '1px solid var(--border)' }}>
-            {ANTERIORES.map(([data, pct, presentes, destaque]) => (
-              <div
-                key={data}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 14,
-                  padding: '13px 2px',
-                  borderBottom: '1px solid var(--border)',
-                }}
-              >
-                <div style={{ fontWeight: 800, fontSize: 13.5, width: 74 }}>{data}</div>
-                <Progress
-                  pct={pct}
-                  style={{ flex: 1 }}
-                  fillStyle={destaque ? undefined : { background: '#D8A3AE' }}
-                />
+            {passados.map((e) => {
+              const n = presentesDe(presencas ?? [], e.id)
+              const pct = totalIntegrantes === 0 ? 0 : Math.round((n / totalIntegrantes) * 100)
+              const ativo = e.id === selecionado?.id
+              return (
                 <div
+                  key={e.id}
+                  onClick={() => navigate(`/presenca/${e.id}`)}
                   style={{
-                    fontSize: 12,
-                    fontWeight: destaque ? 800 : 700,
-                    color: destaque ? 'var(--accent)' : 'var(--muted)',
-                    width: 88,
-                    textAlign: 'right',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
+                    padding: '13px 2px',
+                    borderBottom: '1px solid var(--border)',
+                    cursor: 'pointer',
                   }}
                 >
-                  {presentes}
+                  <div style={{ fontWeight: 800, fontSize: 13.5, width: 74 }}>
+                    {fmtDataCurta(e.data)}
+                  </div>
+                  <Progress
+                    pct={`${pct}%`}
+                    style={{ flex: 1 }}
+                    fillStyle={ativo ? undefined : { background: '#D8A3AE' }}
+                  />
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: ativo ? 800 : 700,
+                      color: ativo ? 'var(--accent)' : 'var(--muted)',
+                      width: 88,
+                      textAlign: 'right',
+                    }}
+                  >
+                    {n} presentes
+                  </div>
                 </div>
+              )
+            })}
+            {passados.length === 0 && !isLoading && (
+              <div style={{ padding: '13px 2px', fontSize: 13, color: 'var(--muted)' }}>
+                Nenhum encontro registrado ainda.
               </div>
-            ))}
+            )}
           </div>
         </div>
         <div>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'baseline',
-              marginBottom: 10,
-            }}
-          >
-            <div className="h" style={{ fontSize: 16 }}>
-              Chamada · 07 jul
-            </div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>
-              16/18 presentes
-            </div>
-          </div>
-          <div style={{ borderTop: '1px solid var(--border)' }}>
-            {CHAMADA.map(([name, color, present]) => (
+          {selecionado ? (
+            <>
               <div
-                key={name}
                 style={{
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '11px 2px',
-                  borderBottom: '1px solid var(--border)',
+                  justifyContent: 'space-between',
+                  alignItems: 'baseline',
+                  marginBottom: 10,
                 }}
               >
-                <Avatar color={color} size={26} fontSize={10}>
-                  {ini(name)}
-                </Avatar>
-                <div style={{ flex: 1, fontWeight: 700, fontSize: 13.5 }}>{name}</div>
-                {present ? (
-                  <div
-                    style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: '50%',
-                      background: 'var(--primary)',
-                      color: '#fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 12,
-                      fontWeight: 800,
-                    }}
-                  >
-                    ✓
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: '50%',
-                      border: '1.5px dashed var(--field-border)',
-                    }}
-                  />
-                )}
+                <div className="h" style={{ fontSize: 16 }}>
+                  Chamada · {fmtDataCurta(selecionado.data)}
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>
+                  {presentesSel}/{totalIntegrantes} presentes
+                </div>
               </div>
-            ))}
-          </div>
+              <div style={{ borderTop: '1px solid var(--border)' }}>
+                {(integrantes ?? []).map((p) => {
+                  const presente = presenteDe(p.id)
+                  return (
+                    <div
+                      key={p.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: '11px 2px',
+                        borderBottom: '1px solid var(--border)',
+                      }}
+                    >
+                      <Avatar color={p.avatar_color} size={26} fontSize={10}>
+                        {ini(p.nome)}
+                      </Avatar>
+                      <div style={{ flex: 1, fontWeight: 700, fontSize: 13.5 }}>{p.nome}</div>
+                      <div
+                        role={isAdmin ? 'button' : undefined}
+                        aria-label={isAdmin ? `Marcar presença de ${p.nome}` : undefined}
+                        onClick={
+                          isAdmin
+                            ? () => marcar.mutate({ integranteId: p.id, presente: !presente })
+                            : undefined
+                        }
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: '50%',
+                          cursor: isAdmin ? 'pointer' : 'default',
+                          ...(presente
+                            ? {
+                                background: 'var(--primary)',
+                                color: '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 12,
+                                fontWeight: 800,
+                              }
+                            : { border: '1.5px dashed var(--field-border)' }),
+                        }}
+                      >
+                        {presente ? '✓' : ''}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          ) : (
+            !isLoading && (
+              <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+                Crie o primeiro encontro para abrir a chamada.
+              </div>
+            )
+          )}
         </div>
       </div>
     </div>

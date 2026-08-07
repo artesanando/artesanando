@@ -1,7 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Lbl, Select, Stepper } from '../components/ui/bits'
-import { ModalBox, ModalFooter, ModalHeader } from './shared'
+import { ModalBox, ModalHeader } from './shared'
 import { supabase } from '../lib/supabase'
 import { useStore } from '../state/store'
 import type { EstoqueCategoria, Papel, Preferencia, ReceitaCategoria } from '../types/database'
@@ -14,6 +14,8 @@ import {
 } from '../features/estoque/api'
 import { criarReceita, uploadPdf } from '../features/biblioteca/api'
 import { fetchIntegrantesAtivas, fetchLotes, registrarProducao } from '../features/projetos/api'
+import { criarEncontro } from '../features/presenca/api'
+import { hojeIso } from '../lib/format'
 import { useAuth } from '../state/auth'
 
 function ErroBox({ children }: { children: ReactNode }) {
@@ -834,28 +836,83 @@ export function ModalIntegrante() {
 }
 
 export function ModalEncontro() {
+  const { close } = useStore()
+  const qc = useQueryClient()
+  const [data, setData] = useState(hojeIso())
+  const [hora, setHora] = useState('14:00')
+  const [local, setLocal] = useState('')
+  const [pauta, setPauta] = useState('')
+  const [erro, setErro] = useState<string | null>(null)
+
+  const salvar = useMutation({
+    mutationFn: () => criarEncontro({ data, hora, local: local.trim(), pauta: pauta.trim() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['encontros'] })
+      close()
+    },
+    onError: () => setErro('Não foi possível criar o encontro.'),
+  })
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    setErro(null)
+    if (!data) {
+      setErro('Escolha a data do encontro.')
+      return
+    }
+    salvar.mutate()
+  }
+
   return (
     <ModalBox maxWidth={520}>
       <ModalHeader title="Novo encontro" sub="Abre a chamada e a pauta do dia" />
-      <div className="grid2" style={{ marginBottom: 18 }}>
-        <div>
-          <Lbl style={{ marginBottom: 7 }}>DATA</Lbl>
-          <input className="field" defaultValue="14/07/2026" />
+      <form onSubmit={submit}>
+        <div className="grid2" style={{ marginBottom: 18 }}>
+          <div>
+            <Lbl style={{ marginBottom: 7 }}>DATA</Lbl>
+            <input
+              className="field"
+              type="date"
+              value={data}
+              onChange={(e) => setData(e.target.value)}
+            />
+          </div>
+          <div>
+            <Lbl style={{ marginBottom: 7 }}>HORÁRIO</Lbl>
+            <input
+              className="field"
+              type="time"
+              value={hora}
+              onChange={(e) => setHora(e.target.value)}
+            />
+          </div>
         </div>
-        <div>
-          <Lbl style={{ marginBottom: 7 }}>HORÁRIO</Lbl>
-          <input className="field" defaultValue="14:00" />
+        <Lbl style={{ marginBottom: 7 }}>SALA</Lbl>
+        <input
+          className="field"
+          style={{ marginBottom: 18 }}
+          value={local}
+          onChange={(e) => setLocal(e.target.value)}
+          placeholder="Sala 203"
+        />
+        <Lbl style={{ marginBottom: 7 }}>PAUTA</Lbl>
+        <textarea
+          className="field"
+          style={{ minHeight: 52, marginBottom: 24, resize: 'vertical' }}
+          value={pauta}
+          onChange={(e) => setPauta(e.target.value)}
+          placeholder="Montagem da Manta Primavera"
+        />
+        {erro && <ErroBox>{erro}</ErroBox>}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button type="button" className="pill ghost" onClick={close}>
+            Cancelar
+          </button>
+          <button type="submit" className="pill" disabled={salvar.isPending}>
+            {salvar.isPending ? 'Criando…' : 'Criar encontro'}
+          </button>
         </div>
-      </div>
-      <Lbl style={{ marginBottom: 7 }}>SALA</Lbl>
-      <input className="field" style={{ marginBottom: 18 }} defaultValue="Sala 203" />
-      <Lbl style={{ marginBottom: 7 }}>PAUTA</Lbl>
-      <textarea
-        className="field"
-        style={{ minHeight: 52, marginBottom: 24, resize: 'vertical' }}
-        defaultValue="Montagem da Manta Primavera"
-      />
-      <ModalFooter okLabel="Criar encontro" />
+      </form>
     </ModalBox>
   )
 }
