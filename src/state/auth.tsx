@@ -1,13 +1,17 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { setKeepConnected, supabase } from '../lib/supabase'
-import type { Profile } from '../types/database'
+import type { Permissoes, Profile } from '../types/database'
+
+export type Perm = 'progresso' | 'devolucoes' | 'comentarios' | 'financeiro'
 
 interface AuthCtx {
   session: Session | null
   profile: Profile | null
   loading: boolean
   isAdmin: boolean
+  /** permissão efetiva: admin sempre pode; integrante depende da flag */
+  can: (perm: Perm) => boolean
   login: (usuarioOuEmail: string, senha: string, manter: boolean) => Promise<void>
   logout: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
@@ -23,9 +27,19 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
   return data as Profile
 }
 
+async function fetchPermissoes(userId: string): Promise<Permissoes | null> {
+  const { data } = await supabase
+    .from('permissoes')
+    .select('*')
+    .eq('profile_id', userId)
+    .maybeSingle()
+  return (data as Permissoes | null) ?? null
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [perms, setPerms] = useState<Permissoes | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -44,12 +58,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!userId) {
       setProfile(null)
+      setPerms(null)
       return
     }
     let alive = true
-    fetchProfile(userId).then((p) => {
+    Promise.all([fetchProfile(userId), fetchPermissoes(userId)]).then(([p, pm]) => {
       if (alive) {
         setProfile(p)
+        setPerms(pm)
         setLoading(false)
       }
     })
@@ -92,13 +108,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (userId) setProfile(await fetchProfile(userId))
   }
 
+  const isAdmin = profile?.papel === 'admin'
+
   return (
     <Ctx.Provider
       value={{
         session,
         profile,
         loading,
-        isAdmin: profile?.papel === 'admin',
+        isAdmin,
+        can: (perm) => isAdmin || Boolean(perms?.[perm]),
         login,
         logout,
         resetPassword,
