@@ -37,26 +37,14 @@ export function Sidebar() {
   }
 
   return (
-    <div
-      style={{
-        width: 212,
-        flex: 'none',
-        padding: '26px 22px',
-        display: 'flex',
-        flexDirection: 'column',
-        borderRight: '1px dashed var(--border-dashed)',
-        position: 'sticky',
-        top: 0,
-        height: '100vh',
-      }}
-    >
+    <div className="sidebar">
       <div
         className="h"
         style={{ fontSize: 19, letterSpacing: '-.2px', marginBottom: 28 }}
       >
         Artesanando<span style={{ color: 'var(--primary)' }}>.</span>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div className="nav-list">
         {ITEMS.map(({ to, label, Icon }) => {
           const on = isActive(to)
           return (
@@ -98,18 +86,7 @@ export function Sidebar() {
           </div>
         </div>
       )}
-      <div
-        onClick={() => setMenu((m) => !m)}
-        style={{
-          marginTop: 'auto',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          paddingTop: 16,
-          borderTop: '1px dashed var(--border-dashed)',
-          cursor: 'pointer',
-        }}
-      >
+      <div className="sidebar-user" onClick={() => setMenu((m) => !m)}>
         <Avatar color={profile?.avatar_color ?? 'var(--fill)'} size={32} fontSize={12}>
           {profile ? ini(profile.nome) : '?'}
         </Avatar>

@@ -5,7 +5,7 @@ import { ModalRoot } from '../../modals/ModalRoot'
 export function AppShell() {
   return (
     <>
-      <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <div className="shell">
         <Sidebar />
         <div style={{ flex: 1, minWidth: 0 }}>
           <Outlet />
