@@ -124,7 +124,8 @@ export function ProjetosPage() {
             MANTAS
           </div>
           <div
-            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 26 }}
+            className="pgrid"
+            style={{ '--cols': '1fr 1fr', '--gap': '12px', marginBottom: 26 } as React.CSSProperties}
           >
             {mantas.map((p) => {
               const pr = progressoDe(p)

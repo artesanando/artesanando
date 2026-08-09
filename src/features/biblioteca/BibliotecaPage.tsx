@@ -105,7 +105,10 @@ export function BibliotecaPage() {
           Não foi possível carregar a biblioteca. Recarregue a página.
         </div>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
+      <div
+        className="pgrid"
+        style={{ '--cols': 'repeat(4,1fr)', '--gap': '16px' } as React.CSSProperties}
+      >
         {filtradas.map((r) => {
           const c = CAT_CARD[r.categoria]
           return (

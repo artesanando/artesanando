@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
+import { useAuth } from '../../state/auth'
 import { Lbl } from '../../components/ui/bits'
 import { fmtCentavos, fmtDataCurta, hojeIso } from '../../lib/format'
 import { fetchMovimentacoes, saldo, totalDoMes } from './api'
 
 export function FinanceiroPage() {
-  const { isAdmin, openFin } = useStore()
+  const { openFin } = useStore()
+  const { can } = useAuth()
   const { data: movs, isLoading, isError } = useQuery({
     queryKey: ['movimentacoes'],
     queryFn: fetchMovimentacoes,
@@ -34,7 +36,7 @@ export function FinanceiroPage() {
             Caixa do projeto · semestre 2026.2
           </div>
         </div>
-        {isAdmin && (
+        {can('financeiro') && (
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="pill ghost" onClick={() => openFin('saida')}>
               ↓ Saída
@@ -46,12 +48,8 @@ export function FinanceiroPage() {
         )}
       </div>
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1.4fr 1fr 1fr',
-          gap: 14,
-          marginBottom: 28,
-        }}
+        className="pgrid"
+        style={{ '--cols': '1.4fr 1fr 1fr', '--gap': '14px', marginBottom: 28 } as React.CSSProperties}
       >
         <div
           style={{

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
 import { useAuth } from '../../state/auth'
 import { Avatar, Lbl, Progress } from '../../components/ui/bits'
+import { useToast } from '../../components/ui/Toast'
 import { fmtDataCurta, fmtDataLonga, hojeIso, ini } from '../../lib/format'
 import {
   encontrosPassados,
@@ -21,6 +22,7 @@ export function PresencaPage() {
   const navigate = useNavigate()
   const { encontroId } = useParams()
   const qc = useQueryClient()
+  const toast = useToast()
   const hoje = hojeIso()
 
   const { data: encontros, isLoading } = useQuery({
@@ -46,6 +48,7 @@ export function PresencaPage() {
         presente: opts.presente,
         marcado_por: profile!.id,
       }),
+    onError: () => toast('Não foi possível marcar a presença.', 'erro'),
     onSettled: () => qc.invalidateQueries({ queryKey: ['presencas'] }),
   })
 
@@ -83,14 +86,7 @@ export function PresencaPage() {
         )}
       </div>
       {isLoading && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1.3fr',
-          gap: 40,
-          alignItems: 'start',
-        }}
-      >
+      <div className="pgrid" style={{ '--cols': '1fr 1.3fr', '--gap': '40px' } as React.CSSProperties}>
         <div>
           {proximo && (
             <div

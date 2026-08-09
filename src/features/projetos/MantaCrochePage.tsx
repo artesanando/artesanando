@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
 import { useAuth } from '../../state/auth'
 import { Lbl, Progress } from '../../components/ui/bits'
+import { useToast } from '../../components/ui/Toast'
 import { Comentarios, Historico } from './Comentarios'
 import {
   fetchLotes,
@@ -59,11 +60,14 @@ function Fluxo({
   modelos: MantaModelo[]
   squares: Square[]
 }) {
-  const { profile } = useAuth()
+  const { profile, can } = useAuth()
   const qc = useQueryClient()
+  const toast = useToast()
 
   const pegar = useMutation({
     mutationFn: (lote: Lote) => pegarLote(lote, profile!.id),
+    onSuccess: () => toast('Lote assumido — bom trabalho! ✓'),
+    onError: () => toast('Não foi possível pegar o lote.', 'erro'),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['lotes', projeto.id] })
       qc.invalidateQueries({ queryKey: ['squares', projeto.id] })
@@ -89,16 +93,22 @@ function Fluxo({
       </div>
       {!l.responsavel_id && l.etapa === 'aguardando_borda' && (
         <div
-          onClick={() => pegar.mutate(l)}
+          onClick={can('progresso') ? () => pegar.mutate(l) : undefined}
           style={{
             fontSize: 10.5,
             fontWeight: 800,
             color: 'var(--gold-dark)',
             marginTop: 6,
-            cursor: 'pointer',
+            cursor: can('progresso') ? 'pointer' : 'default',
           }}
         >
-          ↳ precisa de alguém · <span style={{ textDecoration: 'underline' }}>Pegar lote</span>
+          ↳ precisa de alguém
+          {can('progresso') && (
+            <>
+              {' '}
+              · <span style={{ textDecoration: 'underline' }}>Pegar lote</span>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -315,7 +325,8 @@ function Mapa({
 }
 
 export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
-  const { isAdmin, openProducao } = useStore()
+  const { openProducao } = useStore()
+  const { can } = useAuth()
   const navigate = useNavigate()
   const [view, setView] = useState<'fluxo' | 'mapa'>('fluxo')
 
@@ -360,7 +371,7 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
             CROCHÊ
           </span>
         </div>
-        {isAdmin && (
+        {can('progresso') && (
           <button className="pill" onClick={() => openProducao(projeto.id)}>
             + Registrar produção
           </button>
@@ -395,9 +406,7 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
       ) : (
         <Mapa squares={squares ?? []} modelos={modelos ?? []} />
       )}
-      <div
-        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}
-      >
+      <div className="pgrid" style={{ '--cols': '1fr 1fr', '--gap': '24px' } as React.CSSProperties}>
         <Comentarios projetoId={projeto.id} />
         <Historico projetoId={projeto.id} titulo="Histórico de alterações" />
       </div>

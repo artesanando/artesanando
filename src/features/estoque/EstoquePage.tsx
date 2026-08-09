@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
+import { useAuth } from '../../state/auth'
 import type { EstoqueCategoria, EstoqueItem } from '../../types/database'
 import {
   disponivel,
@@ -65,6 +66,7 @@ function fmtData(iso: string) {
 
 export function EstoquePage() {
   const { isAdmin, open, openDevolucao } = useStore()
+  const { can } = useAuth()
   const [estoTab, setEstoTab] = useState<EstoqueCategoria>('novelos')
 
   const { data: itens, isLoading, isError } = useQuery({ queryKey: ['estoque'], queryFn: fetchEstoque })
@@ -164,12 +166,16 @@ export function EstoquePage() {
               + Material
             </button>
           )}
-          <button className="pill ghost" onClick={() => openDevolucao(null)}>
-            Devolução
-          </button>
-          <button className="pill" onClick={() => open('emprestimo')}>
-            + Empréstimo
-          </button>
+          {can('devolucoes') && (
+            <>
+              <button className="pill ghost" onClick={() => openDevolucao(null)}>
+                Devolução
+              </button>
+              <button className="pill" onClick={() => open('emprestimo')}>
+                + Empréstimo
+              </button>
+            </>
+          )}
         </div>
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
@@ -179,14 +185,7 @@ export function EstoquePage() {
           </div>
         ))}
       </div>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1.5fr 1fr',
-          gap: 40,
-          alignItems: 'start',
-        }}
-      >
+      <div className="pgrid" style={{ '--cols': '1.5fr 1fr', '--gap': '40px' } as React.CSSProperties}>
         <div>
           <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12 }}>
             <b style={{ color: 'var(--ink)' }}>{count}</b> {UNIT[estoTab]} em estoque
@@ -240,17 +239,19 @@ export function EstoquePage() {
                   {e.item?.detalhe ? ` ${e.item.detalhe}` : ''}
                   {e.projeto_nome ? ` · ${e.projeto_nome}` : ''}
                 </div>
-                <div
-                  style={{
-                    fontSize: 11.5,
-                    fontWeight: 800,
-                    color: 'var(--accent)',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => openDevolucao(e.id)}
-                >
-                  Registrar devolução →
-                </div>
+                {can('devolucoes') && (
+                  <div
+                    style={{
+                      fontSize: 11.5,
+                      fontWeight: 800,
+                      color: 'var(--accent)',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => openDevolucao(e.id)}
+                  >
+                    Registrar devolução →
+                  </div>
+                )}
               </div>
             ))}
           </div>

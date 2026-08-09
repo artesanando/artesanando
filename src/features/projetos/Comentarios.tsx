@@ -2,19 +2,14 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../state/auth'
 import { Avatar } from '../../components/ui/bits'
-import { ini } from '../../lib/format'
+import { useToast } from '../../components/ui/Toast'
+import { ini, tempoRelativo } from '../../lib/format'
 import { comentar, fetchAtividades, fetchComentarios } from './api'
 
-function tempoRelativo(iso: string): string {
-  const dias = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
-  if (dias <= 0) return 'hoje'
-  if (dias === 1) return 'ontem'
-  return `há ${dias} dias`
-}
-
 export function Comentarios({ projetoId }: { projetoId: string }) {
-  const { profile } = useAuth()
+  const { profile, can } = useAuth()
   const qc = useQueryClient()
+  const toast = useToast()
   const [texto, setTexto] = useState('')
 
   const { data: comentarios } = useQuery({
@@ -28,6 +23,7 @@ export function Comentarios({ projetoId }: { projetoId: string }) {
       setTexto('')
       qc.invalidateQueries({ queryKey: ['comentarios', projetoId] })
     },
+    onError: () => toast('Não foi possível enviar o comentário.', 'erro'),
   })
 
   return (
@@ -58,22 +54,24 @@ export function Comentarios({ projetoId }: { projetoId: string }) {
           </div>
         </div>
       ))}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (texto.trim()) enviar.mutate()
-        }}
-      >
-        <input
-          className="field"
-          style={{ borderRadius: 99 }}
-          placeholder="Escrever um comentário…"
-          aria-label="Escrever um comentário"
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          disabled={enviar.isPending}
-        />
-      </form>
+      {can('comentarios') && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (texto.trim()) enviar.mutate()
+          }}
+        >
+          <input
+            className="field"
+            style={{ borderRadius: 99 }}
+            placeholder="Escrever um comentário…"
+            aria-label="Escrever um comentário"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            disabled={enviar.isPending}
+          />
+        </form>
+      )}
     </div>
   )
 }
