@@ -58,6 +58,14 @@ export function fmtDataBarra(iso: string): string {
   return `${d}/${m}`
 }
 
+/** timestamp → "hoje" / "ontem" / "há N dias" */
+export function tempoRelativo(iso: string): string {
+  const dias = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
+  if (dias <= 0) return 'hoje'
+  if (dias === 1) return 'ontem'
+  return `há ${dias} dias`
+}
+
 /** hoje como 'YYYY-MM-DD' local */
 export function hojeIso(): string {
   const d = new Date()

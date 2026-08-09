@@ -1,25 +1,73 @@
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
+import { useAuth } from '../../state/auth'
 import { Progress } from '../../components/ui/bits'
-
-const KPIS: [string, string][] = [
-  ['18', 'integrantes'],
-  ['65', 'novelos em estoque'],
-  ['5', 'novelos emprestados'],
-  ['2', 'mantas em andamento'],
-  ['2', 'amigurumis ativos'],
-]
-
-const ATIVIDADE: { cor: string; quem: string; texto: string; quando: string }[] = [
-  { cor: '#C4798A', quem: 'Ana', texto: 'concluiu o miolo de 8 squares Modelo A · Primavera', quando: 'há 2h' },
-  { cor: '#7D9B76', quem: 'Camila', texto: 'concluiu a faixa 3 · Manta Nuvem', quando: 'há 5h' },
-  { cor: '#C9B98F', quem: 'Fernanda', texto: 'devolveu 2 novelos Balloon', quando: 'ontem' },
-  { cor: '#8FA3B8', quem: 'Regina', texto: 'registrou presença de 07/07', quando: 'ontem' },
-]
+import { fmtDataLonga, hojeIso, tempoRelativo } from '../../lib/format'
+import { fetchEmprestimosAtivos, fetchEstoque } from '../estoque/api'
+import {
+  fetchProgressoGeral,
+  fetchProjetos,
+  progressoFaixas,
+  progressoSquares,
+  progressoUnidades,
+  type Projeto,
+} from '../projetos/api'
+import { fetchEncontros, proximoEncontro } from '../presenca/api'
+import {
+  fetchAtividadesRecentes,
+  fetchTotalIntegrantes,
+  novelosKpis,
+  primeiroNome,
+  projetosAtivos,
+  saudacao,
+} from './api'
 
 export function DashboardPage() {
   const { isAdmin, open } = useStore()
+  const { profile } = useAuth()
   const navigate = useNavigate()
+  const hoje = hojeIso()
+
+  const { data: totalIntegrantes } = useQuery({
+    queryKey: ['total-integrantes'],
+    queryFn: fetchTotalIntegrantes,
+  })
+  const { data: itens } = useQuery({ queryKey: ['estoque'], queryFn: fetchEstoque })
+  const { data: loans } = useQuery({ queryKey: ['emprestimos'], queryFn: fetchEmprestimosAtivos })
+  const { data: projetos } = useQuery({ queryKey: ['projetos'], queryFn: fetchProjetos })
+  const { data: prog } = useQuery({ queryKey: ['progresso-geral'], queryFn: fetchProgressoGeral })
+  const { data: encontros } = useQuery({ queryKey: ['encontros'], queryFn: fetchEncontros })
+  const { data: atividades } = useQuery({
+    queryKey: ['atividades-recentes'],
+    queryFn: fetchAtividadesRecentes,
+  })
+
+  const novelos = novelosKpis(itens ?? [], loans ?? [])
+  const ativos = projetosAtivos(projetos ?? [])
+  const proximo = proximoEncontro(encontros ?? [], hoje)
+
+  const kpis: [string | number, string][] = [
+    [totalIntegrantes ?? '—', 'integrantes'],
+    [novelos.emEstoque, 'novelos em estoque'],
+    [novelos.emprestados, 'novelos emprestados'],
+    [ativos.mantas, 'mantas em andamento'],
+    [ativos.amigurumis, 'amigurumis ativos'],
+  ]
+
+  const progressoDe = (p: Projeto) => {
+    if (!prog) return { done: 0, total: 0 }
+    if (p.tipo === 'manta_croche')
+      return progressoSquares(prog.squares.filter((s) => s.projeto_id === p.id))
+    if (p.tipo === 'manta_trico')
+      return progressoFaixas(prog.faixas.filter((f) => f.projeto_id === p.id))
+    return progressoUnidades(
+      prog.unidades.filter((u) => u.projeto_id === p.id),
+      p.meta,
+    )
+  }
+
+  const emProducao = (projetos ?? []).filter((p) => p.status === 'ativo')
 
   return (
     <div style={{ padding: '30px 40px' }}>
@@ -33,11 +81,24 @@ export function DashboardPage() {
       >
         <div>
           <div className="h" style={{ fontWeight: 500, fontSize: 28 }}>
-            Boa tarde, Regina
+            {saudacao(new Date().getHours())}, {primeiroNome(profile?.nome ?? '')}
           </div>
           <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
-            Quinta, 10 de julho — próximo encontro{' '}
-            <b style={{ color: 'var(--accent)' }}>terça 14, 14h · Sala 203</b>
+            {fmtDataLonga(hoje)}
+            {proximo && (
+              <>
+                {' '}
+                — próximo encontro{' '}
+                <b
+                  style={{ color: 'var(--accent)', cursor: 'pointer' }}
+                  onClick={() => navigate(`/presenca/${proximo.id}`)}
+                >
+                  {fmtDataLonga(proximo.data).toLowerCase()}
+                  {proximo.hora ? `, ${proximo.hora.slice(0, 5)}h` : ''}
+                  {proximo.local ? ` · ${proximo.local}` : ''}
+                </b>
+              </>
+            )}
           </div>
         </div>
         {isAdmin && (
@@ -55,13 +116,13 @@ export function DashboardPage() {
           marginBottom: 30,
         }}
       >
-        {KPIS.map(([n, l], i) => (
+        {kpis.map(([n, l], i) => (
           <div
             key={l}
             style={{
               flex: 1,
               padding: '0 22px',
-              borderRight: i < KPIS.length - 1 ? '1px solid var(--border)' : undefined,
+              borderRight: i < kpis.length - 1 ? '1px solid var(--border)' : undefined,
             }}
           >
             <div className="h" style={{ fontSize: 30 }}>
@@ -72,108 +133,84 @@ export function DashboardPage() {
         ))}
       </div>
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1.55fr 1fr',
-          gap: 44,
-          alignItems: 'start',
-        }}
+        className="pgrid"
+        style={{ '--cols': '1.55fr 1fr', '--gap': '44px' } as React.CSSProperties}
       >
         <div>
           <div className="h" style={{ fontSize: 17, marginBottom: 14 }}>
             Em produção
           </div>
           <div style={{ borderTop: '1px solid var(--border)' }}>
-            <div
-              onClick={() => navigate('/projetos')}
-              style={{ padding: '16px 2px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'baseline',
-                  gap: 12,
-                }}
-              >
+            {emProducao.length === 0 && (
+              <div style={{ padding: '16px 2px', fontSize: 13, color: 'var(--muted)' }}>
+                Nenhum projeto ativo — crie o primeiro.
+              </div>
+            )}
+            {emProducao.map((p) => {
+              const pr = progressoDe(p)
+              const pct = pr.total === 0 ? 0 : Math.round((pr.done / pr.total) * 100)
+              const sufixo =
+                p.tipo === 'manta_croche'
+                  ? ` squares`
+                  : p.tipo === 'manta_trico'
+                    ? ' faixas'
+                    : ' und'
+              const etiqueta =
+                p.tipo === 'manta_croche'
+                  ? '· crochê'
+                  : p.tipo === 'manta_trico'
+                    ? '· tricô'
+                    : '· amigurumi'
+              return (
                 <div
+                  key={p.id}
+                  onClick={() => navigate(`/projetos/${p.id}`)}
                   style={{
-                    fontWeight: 800,
-                    fontSize: 15,
-                    minWidth: 0,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
+                    padding: '16px 2px',
+                    borderBottom: '1px solid var(--border)',
+                    cursor: 'pointer',
                   }}
                 >
-                  Manta Primavera{' '}
-                  <span style={{ fontWeight: 600, fontSize: 11.5, color: 'var(--accent)' }}>
-                    · crochê · 5 integrantes
-                  </span>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'baseline',
+                      gap: 12,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 800,
+                        fontSize: 15,
+                        minWidth: 0,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {p.nome}{' '}
+                      <span style={{ fontWeight: 600, fontSize: 11.5, color: 'var(--muted)' }}>
+                        {etiqueta}
+                        {p.destino ? ` · ${p.destino}` : ''}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12.5,
+                        fontWeight: 700,
+                        color: 'var(--accent)',
+                        flex: 'none',
+                      }}
+                    >
+                      {pr.done}/{pr.total}
+                      {sufixo}
+                    </div>
+                  </div>
+                  <Progress pct={`${pct}%`} style={{ margin: '10px 0 0' }} />
                 </div>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--accent)', flex: 'none' }}>
-                  63/80
-                </div>
-              </div>
-              <Progress pct="79%" style={{ margin: '10px 0 0' }} />
-            </div>
-            <div
-              onClick={() => navigate('/projetos')}
-              style={{ padding: '16px 2px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'baseline',
-                  gap: 12,
-                }}
-              >
-                <div
-                  style={{
-                    fontWeight: 800,
-                    fontSize: 15,
-                    minWidth: 0,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  Manta Nuvem{' '}
-                  <span style={{ fontWeight: 600, fontSize: 11.5, color: 'var(--green-dark)' }}>
-                    · tricô · 4 integrantes
-                  </span>
-                </div>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--accent)', flex: 'none' }}>
-                  3/8 faixas
-                </div>
-              </div>
-              <Progress pct="37%" style={{ margin: '10px 0 0' }} />
-            </div>
-            <div
-              onClick={() => navigate('/projetos')}
-              style={{
-                padding: '16px 2px',
-                borderBottom: '1px solid var(--border)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                cursor: 'pointer',
-              }}
-            >
-              <div style={{ fontWeight: 800, fontSize: 15 }}>
-                Amigurumi Capivara{' '}
-                <span style={{ fontWeight: 600, fontSize: 11.5, color: 'var(--muted)' }}>
-                  · 4 integrantes
-                </span>
-              </div>
-              <span
-                className="tag"
-                style={{ border: '1px solid var(--chip-rose-border)', color: 'var(--accent)' }}
-              >
-                10/12 UND
-              </span>
-            </div>
+              )
+            })}
           </div>
         </div>
         <div>
@@ -181,24 +218,36 @@ export function DashboardPage() {
             Atividade recente
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {ATIVIDADE.map((a, i) => (
+            {(atividades ?? []).length === 0 && (
+              <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
+                Nada registrado ainda — as ações das integrantes aparecem aqui.
+              </div>
+            )}
+            {(atividades ?? []).map((a, i, arr) => (
               <div
-                key={i}
-                style={{ display: 'flex', gap: 12, padding: i < ATIVIDADE.length - 1 ? '0 0 18px' : 0 }}
+                key={a.id}
+                onClick={a.projeto_id ? () => navigate(`/projetos/${a.projeto_id}`) : undefined}
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  padding: i < arr.length - 1 ? '0 0 18px' : 0,
+                  cursor: a.projeto_id ? 'pointer' : 'default',
+                }}
               >
                 <div
                   style={{
                     width: 9,
                     height: 9,
                     borderRadius: '50%',
-                    background: a.cor,
+                    background: a.autor?.avatar_color ?? 'var(--fill)',
                     marginTop: 4,
                     flex: 'none',
                   }}
                 />
                 <div style={{ fontSize: 12.5, lineHeight: 1.5, color: 'var(--ink-soft)' }}>
-                  <b style={{ color: 'var(--ink)' }}>{a.quem}</b> {a.texto}{' '}
-                  <span style={{ color: 'var(--faint)' }}>· {a.quando}</span>
+                  <b style={{ color: 'var(--ink)' }}>{a.autor?.nome ?? '—'}</b> {a.payload.texto}
+                  {a.projeto?.nome ? ` · ${a.projeto.nome}` : ''}{' '}
+                  <span style={{ color: 'var(--faint)' }}>· {tempoRelativo(a.created_at)}</span>
                 </div>
               </div>
             ))}
