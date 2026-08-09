@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 import { AuthProvider, useAuth } from './state/auth'
 import { StoreProvider } from './state/store'
 import { supabaseConfigured } from './lib/supabase'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import { ToastProvider } from './components/ui/Toast'
 import { AppShell } from './components/layout/AppShell'
 import { LoginPage } from './features/auth/LoginPage'
 import { EsqueciPage } from './features/auth/EsqueciPage'
@@ -72,6 +74,16 @@ function RequireAdmin({ children }: { children: ReactNode }) {
 export default function App() {
   if (!supabaseConfigured) return <SetupPage />
 
+  return (
+    <ErrorBoundary>
+      <ToastProvider>
+        <AppRoutes />
+      </ToastProvider>
+    </ErrorBoundary>
+  )
+}
+
+function AppRoutes() {
   return (
     <AuthProvider>
       <StoreProvider>
