@@ -36,7 +36,7 @@ describe('auth', () => {
     await userEvent.type(screen.getByLabelText('Usuário ou email'), 'candida.prof')
     await userEvent.type(screen.getByLabelText('Senha'), '12345678')
     await userEvent.click(screen.getByRole('button', { name: 'Entrar' }))
-    expect(await screen.findByText('Boa tarde, Cândida')).toBeInTheDocument()
+    expect(await screen.findByText(/, Cândida$/)).toBeInTheDocument()
   })
 
   it('senha errada mostra erro e não loga', async () => {
@@ -45,7 +45,7 @@ describe('auth', () => {
     await userEvent.type(screen.getByLabelText('Senha'), 'senha-errada')
     await userEvent.click(screen.getByRole('button', { name: 'Entrar' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Usuário ou senha incorretos')
-    expect(screen.queryByText('Boa tarde, Cândida')).not.toBeInTheDocument()
+    expect(screen.queryByText(/, Cândida$/)).not.toBeInTheDocument()
   })
 
   it('sidebar mostra a usuária logada', async () => {
@@ -53,6 +53,16 @@ describe('auth', () => {
     renderAt('/')
     expect(await screen.findByText('Cândida Nunes')).toBeInTheDocument()
     expect(screen.getByText('Administradora')).toBeInTheDocument()
+  })
+})
+
+describe('dashboard (M5)', () => {
+  it('deriva projetos em produção e atividade recente do banco', async () => {
+    __login()
+    renderAt('/')
+    expect(await screen.findByText('Manta Primavera')).toBeInTheDocument()
+    expect(await screen.findByText(/concluiu miolo Modelo A ×8/)).toBeInTheDocument()
+    expect(screen.getByText('integrantes')).toBeInTheDocument()
   })
 })
 

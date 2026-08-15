@@ -326,6 +326,7 @@ function builder(table: string) {
     is: () => b,
     in: () => b,
     order: () => b,
+    limit: () => b,
     insert: () => b,
     update: () => b,
     upsert: () => b,
