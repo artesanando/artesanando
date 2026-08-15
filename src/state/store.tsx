@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
-import { FAIXA_SEQ_INICIAL, GRANNY_RINGS_INICIAL, PALETTE, type ModelKey } from '../mocks/data'
+import { FAIXA_SEQ_INICIAL, GRANNY_RINGS_INICIAL, PALETTE, type ModelKey } from '../lib/paleta'
 import { useAuth } from './auth'
 
 /* Estado global de UI portado do protótipo (objeto S de js/app.js).

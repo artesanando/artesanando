@@ -1,6 +1,4 @@
-/* Dados mockados restantes do protótipo (js/app.js).
-   O que sobra aqui é removido no M5, quando o dashboard/presença/etc.
-   passarem a derivar tudo do banco. */
+/* Paleta de fios e modelos padrão dos criadores de padrões */
 
 export type ModelKey = 'A' | 'B' | 'C'
 
@@ -19,13 +17,12 @@ export interface ModelDef {
   nome: string
   border: string
   inner: string
-  resp: string
 }
 
 export const MODELS: Record<ModelKey, ModelDef> = {
-  A: { nome: 'Modelo A — Flor de Maio', border: '#C4798A', inner: '#DFA2AC', resp: 'Ana Luiza' },
-  B: { nome: 'Modelo B — Sunburst', border: '#B99BC4', inner: '#E3C07A', resp: 'Beatriz' },
-  C: { nome: 'Modelo C — Clássico', border: '#7D9B76', inner: '#A9BFA3', resp: 'Fernanda' },
+  A: { nome: 'Modelo A — Flor de Maio', border: '#C4798A', inner: '#DFA2AC' },
+  B: { nome: 'Modelo B — Sunburst', border: '#B99BC4', inner: '#E3C07A' },
+  C: { nome: 'Modelo C — Clássico', border: '#7D9B76', inner: '#A9BFA3' },
 }
 
 export const GRANNY_RINGS_INICIAL = [
