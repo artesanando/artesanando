@@ -4,20 +4,44 @@ import type { EmprestimoAtivo } from '../estoque/api'
 import type { Profile } from '../../types/database'
 
 describe('entregasDe', () => {
-  it('conta amigurumis concluídos e faixas feitas da integrante', () => {
-    const dados = {
-      unidades: [
-        { responsavel_id: 'a', status: 'concluida' },
-        { responsavel_id: 'a', status: 'em_producao' },
-        { responsavel_id: 'b', status: 'concluida' },
-      ],
-      faixas: [
-        { responsavel_id: 'a', status: 'feita' },
-        { responsavel_id: 'a', status: 'afazer' },
-      ],
-    }
-    expect(entregasDe('a', dados)).toEqual({ amigurumis: 1, faixas: 1, total: 2 })
-    expect(entregasDe('b', dados)).toEqual({ amigurumis: 1, faixas: 0, total: 1 })
+  const dados = {
+    unidades: [
+      { responsavel_id: 'a', status: 'concluida' },
+      { responsavel_id: 'a', status: 'em_producao' },
+      { responsavel_id: 'b', status: 'concluida' },
+    ],
+    faixas: [
+      { responsavel_id: 'a', status: 'feita' },
+      { responsavel_id: 'a', status: 'afazer' },
+    ],
+    squares: [
+      { responsavel_id: 'a', etapa: 'pronto' },
+      { responsavel_id: 'a', etapa: 'pronto' },
+      { responsavel_id: 'a', etapa: 'borda' },
+      { responsavel_id: 'c', etapa: 'pronto' },
+    ],
+  }
+
+  it('conta amigurumis concluídos, faixas feitas e granny squares prontos', () => {
+    expect(entregasDe('a', dados)).toEqual({
+      amigurumis: 1,
+      faixas: 1,
+      grannies: 2,
+      total: 4,
+    })
+  })
+
+  it('quem só fez granny square deixa de aparecer com zero entregas', () => {
+    expect(entregasDe('c', dados)).toEqual({
+      amigurumis: 0,
+      faixas: 0,
+      grannies: 1,
+      total: 1,
+    })
+  })
+
+  it('square que ainda não está pronto não conta como entrega', () => {
+    expect(entregasDe('b', dados).grannies).toBe(0)
   })
 })
 

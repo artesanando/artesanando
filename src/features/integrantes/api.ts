@@ -15,22 +15,50 @@ export async function fetchIntegrantes(): Promise<Profile[]> {
 export interface EntregasLight {
   unidades: { responsavel_id: string | null; status: string }[]
   faixas: { responsavel_id: string | null; status: string }[]
+  squares: { responsavel_id: string | null; etapa: string }[]
 }
 
 export async function fetchEntregasLight(): Promise<EntregasLight> {
-  const [un, fx] = await Promise.all([
+  const [un, fx, sq] = await Promise.all([
     supabase.from('unidades').select('responsavel_id, status'),
     supabase.from('faixas').select('responsavel_id, status'),
+    supabase.from('squares').select('responsavel_id, etapa'),
   ])
-  if (un.error || fx.error) throw un.error ?? fx.error
+  if (un.error || fx.error || sq.error) throw un.error ?? fx.error ?? sq.error
   return {
     unidades: (un.data ?? []) as EntregasLight['unidades'],
     faixas: (fx.data ?? []) as EntregasLight['faixas'],
+    squares: (sq.data ?? []) as EntregasLight['squares'],
   }
+}
+
+/** Integrantes anotadas na chamada que ainda não têm conta no app */
+export async function fetchSemConta(): Promise<Profile[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .is('user_id', null)
+    .eq('ativo', true)
+    .order('nome')
+  if (error) throw error
+  return (data ?? []) as Profile[]
+}
+
+/** Junta a ficha de "só chamada" numa integrante que já tem conta */
+export async function vincularPerfil(origem: string, destino: string) {
+  const { error } = await supabase.rpc('vincular_perfil', { origem, destino })
+  if (error) throw error
+}
+
+export async function definirAtivo(id: string, ativo: boolean) {
+  const { error } = await supabase.from('profiles').update({ ativo }).eq('id', id)
+  if (error) throw error
 }
 
 /* ---------- Derivados (unit-testados) ---------- */
 
+/* Granny squares entram na conta desde que o square passou a guardar quem o fez
+   — antes disso, quem só fazia manta de crochê aparecia com zero entregas. */
 export function entregasDe(integranteId: string, dados: EntregasLight) {
   const amigurumis = dados.unidades.filter(
     (u) => u.responsavel_id === integranteId && u.status === 'concluida',
@@ -38,7 +66,10 @@ export function entregasDe(integranteId: string, dados: EntregasLight) {
   const faixas = dados.faixas.filter(
     (f) => f.responsavel_id === integranteId && f.status === 'feita',
   ).length
-  return { amigurumis, faixas, total: amigurumis + faixas }
+  const grannies = dados.squares.filter(
+    (s) => s.responsavel_id === integranteId && s.etapa === 'pronto',
+  ).length
+  return { amigurumis, faixas, grannies, total: amigurumis + faixas + grannies }
 }
 
 /** Itens que a integrante ainda tem em casa (saldo dos empréstimos ativos) */

@@ -1,26 +1,36 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
 import { Lbl, Progress } from '../../components/ui/bits'
 import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
+import { MenuKebab, Select } from '../../components/ui/controles'
+import { useToast } from '../../components/ui/Toast'
+import { useConfirmar } from '../../components/ui/Confirm'
 import { hojeIso } from '../../lib/format'
 import { fetchEmprestimosAtivos } from '../estoque/api'
 import { fetchEncontros, fetchPresencas, frequenciaDe } from '../presenca/api'
 import {
+  definirAtivo,
   emprestadosDe,
   entregasDe,
   fetchEntregasLight,
   fetchIntegrantes,
   filtraIntegrantes,
+  vincularPerfil,
 } from './api'
 import { PREFERENCIA_LABEL } from '../../types/database'
 
 export function IntegrantesPage() {
   const { isAdmin, open } = useStore()
   const navigate = useNavigate()
+  const qc = useQueryClient()
+  const toast = useToast()
+  const confirmar = useConfirmar()
   const { id } = useParams()
   const [busca, setBusca] = useState('')
+  const [vinculando, setVinculando] = useState<string | null>(null)
+  const [destino, setDestino] = useState('')
   const hoje = hojeIso()
 
   const { data: integrantes, isLoading } = useQuery({
@@ -38,8 +48,39 @@ export function IntegrantesPage() {
   const freqDe = (pid: string) => frequenciaDe(pid, encontros ?? [], presencas ?? [], hoje)
 
   const selFreq = sel ? freqDe(sel.id) : { presentes: 0, total: 0, pct: 0 }
-  const selEntregas = sel && entregas ? entregasDe(sel.id, entregas) : { amigurumis: 0, faixas: 0, total: 0 }
+  const selEntregas =
+    sel && entregas
+      ? entregasDe(sel.id, entregas)
+      : { amigurumis: 0, faixas: 0, grannies: 0, total: 0 }
   const selEmprestados = sel ? emprestadosDe(sel.id, loans ?? []) : 0
+
+  /* Quem entrou pela chamada existe como perfil sem conta. Enquanto não for
+     convidada (ou juntada a uma ficha existente), fica sinalizada aqui. */
+  const semConta = (integrantes ?? []).filter((p) => !p.user_id)
+  const comConta = (integrantes ?? []).filter((p) => p.user_id)
+
+  const vincular = useMutation({
+    mutationFn: ({ origem, para }: { origem: string; para: string }) =>
+      vincularPerfil(origem, para),
+    onSuccess: () => {
+      setVinculando(null)
+      setDestino('')
+      qc.invalidateQueries({ queryKey: ['integrantes'] })
+      qc.invalidateQueries({ queryKey: ['presencas'] })
+      qc.invalidateQueries({ queryKey: ['entregas-light'] })
+      toast('Fichas juntadas ✓')
+    },
+    onError: () => toast('Não foi possível juntar as fichas.', 'erro'),
+  })
+
+  const desativar = useMutation({
+    mutationFn: ({ pid, ativo }: { pid: string; ativo: boolean }) => definirAtivo(pid, ativo),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['integrantes'] })
+      toast('Integrante atualizada ✓')
+    },
+    onError: () => toast('Não foi possível atualizar.', 'erro'),
+  })
 
   return (
     <div
@@ -79,6 +120,87 @@ export function IntegrantesPage() {
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
+        {isAdmin && semConta.length > 0 && (
+          <div
+            style={{
+              background: 'var(--chip-warn)',
+              border: '1px solid #E7D6B8',
+              borderRadius: 12,
+              padding: '11px 14px',
+              marginBottom: 14,
+              fontSize: 12.5,
+              color: 'var(--gold-dark)',
+            }}
+          >
+            <b>
+              {semConta.length}{' '}
+              {semConta.length === 1 ? 'pessoa na chamada' : 'pessoas na chamada'} ainda sem
+              perfil.
+            </b>{' '}
+            Convide para o app, ou junte a ficha a uma integrante que já existe.
+            {semConta.map((p) => (
+              <div
+                key={p.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginTop: 8,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <b style={{ flex: 1, minWidth: 100 }}>{p.nome}</b>
+                {vinculando === p.id ? (
+                  <>
+                    <span style={{ minWidth: 170, flex: 1 }}>
+                      <Select
+                        ariaLabel={`Juntar ${p.nome} a qual integrante`}
+                        value={destino}
+                        onChange={setDestino}
+                        options={[
+                          ['', 'Juntar com…'],
+                          ...comConta.map((d) => [d.id, d.nome] as [string, string]),
+                        ]}
+                      />
+                    </span>
+                    <button
+                      className="pill"
+                      style={{ padding: '7px 14px', fontSize: 12 }}
+                      disabled={!destino || vincular.isPending}
+                      onClick={() => vincular.mutate({ origem: p.id, para: destino })}
+                    >
+                      Juntar
+                    </button>
+                    <button
+                      className="pill ghost"
+                      style={{ padding: '7px 14px', fontSize: 12 }}
+                      onClick={() => setVinculando(null)}
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="pill ghost"
+                      style={{ padding: '7px 14px', fontSize: 12 }}
+                      onClick={() => open('integrante')}
+                    >
+                      Convidar
+                    </button>
+                    <button
+                      className="pill ghost"
+                      style={{ padding: '7px 14px', fontSize: 12 }}
+                      onClick={() => setVinculando(p.id)}
+                    >
+                      Juntar a outra
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
         <div style={{ borderTop: '1px solid var(--border)' }}>
           {isLoading && (
             <div style={{ padding: '12px 8px', fontSize: 13, color: 'var(--muted)' }}>
@@ -118,8 +240,23 @@ export function IntegrantesPage() {
                   size={32}
                   fontSize={12}
                 />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: 14 }}>{p.nome}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: 14 }}>
+                    {p.nome}
+                    {!p.user_id && (
+                      <span
+                        className="tag"
+                        style={{
+                          background: 'var(--chip-warn)',
+                          color: 'var(--gold-dark)',
+                          fontSize: 9.5,
+                          marginLeft: 6,
+                        }}
+                      >
+                        SEM PERFIL
+                      </span>
+                    )}
+                  </div>
                   <div
                     style={{
                       fontSize: 11.5,
@@ -139,6 +276,29 @@ export function IntegrantesPage() {
                 >
                   {freq.pct}%
                 </div>
+                {isAdmin && (
+                  <span onClick={(e) => e.stopPropagation()}>
+                    <MenuKebab
+                      ariaLabel={`Ações de ${p.nome}`}
+                      acoes={[
+                        {
+                          label: 'Desativar',
+                          perigo: true,
+                          onSelect: async () => {
+                            const ok = await confirmar({
+                              titulo: `Desativar ${p.nome}?`,
+                              descricao:
+                                'Ela sai das listas e da chamada, mas o histórico dela continua inteiro.',
+                              okLabel: 'Desativar',
+                              perigo: true,
+                            })
+                            if (ok) desativar.mutate({ pid: p.id, ativo: false })
+                          },
+                        },
+                      ]}
+                    />
+                  </span>
+                )}
               </div>
             )
           })}
@@ -191,6 +351,21 @@ export function IntegrantesPage() {
               <span style={{ width: 12, height: 12, borderRadius: 3, background: '#7D9B76' }} />
               <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>Faixas de tricô feitas</span>
               <b style={{ fontSize: 15 }}>{selEntregas.faixas}</b>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '11px 14px',
+                borderTop: '1px solid var(--border)',
+              }}
+            >
+              <span style={{ width: 12, height: 12, borderRadius: 3, background: '#C4798A' }} />
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>
+                Granny squares prontos
+              </span>
+              <b style={{ fontSize: 15 }}>{selEntregas.grannies}</b>
             </div>
           </div>
           {selEmprestados > 0 && (

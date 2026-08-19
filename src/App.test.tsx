@@ -259,6 +259,19 @@ describe('integrantes (M4)', () => {
     expect(screen.getByText('ENTREGAS NO SEMESTRE')).toBeInTheDocument()
     expect(screen.getByText('FREQUÊNCIA')).toBeInTheDocument()
   })
+
+  it('as entregas passam a contar granny squares', async () => {
+    __login()
+    renderAt('/integrantes')
+    expect(await screen.findByText('Granny squares prontos')).toBeInTheDocument()
+  })
+
+  it('avisa quem ainda precisa ser vinculada a um perfil', async () => {
+    __login()
+    renderAt('/integrantes')
+    expect(await screen.findByText(/1 pessoa na chamada.* ainda sem/s)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Juntar a outra' })).toBeInTheDocument()
+  })
 })
 
 describe('perfil', () => {
