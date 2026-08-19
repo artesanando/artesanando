@@ -32,6 +32,7 @@ const item = (over: Partial<EstoqueItem>): EstoqueItem => ({
   vendidos: 0,
   minimo: 5,
   custo_centavos: null,
+  capa_path: null,
   arquivado_em: null,
   ...over,
 })

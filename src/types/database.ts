@@ -51,6 +51,7 @@ export interface EstoqueItem {
   vendidos: number
   minimo: number
   custo_centavos: number | null
+  capa_path: string | null
   arquivado_em: string | null
 }
 
@@ -104,7 +105,7 @@ export interface ReceitaConteudo {
   esquema?: string[][]
   faixas?: number
   cells?: string[][]
-  modelos?: Record<string, { border: string; inner: string }>
+  modelos?: Record<string, { border: string; inner: string; nome?: string }>
 }
 
 export interface Receita {
@@ -116,6 +117,8 @@ export interface Receita {
   specs: [string, string][]
   conteudo: ReceitaConteudo
   pdf_path: string | null
+  video_url: string | null
+  capa_path: string | null
   origem: 'manual' | 'criador'
   criado_por: string | null
   arquivado_em: string | null

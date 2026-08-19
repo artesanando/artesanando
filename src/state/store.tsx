@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
-import { FAIXA_SEQ_INICIAL, GRANNY_RINGS_INICIAL, PALETTE, type ModelKey } from '../lib/paleta'
+import { FAIXA_SEQ_INICIAL, GRANNY_RINGS_INICIAL, PALETTE } from '../lib/paleta'
 import { useAuth } from './auth'
 
 /* Estado global de UI portado do protótipo (objeto S de js/app.js).
@@ -43,10 +43,6 @@ interface StoreState {
   grannyRings: Ring[]
   faixaSeq: string[]
   faixaCount: number
-  layoutCols: number
-  layoutRows: number
-  layoutBrush: ModelKey
-  layoutMap: Record<string, ModelKey>
 }
 
 const INITIAL: StoreState = {
@@ -63,10 +59,6 @@ const INITIAL: StoreState = {
   grannyRings: GRANNY_RINGS_INICIAL,
   faixaSeq: FAIXA_SEQ_INICIAL,
   faixaCount: 8,
-  layoutCols: 8,
-  layoutRows: 6,
-  layoutBrush: 'A',
-  layoutMap: {},
 }
 
 export interface Store extends StoreState {
@@ -99,12 +91,6 @@ export interface Store extends StoreState {
   faixaDrop: () => void
   incFaixa: () => void
   decFaixa: () => void
-  layoutPaint: (r: number, c: number) => void
-  pickBrush: (k: ModelKey) => void
-  incCols: () => void
-  decCols: () => void
-  incRows: () => void
-  decRows: () => void
 }
 
 const Ctx = createContext<Store | null>(null)
@@ -172,12 +158,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     faixaDrop: () => set({ faixaSeq: s.faixaSeq.length > 2 ? s.faixaSeq.slice(0, -1) : s.faixaSeq }),
     incFaixa: () => set({ faixaCount: Math.min(20, s.faixaCount + 1) }),
     decFaixa: () => set({ faixaCount: Math.max(2, s.faixaCount - 1) }),
-    layoutPaint: (r, c) => set({ layoutMap: { ...s.layoutMap, [r + '-' + c]: s.layoutBrush } }),
-    pickBrush: (layoutBrush) => set({ layoutBrush }),
-    incCols: () => set({ layoutCols: Math.min(12, s.layoutCols + 1) }),
-    decCols: () => set({ layoutCols: Math.max(3, s.layoutCols - 1) }),
-    incRows: () => set({ layoutRows: Math.min(12, s.layoutRows + 1) }),
-    decRows: () => set({ layoutRows: Math.max(3, s.layoutRows - 1) }),
   }
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>

@@ -8,7 +8,7 @@ import { ColorPicker, Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { PAPEL_LABEL, type Preferencia } from '../../types/database'
 import { atualizarPerfil, subirAvatar } from './api'
-import { RecorteFoto } from './RecorteFoto'
+import { RecorteImagem } from '../../components/ui/RecorteImagem'
 
 const PREFS: [Preferencia, string][] = [
   ['croche', 'Crochê'],
@@ -326,8 +326,10 @@ export function PerfilPage() {
       </form>
 
       {aRecortar && (
-        <RecorteFoto
+        <RecorteImagem
           arquivo={aRecortar}
+          redondo
+          saida={{ largura: 256, altura: 256 }}
           aoConfirmar={trocarFoto}
           aoCancelar={() => setARecortar(null)}
         />

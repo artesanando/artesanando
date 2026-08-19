@@ -565,6 +565,112 @@ textarea.field::placeholder {
   }
 }
 
+/* Enquadramento de foto: a imagem inteira embaixo, moldura arrastável em cima */
+.palco-recorte {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--sand);
+  touch-action: none;
+  user-select: none;
+}
+.sombra-recorte {
+  position: absolute;
+  inset: 0;
+  background: rgba(59, 52, 47, 0.55);
+  pointer-events: none;
+}
+.moldura-recorte {
+  position: absolute;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(59, 52, 47, 0.35);
+  cursor: grab;
+  background: none;
+  padding: 0;
+}
+.canto-recorte {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(59, 52, 47, 0.4);
+}
+@media (max-width: 640px) {
+  .canto-recorte {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* alças de redimensionar a grade do esquema de manta. A faixa visível é fina,
+   mas a área de toque é generosa — no celular o dedo não acerta 4px. */
+.alca-grade {
+  position: absolute;
+  border: none;
+  background: transparent;
+  padding: 0;
+  touch-action: none;
+}
+.alca-grade::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  border-radius: 99px;
+  background: var(--field-border);
+  transition: background var(--dur-rapida) var(--ease-suave);
+}
+.alca-grade:hover::after,
+.alca-grade:focus-visible::after {
+  background: var(--primary);
+}
+.alca-x {
+  top: 0;
+  right: 0;
+  width: 14px;
+  bottom: 14px;
+  cursor: ew-resize;
+}
+.alca-x::after {
+  width: 4px;
+  height: 46%;
+}
+.alca-y {
+  left: 0;
+  bottom: 0;
+  height: 14px;
+  right: 14px;
+  cursor: ns-resize;
+}
+.alca-y::after {
+  height: 4px;
+  width: 46%;
+}
+.alca-xy {
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+}
+.alca-xy::after {
+  width: 8px;
+  height: 8px;
+}
+@media (max-width: 640px) {
+  .alca-x {
+    width: 22px;
+  }
+  .alca-y {
+    height: 22px;
+  }
+  .alca-xy {
+    width: 22px;
+    height: 22px;
+  }
+}
+
 /* faixa "#1–5 · Ana" das unidades de amigurumi */
 .linha-grupo-und {
   display: flex;
