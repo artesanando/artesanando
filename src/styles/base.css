@@ -565,6 +565,23 @@ textarea.field::placeholder {
   }
 }
 
+/* miniatura do material na lista de estoque — cor sólida quando não há foto */
+.miniatura-item {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  display: block;
+}
+.miniatura-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 /* card tracejado de "+ Adicionar" no fim das grades */
 .card-adicionar {
   border: 2px dashed var(--field-border);

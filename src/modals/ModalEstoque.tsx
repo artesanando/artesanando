@@ -4,6 +4,8 @@ import { Stepper } from '../components/ui/bits'
 import { Campo, LegendaObrigatorio, useFormulario } from '../components/ui/Campo'
 import { ColorPicker, Select } from '../components/ui/controles'
 import { useToast } from '../components/ui/Toast'
+import { CampoCapa } from '../components/ui/CampoCapa'
+import { subirCapa } from '../lib/capa'
 import { ModalBox, ModalHeader } from './shared'
 import { useStore } from '../state/store'
 import { useAuth } from '../state/auth'
@@ -20,8 +22,7 @@ import { fmtDataBarra } from '../lib/format'
 const CATS: [EstoqueCategoria, string][] = [
   ['novelos', 'Novelo'],
   ['agulhas', 'Agulha'],
-  ['olhos', 'Olhos'],
-  ['enchimento', 'Enchimento'],
+  ['outros', 'Outros'],
   ['feira', 'Feira'],
 ]
 
@@ -43,6 +44,7 @@ export function ModalMaterial() {
   const [cor, setCor] = useState(item?.cor_hex ?? '#DFA2AC')
   const [quantidade, setQuantidade] = useState(12)
   const [minimo, setMinimo] = useState(item?.minimo ?? 2)
+  const [capa, setCapa] = useState<Blob | null>(null)
 
   const salvar = useMutation({
     mutationFn: async () => {
@@ -52,6 +54,7 @@ export function ModalMaterial() {
         detalhe: detalhe.trim() || null,
         cor_hex: categoria === 'novelos' ? cor : null,
         minimo,
+        ...(capa ? { capa_path: await subirCapa(capa) } : {}),
       }
       if (item) await atualizarItemEstoque(item.id, base)
       else await criarItemEstoque({ ...base, quantidade })
@@ -73,14 +76,7 @@ export function ModalMaterial() {
 
   return (
     <ModalBox maxWidth={560}>
-      <ModalHeader
-        title={editando ? 'Editar material' : 'Novo material'}
-        sub={
-          editando
-            ? 'A quantidade muda por entrada de material, não aqui'
-            : 'Adicionar ao estoque coletivo'
-        }
-      />
+      <ModalHeader title={editando ? 'Editar material' : 'Novo material'} />
       <form onSubmit={submit}>
         <div className="lbl" style={{ marginBottom: 7 }}>
           TIPO
@@ -151,11 +147,18 @@ export function ModalMaterial() {
               )}
             </Campo>
           )}
-          <Campo label="MÍNIMO (ALERTA ⚠)" dica="abaixo disso a tela avisa">
+          <Campo label="MÍNIMO PARA AVISAR ⚠">
             {() => (
               <Stepper value={minimo} onChange={setMinimo} min={0} max={99} ariaLabel="Mínimo" />
             )}
           </Campo>
+        </div>
+
+        <div className="lbl" style={{ marginBottom: 7 }}>
+          FOTO
+        </div>
+        <div style={{ marginBottom: 24 }}>
+          <CampoCapa atual={item?.capa_path} blob={capa} aoEscolher={setCapa} vazio="Foto do material" />
         </div>
 
         <div
@@ -184,9 +187,15 @@ export function ModalMaterial() {
 
 /* ---------- Entrada / ajuste de estoque ---------- */
 
-const MOTIVOS: [MotivoMovimento, string][] = (
-  ['compra', 'doacao', 'ajuste', 'perda', 'venda'] as MotivoMovimento[]
-).map((m) => [m, MOTIVO_LABEL[m]])
+/* O sentido do movimento vinha escondido no motivo — "perda" e "venda" eram
+   saída, o resto entrada — e não havia como tirar do estoque por outro motivo.
+   Agora a direção vem primeiro e os motivos mudam conforme ela. */
+type Direcao = 'entrada' | 'saida'
+
+const MOTIVOS: Record<Direcao, MotivoMovimento[]> = {
+  entrada: ['compra', 'doacao', 'ajuste'],
+  saida: ['perda', 'venda', 'ajuste'],
+}
 
 export function ModalMovimentoEstoque() {
   const { close, estoqueItemId } = useStore()
@@ -204,11 +213,16 @@ export function ModalMovimentoEstoque() {
     enabled: !!estoqueItemId,
   })
 
+  const [direcao, setDirecao] = useState<Direcao>('entrada')
   const [motivo, setMotivo] = useState<MotivoMovimento>('compra')
   const [quantidade, setQuantidade] = useState(12)
   const [obs, setObs] = useState('')
 
-  const saida = motivo === 'perda' || motivo === 'venda'
+  const saida = direcao === 'saida'
+  const trocarDirecao = (d: Direcao) => {
+    setDirecao(d)
+    if (!MOTIVOS[d].includes(motivo)) setMotivo(MOTIVOS[d][0])
+  }
 
   const lancar = useMutation({
     mutationFn: () =>
@@ -253,19 +267,38 @@ export function ModalMovimentoEstoque() {
         sub={`${item.nome}${item.detalhe ? ` · ${item.detalhe}` : ''} — ${item.quantidade} em posse`}
       />
       <form onSubmit={submit}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+          {(['entrada', 'saida'] as Direcao[]).map((d) => (
+            <button
+              key={d}
+              type="button"
+              className="seg"
+              aria-pressed={direcao === d}
+              onClick={() => trocarDirecao(d)}
+              style={
+                direcao === d
+                  ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }
+                  : undefined
+              }
+            >
+              {d === 'entrada' ? 'Adicionar ao estoque' : 'Retirar do estoque'}
+            </button>
+          ))}
+        </div>
+
         <div className="grid2" style={{ marginBottom: 18 }}>
           <Campo label="MOTIVO" obrigatorio>
             {() => (
-              <Select
+              <Select<MotivoMovimento>
                 value={motivo}
                 onChange={setMotivo}
-                options={MOTIVOS}
+                options={MOTIVOS[direcao].map((m) => [m, MOTIVO_LABEL[m]])}
                 ariaLabel="Motivo do movimento"
               />
             )}
           </Campo>
           <Campo
-            label={saida ? 'QUANTIDADE QUE SAI' : 'QUANTIDADE QUE ENTRA'}
+            label="QUANTIDADE"
             obrigatorio
             erro={form.erros.quantidade}
           >

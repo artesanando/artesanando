@@ -5,6 +5,7 @@ import { useAuth } from '../../state/auth'
 import { MenuKebab } from '../../components/ui/controles'
 import { useAcoesArquivo } from '../../components/ui/useAcoesItem'
 import { separaArquivados } from '../../lib/arquivo'
+import { urlsDasCapas } from '../../lib/capa'
 import type { EstoqueCategoria, EstoqueItem } from '../../types/database'
 import {
   disponivel,
@@ -18,26 +19,25 @@ import {
 export const ESTO_TABS: [EstoqueCategoria, string][] = [
   ['novelos', 'Novelos'],
   ['agulhas', 'Agulhas'],
-  ['olhos', 'Olhos & segurança'],
-  ['enchimento', 'Enchimento'],
+  ['outros', 'Outros'],
   ['feira', 'Itens de feira'],
 ]
 
 const COLS: Record<EstoqueCategoria, [string, string, string, string]> = {
   novelos: ['MARCA / LINHA', 'COR', 'DISP.', 'EMPR.'],
   agulhas: ['TIPO', 'MEDIDA', 'DISP.', 'EMPR.'],
-  olhos: ['ITEM', 'TAMANHO', 'DISP.', 'EMPR.'],
-  enchimento: ['ITEM', 'ESPECIFICAÇÃO', 'DISP.', 'EMPR.'],
+  outros: ['ITEM', 'DETALHE', 'DISP.', 'EMPR.'],
   feira: ['ITEM', 'DETALHE', 'DISP.', 'VENDIDOS'],
 }
 
 /* Unidade que aparece em "N ... em estoque". Agulha de tricô e gancho de crochê
-   são coisas diferentes, e o projeto só tem agulha — a categoria fala só delas. */
+   são coisas diferentes, e o projeto só tem agulha — a categoria fala só delas.
+   Olhos e enchimento moravam em abas próprias quase vazias e agora dividem
+   "Outros" com todo o resto; o que separa um do outro é o detalhe. */
 const UNIT: Record<EstoqueCategoria, string> = {
   novelos: 'novelos',
   agulhas: 'agulhas',
-  olhos: 'olhos e itens de segurança',
-  enchimento: 'itens de enchimento',
+  outros: 'itens',
   feira: 'itens de feira',
 }
 
@@ -74,6 +74,13 @@ export function EstoquePage() {
   } = useQuery({ queryKey: ['estoque'], queryFn: fetchEstoque })
   const { data: loans } = useQuery({ queryKey: ['emprestimos'], queryFn: fetchEmprestimosAtivos })
 
+  const comCapa = (itens ?? []).filter((i) => i.capa_path).map((i) => i.capa_path!)
+  const { data: capas } = useQuery({
+    queryKey: ['capas-estoque', comCapa.join(',')],
+    queryFn: () => urlsDasCapas(comCapa),
+    enabled: comCapa.length > 0,
+  })
+
   const emprestados = emprestadoPorItem(loans ?? [])
   const { ativos, arquivados } = separaArquivados(itens ?? [])
   const rows = (verArquivados ? arquivados : ativos).filter((i) => i.categoria === estoTab)
@@ -86,32 +93,18 @@ export function EstoquePage() {
     const disp = disponivel(item, emp)
     const low = item.categoria !== 'feira' && estoqueBaixo(item, emp)
     const ultima = item.categoria === 'feira' ? item.vendidos : emp
+    const capa = item.capa_path ? capas?.get(item.capa_path) : null
     return (
       <div key={item.id} className="linha-estoque">
-        <div style={{ fontWeight: 800 }}>{item.nome}</div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            fontWeight: 600,
-            color: 'var(--ink-soft)',
-          }}
-        >
-          {item.cor_hex && (
-            <span
-              style={{
-                width: 14,
-                height: 14,
-                borderRadius: '50%',
-                background: item.cor_hex,
-                border: '1px solid rgba(0,0,0,.08)',
-                flex: 'none',
-              }}
-            />
-          )}
-          {item.detalhe}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+          {/* sem foto, a cor do item (ou a da categoria) já identifica a linha */}
+          <span className="miniatura-item" style={{ background: item.cor_hex ?? 'var(--sand)' }}>
+            {capa && <img src={capa} alt="" />}
+          </span>
+          <span style={{ fontWeight: 800, minWidth: 0 }}>{item.nome}</span>
         </div>
+        {/* a cor do fio já está na miniatura; aqui fica só o texto */}
+        <div style={{ fontWeight: 600, color: 'var(--ink-soft)' }}>{item.detalhe}</div>
         <div>
           <span
             className="tag"

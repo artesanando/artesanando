@@ -39,7 +39,7 @@ export interface Semestre {
   ativo: boolean
 }
 
-export type EstoqueCategoria = 'novelos' | 'agulhas' | 'olhos' | 'enchimento' | 'feira'
+export type EstoqueCategoria = 'novelos' | 'agulhas' | 'outros' | 'feira'
 
 export interface EstoqueItem {
   id: string
