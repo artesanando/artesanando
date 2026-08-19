@@ -1,13 +1,18 @@
-import { useState, type CSSProperties, type FormEvent } from 'react'
+import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../state/store'
 import { useAuth } from '../state/auth'
 import { Stepper } from '../components/ui/bits'
 import { Campo, LegendaObrigatorio, useFormulario } from '../components/ui/Campo'
+import { CampoMedida } from '../components/ui/CampoMedida'
+import { PreviaFaixas } from '../components/ui/PreviaFaixas'
+import { PreviaGrade } from '../components/ui/PreviaGrade'
 import { ColorPicker, Select } from '../components/ui/controles'
+import { useConfirmar } from '../components/ui/Confirm'
 import { ModalBox, ModalHeader } from './shared'
 import { gradePadrao } from '../lib/grade'
+import { fmtMedida, gradeParaTamanho, tamanhoManta } from '../lib/medida'
 import { MODELS } from '../lib/paleta'
 import { fetchReceitas } from '../features/biblioteca/api'
 import {
@@ -69,9 +74,19 @@ const MODELOS_INICIAIS: ModeloNovo[] = [
 const LETRAS = 'ABCDEFGH'.split('')
 
 export function ModalProjeto() {
-  const { projCat, projTec, setProjCat, setProjTec, openFaixa, faixaSeq, faixaCount, close } =
-    useStore()
+  const {
+    projCat,
+    projTec,
+    setProjCat,
+    setProjTec,
+    openFaixa,
+    faixaSeq,
+    faixaCount,
+    setFaixaCount,
+    close,
+  } = useStore()
   const { profile } = useAuth()
+  const confirmar = useConfirmar()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const form = useFormulario<'nome' | 'manta'>()
@@ -91,6 +106,16 @@ export function ModalProjeto() {
   const [linhas, setLinhas] = useState(10)
   const [modelos, setModelos] = useState<ModeloNovo[]>(MODELOS_INICIAIS)
   const [esquemaId, setEsquemaId] = useState('')
+  /* A peça vem do padrão escolhido e pode ser ajustada só para este projeto: a
+     mesma receita rende tamanhos diferentes conforme o fio e a mão. */
+  const [peca, setPeca] = useState<{ largura: number | null; altura: number | null }>({
+    largura: null,
+    altura: null,
+  })
+  const [alvo, setAlvo] = useState<{ largura: number | null; altura: number | null }>({
+    largura: null,
+    altura: null,
+  })
 
   const manta = projCat === 'manta'
   const croche = manta && projTec === 'croche'
@@ -111,6 +136,48 @@ export function ModalProjeto() {
   )
   const esquema = esquemas.find((e) => e.id === esquemaId)
 
+  const grade = croche && origem === 'esquema' && esquema?.conteudo.cells
+    ? { colunas: esquema.conteudo.cells[0]?.length ?? 1, linhas: esquema.conteudo.cells.length }
+    : { colunas, linhas: manta && !croche ? faixaCount : linhas }
+
+  const tamanho = manta
+    ? tamanhoManta(croche ? 'manta_croche' : 'manta_trico', grade.colunas, grade.linhas, peca)
+    : null
+
+  /* Herda a medida do esquema escolhido enquanto ninguém digitou a sua. */
+  useEffect(() => {
+    if (!esquema || peca.largura || peca.altura) return
+    setPeca({ largura: esquema.largura_cm, altura: esquema.altura_cm })
+  }, [esquema, peca.largura, peca.altura])
+
+  /* Tamanho final editado à mão: recalcula a grade pela mais próxima e mostra o
+     que deu antes de aplicar — o número quase nunca fecha redondo. */
+  const aplicarAlvo = async () => {
+    if (!alvo.largura || !alvo.altura || !peca.largura || !peca.altura) return
+    const tipo = croche ? 'manta_croche' : 'manta_trico'
+    const nova = gradeParaTamanho(
+      tipo,
+      { largura: alvo.largura, altura: alvo.altura },
+      { largura: peca.largura, altura: peca.altura },
+    )
+    const resultado = tamanhoManta(tipo, nova.colunas, nova.linhas, peca)!
+    const ok = await confirmar({
+      titulo: croche
+        ? `${nova.colunas} × ${nova.linhas} squares = ${fmtMedida(resultado)}`
+        : `${nova.linhas} faixas = ${fmtMedida(resultado)}`,
+      descricao: `Você pediu ${fmtMedida({ largura: alvo.largura, altura: alvo.altura })}.`,
+      okLabel: 'Usar esta grade',
+    })
+    if (!ok) return
+    if (croche) {
+      setOrigem('zero')
+      setColunas(nova.colunas)
+      setLinhas(nova.linhas)
+    } else {
+      setFaixaCount(nova.linhas)
+    }
+  }
+
   const criar = useMutation({
     mutationFn: () => {
       if (croche && origem === 'esquema' && esquema?.conteudo.cells && esquema.conteudo.modelos) {
@@ -124,6 +191,8 @@ export function ModalProjeto() {
           created_by: profile!.id,
           colunas: cells[0]?.length ?? 1,
           linhas: cells.length,
+          pecaLarguraCm: peca.largura,
+          pecaAlturaCm: peca.altura,
           modelos: Object.entries(defs).map(([letra, d]) => ({
             letra,
             nome: `Modelo ${letra}`,
@@ -143,6 +212,8 @@ export function ModalProjeto() {
         created_by: profile!.id,
         colunas,
         linhas,
+        pecaLarguraCm: peca.largura,
+        pecaAlturaCm: peca.altura,
         modelos,
         celulas: gradePadrao(
           colunas,
@@ -404,9 +475,19 @@ export function ModalProjeto() {
                     + Modelo
                   </button>
                 )}
-                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 10 }}>
-                  A manta nasce com <b>{colunas * linhas} squares</b> em "a fazer", alternando os
-                  modelos. Depois dá para arrastar, pintar e mudar o tamanho no mapa.
+                {/* a distribuição diagonal dos modelos é o que a grade vai
+                    receber — dá para conferir antes de criar */}
+                <div className="lbl" style={{ margin: '14px 0 6px' }}>
+                  PRÉVIA
+                </div>
+                <PreviaGrade
+                  celulas={gradePadrao(colunas, linhas, modelos.map((m) => m.letra))}
+                  cores={Object.fromEntries(
+                    modelos.map((m) => [m.letra, { border: m.cor_borda, inner: m.cor_miolo }]),
+                  )}
+                />
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>
+                  {colunas} × {linhas} · {colunas * linhas} squares
                 </div>
               </>
             ) : (
@@ -432,37 +513,10 @@ export function ModalProjeto() {
                     <div className="lbl" style={{ marginBottom: 6 }}>
                       PRÉVIA
                     </div>
-                    <div
-                      style={{
-                        display: 'inline-grid',
-                        gridTemplateColumns: `repeat(${esquema.conteudo.cells[0]?.length ?? 1}, 14px)`,
-                        gap: 2,
-                        background: 'var(--sand)',
-                        padding: 5,
-                        borderRadius: 6,
-                      }}
-                    >
-                      {esquema.conteudo.cells.flatMap((row, r) =>
-                        row.map((letra, c) => {
-                          const d = esquema.conteudo.modelos?.[letra]
-                          return (
-                            <span
-                              key={`${r}-${c}`}
-                              style={{
-                                width: 14,
-                                height: 14,
-                                background: d?.border ?? '#ccc',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              <span style={{ width: 7, height: 7, background: d?.inner ?? '#eee' }} />
-                            </span>
-                          )
-                        }),
-                      )}
-                    </div>
+                    <PreviaGrade
+                      celulas={esquema.conteudo.cells}
+                      cores={esquema.conteudo.modelos ?? {}}
+                    />
                     <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>
                       {esquema.conteudo.cells.length} linhas ×{' '}
                       {esquema.conteudo.cells[0]?.length ?? 0} colunas
@@ -484,24 +538,9 @@ export function ModalProjeto() {
               marginBottom: 20,
             }}
           >
-            <div style={{ fontSize: 12, color: '#5E6E55', marginBottom: 10 }}>
-              A manta nasce com <b>{faixaCount} faixas</b> usando esta sequência de cores. Tudo
-              continua editável depois.
-            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div
-                style={{
-                  display: 'flex',
-                  borderRadius: 6,
-                  overflow: 'hidden',
-                  border: '1px solid var(--field-border)',
-                  flex: 1,
-                  height: 22,
-                }}
-              >
-                {faixaSeq.map((c, i) => (
-                  <div key={i} style={{ flex: 1, background: c }} />
-                ))}
+              <div style={{ flex: 1 }}>
+                <PreviaFaixas seq={faixaSeq} faixas={faixaCount} />
               </div>
               <button
                 type="button"
@@ -520,6 +559,69 @@ export function ModalProjeto() {
                 + Editar padrão
               </button>
             </div>
+          </div>
+        )}
+
+        {manta && (
+          <div
+            style={{
+              border: '1px solid var(--border)',
+              borderRadius: 12,
+              padding: '14px 16px',
+              marginBottom: 20,
+            }}
+          >
+            <CampoMedida
+              largura={peca.largura}
+              altura={peca.altura}
+              rotuloLargura={croche ? 'LARGURA DO SQUARE (CM)' : 'LARGURA DA FAIXA (CM)'}
+              rotuloAltura={croche ? 'ALTURA DO SQUARE (CM)' : 'ALTURA DA FAIXA (CM)'}
+              aoMudar={(patch) => setPeca((m) => ({ ...m, ...patch }))}
+            />
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                marginTop: 12,
+                paddingTop: 12,
+                borderTop: '1px solid var(--divider)',
+                flexWrap: 'wrap',
+                fontSize: 12.5,
+              }}
+            >
+              <span style={{ fontWeight: 700, color: 'var(--muted)' }}>Manta</span>
+              <b className="h" style={{ fontSize: 16, color: 'var(--accent)' }}>
+                {fmtMedida(tamanho)}
+              </b>
+            </div>
+            {tamanho && (
+              <div style={{ marginTop: 12 }}>
+                <div className="lbl" style={{ marginBottom: 7 }}>
+                  OU MANDE O TAMANHO FINAL
+                </div>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  <span style={{ flex: 1, minWidth: 190 }}>
+                    <CampoMedida
+                      largura={alvo.largura}
+                      altura={alvo.altura}
+                      rotuloLargura="LARGURA DA MANTA (CM)"
+                      rotuloAltura="ALTURA DA MANTA (CM)"
+                      aoMudar={(patch) => setAlvo((m) => ({ ...m, ...patch }))}
+                    />
+                  </span>
+                  <button
+                    type="button"
+                    className="pill ghost"
+                    disabled={!alvo.largura || !alvo.altura}
+                    onClick={aplicarAlvo}
+                  >
+                    Ajustar a grade
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

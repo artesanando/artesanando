@@ -7,6 +7,7 @@ import { Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { useGradeInterativa, type ModoGrade } from '../../components/ui/useGradeInterativa'
 import { coordenada } from '../../lib/grade'
+import { fmtMedida, tamanhoManta } from '../../lib/medida'
 import { Comentarios, Historico } from './Comentarios'
 import {
   ETAPAS,
@@ -462,6 +463,10 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
   const letras = (modelos ?? []).map((m) => m.letra).join('/')
   // mantas criadas antes da grade configurável não têm colunas gravadas
   const colunas = projeto.colunas ?? 10
+  const tamanho = tamanhoManta('manta_croche', colunas, Math.ceil(lista.length / colunas), {
+    largura: projeto.peca_largura_cm,
+    altura: projeto.peca_altura_cm,
+  })
 
   return (
     <div className="pagina">
@@ -482,6 +487,7 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
       <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 18 }}>
         {projeto.destino ? `Destino: ${projeto.destino} · ` : ''}
         {prog.total} squares{letras ? ` · padrões ${letras}` : ''}
+        {tamanho ? ` · ${fmtMedida(tamanho)}` : ''}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26 }}>
         <Progress pct={`${pct}%`} style={{ flex: 1, height: 8 }} />

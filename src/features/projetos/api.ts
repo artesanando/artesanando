@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import { gradePadrao } from '../../lib/grade'
+import { gradePadrao, sequenciaDaFaixa } from '../../lib/grade'
 import type { Receita } from '../../types/database'
 
 /* ---------- Tipos ---------- */
@@ -29,6 +29,9 @@ export interface Projeto {
   meta: number | null
   colunas: number | null
   linhas: number | null
+  /** tamanho de um square (crochê) ou de uma faixa (tricô), em cm */
+  peca_largura_cm: number | null
+  peca_altura_cm: number | null
   status: 'ativo' | 'entregue' | 'arquivado'
   created_by: string | null
   arquivado_em: string | null
@@ -506,6 +509,9 @@ export interface NovoProjeto {
   // manta tricô: padrão das faixas
   faixaSeq?: string[]
   faixaCount?: number
+  // tamanho de um square (crochê) ou de uma faixa (tricô), em cm
+  pecaLarguraCm?: number | null
+  pecaAlturaCm?: number | null
 }
 
 /** Grade padrão quando a manta começa do zero: alterna os modelos em xadrez */
@@ -524,6 +530,8 @@ export async function criarProjeto(novo: NovoProjeto): Promise<string> {
       p_linhas: linhas,
       p_modelos: modelos,
       p_celulas: novo.celulas ?? gradePadrao(colunas, linhas, modelos.map((m) => m.letra)),
+      p_peca_largura_cm: novo.pecaLarguraCm ?? null,
+      p_peca_altura_cm: novo.pecaAlturaCm ?? null,
     })
     if (error) throw error
     return data as string
@@ -544,6 +552,8 @@ export async function criarProjeto(novo: NovoProjeto): Promise<string> {
       emoji: novo.emoji,
       receita_id: novo.receita_id ?? null,
       meta: novo.meta ?? null,
+      peca_largura_cm: novo.pecaLarguraCm ?? null,
+      peca_altura_cm: novo.pecaAlturaCm ?? null,
       created_by: novo.created_by,
     })
     .select('id')
@@ -554,10 +564,12 @@ export async function criarProjeto(novo: NovoProjeto): Promise<string> {
   if (novo.tipo === 'manta_trico') {
     const seq = novo.faixaSeq ?? []
     const count = novo.faixaCount ?? 8
+    // cada faixa desloca a sequência uma posição: é o que faz as cores
+    // caminharem na diagonal em vez de virarem blocos retos
     const faixas = Array.from({ length: count }, (_, i) => ({
       projeto_id: projetoId,
       ordem: i + 1,
-      cores: seq,
+      cores: sequenciaDaFaixa(seq, i),
     }))
     const { error: e3 } = await supabase.from('faixas').insert(faixas)
     if (e3) throw e3

@@ -4,12 +4,14 @@ import { useStore } from '../state/store'
 import { useAuth } from '../state/auth'
 import { Lbl } from '../components/ui/bits'
 import { ColorPicker } from '../components/ui/controles'
+import { CampoMedida } from '../components/ui/CampoMedida'
 import { useGradeInterativa, type ModoGrade } from '../components/ui/useGradeInterativa'
 import { gradePadrao, redimensionaCelulas } from '../lib/grade'
 import { MODELS } from '../lib/paleta'
 import { ModalBox, ModalHeader } from './shared'
 import { SeletorCategoria } from './SeletorCategoria'
 import { criarReceita } from '../features/biblioteca/api'
+import { fmtMedida, tamanhoManta } from '../lib/medida'
 import type { ModeloNovo } from '../features/projetos/api'
 
 const LETRAS = 'ABCDEFGH'.split('')
@@ -61,7 +63,13 @@ export function ModalLayout() {
   )
   const [modo, setModo] = useState<ModoGrade>('pintar')
   const [pincel, setPincel] = useState('A')
+  const [medida, setMedida] = useState<{ largura: number | null; altura: number | null }>({
+    largura: null,
+    altura: null,
+  })
   const [erro, setErro] = useState<string | null>(null)
+
+  const daManta = tamanhoManta('manta_croche', colunas, linhas, medida)
 
   const letras = modelos.map((m) => m.letra)
   const porLetra = new Map(modelos.map((m) => [m.letra, m]))
@@ -161,7 +169,10 @@ export function ModalLayout() {
           ['Colunas', String(colunas)],
           ['Linhas', String(linhas)],
           ['Total', String(colunas * linhas)],
+          ...(daManta ? ([['Manta', fmtMedida(daManta)]] as [string, string][]) : []),
         ],
+        largura_cm: medida.largura,
+        altura_cm: medida.altura,
         conteudo: {
           cells: celulas,
           modelos: Object.fromEntries(
@@ -335,6 +346,12 @@ export function ModalLayout() {
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>
             {colunas} × {linhas} · {colunas * linhas} squares
+            {daManta && (
+              <>
+                {' · '}
+                <b style={{ color: 'var(--accent)' }}>{fmtMedida(daManta)}</b>
+              </>
+            )}
           </div>
         </div>
 
@@ -402,6 +419,17 @@ export function ModalLayout() {
               + Modelo
             </button>
           )}
+
+          {/* a medida do square dá o tamanho da manta inteira */}
+          <div style={{ marginTop: 16 }}>
+            <CampoMedida
+              largura={medida.largura}
+              altura={medida.altura}
+              rotuloLargura="LARGURA DO SQUARE (CM)"
+              rotuloAltura="ALTURA DO SQUARE (CM)"
+              aoMudar={(patch) => setMedida((m) => ({ ...m, ...patch }))}
+            />
+          </div>
         </div>
       </div>
 

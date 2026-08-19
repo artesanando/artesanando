@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { coordenada, gradePadrao, redimensionaCelulas, retangulo } from './grade'
+import {
+  coordenada,
+  gradePadrao,
+  redimensionaCelulas,
+  retangulo,
+  sequenciaDaFaixa,
+} from './grade'
 
 describe('geometria da grade', () => {
   it('traduz posição em linha e coluna a partir de 1', () => {
@@ -54,5 +60,24 @@ describe('redimensionaCelulas', () => {
 
   it('troca a letra que deixou de existir pelo padrão', () => {
     expect(redimensionaCelulas([['C']], 1, 1, ['A', 'B'])).toEqual([['A']])
+  })
+})
+
+describe('sequenciaDaFaixa', () => {
+  it('a primeira faixa sai como a sequência foi escrita', () => {
+    expect(sequenciaDaFaixa(['a', 'b', 'c'], 0)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('cada faixa desloca uma posição', () => {
+    expect(sequenciaDaFaixa(['a', 'b', 'c'], 1)).toEqual(['b', 'c', 'a'])
+    expect(sequenciaDaFaixa(['a', 'b', 'c'], 2)).toEqual(['c', 'a', 'b'])
+  })
+
+  it('depois de uma volta completa repete a primeira', () => {
+    expect(sequenciaDaFaixa(['a', 'b', 'c'], 3)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('sequência vazia não quebra', () => {
+    expect(sequenciaDaFaixa([], 2)).toEqual([])
   })
 })

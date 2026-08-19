@@ -8,6 +8,7 @@ import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
 import { ini } from '../../lib/format'
 import { nomeDaCor, PALETTE } from '../../lib/paleta'
+import { fmtMedida, tamanhoManta } from '../../lib/medida'
 import { Comentarios, Historico } from './Comentarios'
 import {
   adicionarFaixa,
@@ -491,6 +492,10 @@ export function MantaTricoPage({ projeto }: { projeto: Projeto }) {
   })
 
   const prog = progressoFaixas(faixas ?? [])
+  const tamanho = tamanhoManta('manta_trico', 1, (faixas ?? []).length, {
+    largura: projeto.peca_largura_cm,
+    altura: projeto.peca_altura_cm,
+  })
 
   return (
     <div className="pagina">
@@ -523,7 +528,7 @@ export function MantaTricoPage({ projeto }: { projeto: Projeto }) {
         </div>
       </div>
       <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 20 }}>
-        Ponto arroz · agulha 5mm · cada faixa é uma linha inteira, feita por uma integrante
+        Ponto arroz · agulha 5mm{tamanho ? ` · ${fmtMedida(tamanho)}` : ''}
       </div>
       {isLoading && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>}
       {faixas && faixas.length > 0 && <Editor projeto={projeto} faixas={faixas} />}

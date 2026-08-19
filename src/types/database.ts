@@ -119,6 +119,9 @@ export interface Receita {
   pdf_path: string | null
   video_url: string | null
   capa_path: string | null
+  /** tamanho esperado da peça, em cm — o projeto herda daqui */
+  largura_cm: number | null
+  altura_cm: number | null
   origem: 'manual' | 'criador'
   criado_por: string | null
   arquivado_em: string | null

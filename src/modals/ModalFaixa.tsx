@@ -3,9 +3,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../state/store'
 import { useAuth } from '../state/auth'
 import { Lbl } from '../components/ui/bits'
+import { CampoMedida } from '../components/ui/CampoMedida'
+import { PreviaFaixas } from '../components/ui/PreviaFaixas'
 import { ModalBox, ModalHeader } from './shared'
 import { SeletorCategoria } from './SeletorCategoria'
 import { criarReceita } from '../features/biblioteca/api'
+import { fmtMedida, tamanhoManta } from '../lib/medida'
 
 export function ModalFaixa() {
   const { faixaSeq, faixaCount, faixaCycle, faixaAdd, faixaDrop, incFaixa, decFaixa, backToProjeto } =
@@ -13,9 +16,14 @@ export function ModalFaixa() {
   const { profile } = useAuth()
   const qc = useQueryClient()
   const [nome, setNome] = useState('Novo padrão de faixa')
+  const [medida, setMedida] = useState<{ largura: number | null; altura: number | null }>({
+    largura: null,
+    altura: null,
+  })
   const [erro, setErro] = useState<string | null>(null)
 
-  const rowH = Math.max(5, Math.round(150 / faixaCount))
+  // a largura da faixa já é a largura da manta; a altura é o que empilha
+  const daManta = tamanhoManta('manta_trico', 1, faixaCount, medida)
 
   const salvar = useMutation({
     mutationFn: () =>
@@ -27,7 +35,10 @@ export function ModalFaixa() {
         specs: [
           ['Faixas', String(faixaCount)],
           ['Cores', String(faixaSeq.length)],
+          ...(daManta ? ([['Manta', fmtMedida(daManta)]] as [string, string][]) : []),
         ],
+        largura_cm: medida.largura,
+        altura_cm: medida.altura,
         conteudo: { seq: faixaSeq, faixas: faixaCount },
         origem: 'criador',
         criado_por: profile!.id,
@@ -93,9 +104,6 @@ export function ModalFaixa() {
           +
         </span>
       </div>
-      <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 20 }}>
-        A sequência se repete ao longo da largura da manta.
-      </div>
       <Lbl style={{ marginBottom: 7 }}>QUANTIDADE DE FAIXAS</Lbl>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
         <div
@@ -125,25 +133,32 @@ export function ModalFaixa() {
           uma faixa = uma linha inteira, feita por uma integrante
         </span>
       </div>
-      <Lbl style={{ marginBottom: 9 }}>PRÉVIA DA MANTA</Lbl>
+      <div style={{ marginBottom: 20 }}>
+        <CampoMedida
+          largura={medida.largura}
+          altura={medida.altura}
+          rotuloLargura="LARGURA DA FAIXA (CM)"
+          rotuloAltura="ALTURA DA FAIXA (CM)"
+          aoMudar={(patch) => setMedida((m) => ({ ...m, ...patch }))}
+        />
+      </div>
       <div
         style={{
           display: 'flex',
-          flexDirection: 'column',
-          gap: 3,
-          background: 'var(--sand)',
-          padding: 8,
-          borderRadius: 8,
-          marginBottom: 22,
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
+          marginBottom: 9,
         }}
       >
-        {Array.from({ length: faixaCount }, (_, i) => (
-          <div key={i} style={{ display: 'flex', borderRadius: 3, overflow: 'hidden' }}>
-            {faixaSeq.map((c, j) => (
-              <div key={j} style={{ flex: 1, height: rowH, background: c }} />
-            ))}
-          </div>
-        ))}
+        <Lbl>PRÉVIA DA MANTA</Lbl>
+        {daManta && (
+          <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--accent)' }}>
+            {fmtMedida(daManta)}
+          </span>
+        )}
+      </div>
+      <div style={{ marginBottom: 22 }}>
+        <PreviaFaixas seq={faixaSeq} faixas={faixaCount} />
       </div>
       {erro && (
         <div

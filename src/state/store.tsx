@@ -91,6 +91,7 @@ export interface Store extends StoreState {
   faixaDrop: () => void
   incFaixa: () => void
   decFaixa: () => void
+  setFaixaCount: (n: number) => void
 }
 
 const Ctx = createContext<Store | null>(null)
@@ -158,6 +159,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     faixaDrop: () => set({ faixaSeq: s.faixaSeq.length > 2 ? s.faixaSeq.slice(0, -1) : s.faixaSeq }),
     incFaixa: () => set({ faixaCount: Math.min(20, s.faixaCount + 1) }),
     decFaixa: () => set({ faixaCount: Math.max(2, s.faixaCount - 1) }),
+    setFaixaCount: (n) => set({ faixaCount: Math.max(2, Math.min(60, n)) }),
   }
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>

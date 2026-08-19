@@ -28,6 +28,14 @@ export function gradePadrao(colunas: number, linhas: number, letras: string[]): 
   )
 }
 
+/* Cores de uma faixa de tricô: a mesma sequência, rodada uma posição por faixa.
+   Antes todas as faixas nasciam idênticas e a manta saía listrada em blocos
+   retos; deslocando, as cores caminham na diagonal ao longo da manta. */
+export function sequenciaDaFaixa(seq: string[], indice: number): string[] {
+  if (seq.length === 0) return seq
+  return seq.map((_, j) => seq[(j + indice) % seq.length])
+}
+
 /** Redimensiona uma grade de letras preservando o que couber e completando o resto */
 export function redimensionaCelulas(
   celulas: string[][],

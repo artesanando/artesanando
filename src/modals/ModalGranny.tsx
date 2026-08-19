@@ -4,9 +4,11 @@ import { useStore } from '../state/store'
 import { useAuth } from '../state/auth'
 import { Lbl } from '../components/ui/bits'
 import { ColorPicker } from '../components/ui/controles'
+import { CampoMedida } from '../components/ui/CampoMedida'
 import { ModalBox, ModalHeader } from './shared'
 import { SeletorCategoria } from './SeletorCategoria'
 import { criarReceita } from '../features/biblioteca/api'
+import { fmtMedida } from '../lib/medida'
 
 const passo = (cor: string): React.CSSProperties => ({
   border: 'none',
@@ -32,6 +34,10 @@ export function ModalGranny() {
   const { profile } = useAuth()
   const qc = useQueryClient()
   const [nome, setNome] = useState('Novo granny')
+  const [medida, setMedida] = useState<{ largura: number | null; altura: number | null }>({
+    largura: null,
+    altura: null,
+  })
   const [erro, setErro] = useState<string | null>(null)
 
   const total = rings.reduce((s, r) => s + r.n, 0)
@@ -46,7 +52,15 @@ export function ModalGranny() {
         specs: [
           ['Carreiras', String(total)],
           ['Cores', String(rings.length)],
+          ...(medida.largura && medida.altura
+            ? ([['Tamanho', fmtMedida({ largura: medida.largura, altura: medida.altura })]] as [
+                string,
+                string,
+              ][])
+            : []),
         ],
+        largura_cm: medida.largura,
+        altura_cm: medida.altura,
         conteudo: {
           rings: rings.map((r, i) => ({
             ...r,
@@ -177,6 +191,17 @@ export function ModalGranny() {
             <b className="h" style={{ fontSize: 16 }}>
               {total}
             </b>
+          </div>
+
+          {/* a medida do square é o que dá tamanho às mantas feitas com ele */}
+          <div style={{ marginTop: 14 }}>
+            <CampoMedida
+              largura={medida.largura}
+              altura={medida.altura}
+              rotuloLargura="LARGURA DO SQUARE (CM)"
+              rotuloAltura="ALTURA DO SQUARE (CM)"
+              aoMudar={(patch) => setMedida((m) => ({ ...m, ...patch }))}
+            />
           </div>
         </div>
         <div style={{ width: 140, flex: 'none' }}>

@@ -11,6 +11,7 @@ import { MenuKebab } from '../../components/ui/controles'
 import { useAcoesArquivo } from '../../components/ui/useAcoesItem'
 import { separaArquivados } from '../../lib/arquivo'
 import { urlsDasCapas } from '../../lib/capa'
+import { fmtMedida } from '../../lib/medida'
 
 const CHIPS: [ReceitaCategoria | 'todos', string][] = [
   ['todos', 'Todos'],
@@ -177,6 +178,11 @@ export function BibliotecaPage() {
                   {r.nome}
                 </div>
                 {r.sub && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{r.sub}</div>}
+                {r.largura_cm && r.altura_cm && (
+                  <div style={{ fontSize: 11.5, color: 'var(--faint)', marginTop: 2 }}>
+                    {fmtMedida({ largura: r.largura_cm, altura: r.altura_cm })}
+                  </div>
+                )}
                 <div style={{ flex: 1 }} />
                 <div
                   style={{

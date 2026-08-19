@@ -20,6 +20,8 @@ export interface NovaReceita {
   pdf_path?: string | null
   video_url?: string | null
   capa_path?: string | null
+  largura_cm?: number | null
+  altura_cm?: number | null
   origem: 'manual' | 'criador'
   criado_por: string
 }
