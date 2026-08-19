@@ -1,15 +1,16 @@
-import { useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../state/auth'
 import { Lbl, Progress } from '../../components/ui/bits'
 import { Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
+import { useGradeInterativa, type ModoGrade } from '../../components/ui/useGradeInterativa'
+import { coordenada } from '../../lib/grade'
 import { Comentarios, Historico } from './Comentarios'
 import {
   ETAPAS,
   ETAPA_LABEL,
-  coordenada,
   fetchIntegrantesAtivas,
   fetchModelos,
   fetchSquares,
@@ -17,7 +18,6 @@ import {
   pintarSquares,
   progressoSquares,
   resumoPorEtapa,
-  retangulo,
   trocarSquares,
   type MantaModelo,
   type Projeto,
@@ -25,9 +25,7 @@ import {
   type SquareEtapa,
 } from './api'
 
-type Modo = 'marcar' | 'mover' | 'pintar'
-
-const MODOS: [Modo, string, string][] = [
+const MODOS: [ModoGrade, string, string][] = [
   ['marcar', 'Marcar', 'selecione squares e diga em que etapa estão'],
   ['mover', 'Mover', 'arraste um square sobre outro para trocarem de lugar'],
   ['pintar', 'Pintar', 'escolha um modelo e arraste pela grade'],
@@ -72,18 +70,9 @@ function Mapa({
   const qc = useQueryClient()
   const toast = useToast()
 
-  const [modo, setModo] = useState<Modo>('marcar')
-  const [sel, setSel] = useState<Set<number>>(new Set())
+  const [modo, setModo] = useState<ModoGrade>('marcar')
   const [pincel, setPincel] = useState<string>(modelos[0]?.id ?? '')
   const [respId, setRespId] = useState('')
-  const [arrastado, setArrastado] = useState<number | null>(null)
-  const [alvo, setAlvo] = useState<number | null>(null)
-
-  const grade = useRef<HTMLDivElement>(null)
-  const ancora = useRef<number | null>(null)
-  const pressionado = useRef(false)
-  /** houve arrasto de verdade? se sim, o clique que vem depois é ignorado */
-  const arrastou = useRef(false)
 
   const { data: integrantes } = useQuery({
     queryKey: ['integrantes-min'],
@@ -137,96 +126,17 @@ function Mapa({
 
   const podeEditar = can('progresso')
 
-  /* A célula é um <button>: clicar funciona no teclado e no leitor de tela, e é o
-     caminho único de interação. O arrasto abaixo é reforço para mouse e toque —
-     estende a seleção, arrasta para trocar, pinta em área. */
-  const aoClicar = (pos: number) => {
-    if (!podeEditar || arrastou.current) return
-    if (modo === 'pintar') {
-      pintar.mutate([pos])
-      return
-    }
-    if (modo === 'mover') {
-      if (arrastado === null) {
-        setArrastado(pos)
-      } else if (arrastado !== pos) {
-        const de = porPosicao.get(arrastado)
-        const para = porPosicao.get(pos)
-        if (de && para) trocar.mutate({ de, para })
-        setArrastado(null)
-      } else {
-        setArrastado(null)
-      }
-      return
-    }
-    setSel((atual) => {
-      const novo = new Set(atual)
-      if (novo.has(pos)) novo.delete(pos)
-      else novo.add(pos)
-      return novo
-    })
-  }
-
-  /* posição sob o ponteiro — o mesmo caminho no mouse e no toque */
-  const posSob = (x: number, y: number): number | null => {
-    const el = document.elementFromPoint?.(x, y)?.closest('[data-pos]')
-    return el ? Number((el as HTMLElement).dataset.pos) : null
-  }
-
-  const onDown = (e: React.PointerEvent) => {
-    if (!podeEditar) return
-    const pos = posSob(e.clientX, e.clientY)
-    if (pos === null) return
-    grade.current?.setPointerCapture(e.pointerId)
-    pressionado.current = true
-    arrastou.current = false
-    ancora.current = pos
-    if (modo === 'mover') setArrastado(pos)
-  }
-
-  const onMove = (e: React.PointerEvent) => {
-    if (!pressionado.current || ancora.current === null) return
-    const pos = posSob(e.clientX, e.clientY)
-    if (pos === null || pos === ancora.current) return
-    arrastou.current = true
-
-    if (modo === 'mover') {
-      setAlvo(pos)
-      return
-    }
-    setSel(new Set(retangulo(ancora.current, pos, colunas)))
-  }
-
-  const onUp = () => {
-    if (!pressionado.current) return
-    pressionado.current = false
-
-    if (arrastou.current) {
-      if (modo === 'mover' && arrastado !== null && alvo !== null && alvo !== arrastado) {
-        const de = porPosicao.get(arrastado)
-        const para = porPosicao.get(alvo)
-        if (de && para) trocar.mutate({ de, para })
-      }
-      if (modo === 'pintar' && sel.size > 0) {
-        pintar.mutate([...sel])
-        setSel(new Set())
-      }
-      setArrastado(null)
-    }
-    setAlvo(null)
-    ancora.current = null
-    // o clique chega logo depois do pointerup; solta a trava no próximo tique
-    setTimeout(() => {
-      arrastou.current = false
-    }, 0)
-  }
-
-  const trocarModo = (m: Modo) => {
-    setModo(m)
-    setSel(new Set())
-    setArrastado(null)
-    setAlvo(null)
-  }
+  const { sel, setSel, arrastado, alvo, aoClicar, propsGrade } = useGradeInterativa({
+    colunas,
+    modo,
+    ativo: podeEditar,
+    aoPintar: (posicoes) => pintar.mutate(posicoes),
+    aoTrocar: (de, para) => {
+      const a = porPosicao.get(de)
+      const b = porPosicao.get(para)
+      if (a && b) trocar.mutate({ de: a, para: b })
+    },
+  })
 
   const linhas = Math.ceil(squares.length / colunas)
   const selecionado = sel.size === 1 ? porPosicao.get([...sel][0]) : undefined
@@ -238,7 +148,7 @@ function Mapa({
         style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}
       >
         {MODOS.map(([m, label]) => (
-          <button key={m} onClick={() => trocarModo(m)} style={seg(modo === m)} disabled={!podeEditar}>
+          <button key={m} onClick={() => setModo(m)} style={seg(modo === m)} disabled={!podeEditar}>
             {label}
           </button>
         ))}
@@ -297,11 +207,7 @@ function Mapa({
       >
         <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
           <div
-            ref={grade}
-            onPointerDown={onDown}
-            onPointerMove={onMove}
-            onPointerUp={onUp}
-            onPointerCancel={onUp}
+            {...propsGrade}
             style={{
               display: 'grid',
               gridTemplateColumns: `repeat(${colunas}, var(--celula, 30px))`,

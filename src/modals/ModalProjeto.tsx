@@ -7,12 +7,12 @@ import { Stepper } from '../components/ui/bits'
 import { Campo, LegendaObrigatorio, useFormulario } from '../components/ui/Campo'
 import { ColorPicker, Select } from '../components/ui/controles'
 import { ModalBox, ModalHeader } from './shared'
+import { gradePadrao } from '../lib/grade'
 import { MODELS } from '../lib/paleta'
 import { fetchReceitas } from '../features/biblioteca/api'
 import {
   criarProjeto,
   fetchReceitasAmigurumi,
-  gradePadrao,
   type ModeloNovo,
 } from '../features/projetos/api'
 

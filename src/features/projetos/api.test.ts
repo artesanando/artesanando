@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
-  coordenada,
-  gradePadrao,
   gruposUnidades,
   progressoFaixas,
   progressoSquares,
   progressoUnidades,
   proximaEtapa,
   resumoPorEtapa,
-  retangulo,
   squaresPorResponsavel,
   type MantaModelo,
   type Square,
@@ -77,27 +74,6 @@ describe('proximaEtapa', () => {
   })
 })
 
-describe('geometria do mapa', () => {
-  it('traduz posição em linha e coluna a partir de 1', () => {
-    expect(coordenada(0, 8)).toEqual({ linha: 1, coluna: 1 })
-    expect(coordenada(7, 8)).toEqual({ linha: 1, coluna: 8 })
-    expect(coordenada(8, 8)).toEqual({ linha: 2, coluna: 1 })
-  })
-
-  it('seleção por arrasto pega o retângulo entre os dois cantos', () => {
-    // grade 4 de largura: de (1,2) até (2,3) são 4 squares
-    expect(retangulo(1, 6, 4).sort((a, b) => a - b)).toEqual([1, 2, 5, 6])
-  })
-
-  it('o retângulo independe da ordem dos cantos', () => {
-    expect(retangulo(6, 1, 4).sort((a, b) => a - b)).toEqual(retangulo(1, 6, 4).sort((a, b) => a - b))
-  })
-
-  it('um canto só devolve um square', () => {
-    expect(retangulo(3, 3, 4)).toEqual([3])
-  })
-})
-
 describe('resumoPorEtapa', () => {
   it('conta squares por etapa e por modelo, cobrindo as cinco etapas', () => {
     const resumo = resumoPorEtapa(
@@ -125,15 +101,6 @@ describe('squaresPorResponsavel', () => {
     ])
     expect(map.get('u1')).toBe(2)
     expect(map.size).toBe(1)
-  })
-})
-
-describe('gradePadrao', () => {
-  it('alterna os modelos em xadrez no tamanho pedido', () => {
-    expect(gradePadrao(3, 2, ['A', 'B'])).toEqual([
-      ['A', 'B', 'A'],
-      ['B', 'A', 'B'],
-    ])
   })
 })
 

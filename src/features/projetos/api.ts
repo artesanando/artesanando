@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import { gradePadrao } from '../../lib/grade'
 import type { Receita } from '../../types/database'
 
 /* ---------- Tipos ---------- */
@@ -269,24 +270,6 @@ export function squaresPorResponsavel(squares: Square[]): Map<string, number> {
   return map
 }
 
-/** Linha/coluna de um square na grade da manta */
-export function coordenada(posicao: number, colunas: number) {
-  return { linha: Math.floor(posicao / colunas) + 1, coluna: (posicao % colunas) + 1 }
-}
-
-/** Posições dentro do retângulo entre dois cantos — seleção por arrasto no mapa */
-export function retangulo(de: number, ate: number, colunas: number): number[] {
-  const a = coordenada(de, colunas)
-  const b = coordenada(ate, colunas)
-  const l1 = Math.min(a.linha, b.linha)
-  const l2 = Math.max(a.linha, b.linha)
-  const c1 = Math.min(a.coluna, b.coluna)
-  const c2 = Math.max(a.coluna, b.coluna)
-  const out: number[] = []
-  for (let l = l1; l <= l2; l++) for (let c = c1; c <= c2; c++) out.push((l - 1) * colunas + (c - 1))
-  return out
-}
-
 export interface GrupoUnidades {
   ini: number
   fim: number
@@ -526,12 +509,6 @@ export interface NovoProjeto {
 }
 
 /** Grade padrão quando a manta começa do zero: alterna os modelos em xadrez */
-export function gradePadrao(colunas: number, linhas: number, letras: string[]): string[][] {
-  return Array.from({ length: linhas }, (_, l) =>
-    Array.from({ length: colunas }, (_, c) => letras[(l + c) % letras.length]),
-  )
-}
-
 export async function criarProjeto(novo: NovoProjeto): Promise<string> {
   // manta de crochê nasce inteira numa transação só (projeto + modelos + squares),
   // senão uma falha no meio deixava um projeto pela metade
