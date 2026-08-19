@@ -9,11 +9,14 @@ let currentSession: { user: { id: string } } | null = null
 
 export const ADMIN_PROFILE: Profile = {
   id: 'u1',
+  user_id: 'u1',
   nome: 'Cândida Nunes',
   usuario: 'candida.prof',
+  email: 'candida@example.com',
   telefone: null,
   preferencia: 'ambos',
   avatar_color: '#C4798A',
+  avatar_url: null,
   papel: 'admin',
   ativo: true,
   desde: '2024.1',
@@ -22,11 +25,14 @@ export const ADMIN_PROFILE: Profile = {
 /* segunda professora — os registros de admin se alternam entre as duas */
 export const ADMIN2_PROFILE: Profile = {
   id: 'u7',
+  user_id: 'u7',
   nome: 'Sahudy Montenegro',
   usuario: 'sahudy.prof',
+  email: 'sahudy@example.com',
   telefone: null,
   preferencia: 'ambos',
   avatar_color: '#7D9B76',
+  avatar_url: null,
   papel: 'admin',
   ativo: true,
   desde: '2024.1',
@@ -36,14 +42,33 @@ export const ADMIN2_PROFILE: Profile = {
    depende de papel/responsável (faixa feita, botões bloqueados) */
 export const INTEGRANTE_PROFILE: Profile = {
   id: 'u2',
+  user_id: 'u2',
   nome: 'Ada Lovelace',
   usuario: 'ada.lovelace',
+  email: 'ada@example.com',
   telefone: null,
   preferencia: 'croche',
   avatar_color: '#A9BFA3',
+  avatar_url: null,
   papel: 'integrante',
   ativo: true,
   desde: '2025.1',
+}
+
+/* anotada só na chamada: existe como perfil, mas ainda não tem conta */
+export const SEM_CONTA_PROFILE: Profile = {
+  id: 'u8',
+  user_id: null,
+  nome: 'Hedy Lamarr',
+  usuario: 'hedy.lamarr',
+  email: null,
+  telefone: null,
+  preferencia: 'trico',
+  avatar_color: '#B99BC4',
+  avatar_url: null,
+  papel: 'integrante',
+  ativo: true,
+  desde: '2026.2',
 }
 
 const ESTOQUE_FAKE = [
@@ -57,6 +82,7 @@ const ESTOQUE_FAKE = [
     vendidos: 0,
     minimo: 5,
     custo_centavos: null,
+    arquivado_em: null,
   },
   {
     id: 'i2',
@@ -68,6 +94,7 @@ const ESTOQUE_FAKE = [
     vendidos: 0,
     minimo: 2,
     custo_centavos: null,
+    arquivado_em: null,
   },
 ]
 
@@ -98,6 +125,7 @@ const RECEITAS_FAKE = [
     pdf_path: null,
     origem: 'manual',
     criado_por: 'u1',
+    arquivado_em: null,
   },
   {
     id: 'r2',
@@ -115,6 +143,7 @@ const RECEITAS_FAKE = [
     pdf_path: 'r2.pdf',
     origem: 'manual',
     criado_por: 'u1',
+    arquivado_em: null,
   },
 ]
 
@@ -130,6 +159,7 @@ const PROJETOS_FAKE = [
     meta: null,
     status: 'ativo',
     created_by: 'u1',
+    arquivado_em: null,
   },
   {
     id: 'p2',
@@ -142,6 +172,7 @@ const PROJETOS_FAKE = [
     meta: null,
     status: 'ativo',
     created_by: 'u1',
+    arquivado_em: null,
   },
   {
     id: 'p3',
@@ -154,6 +185,7 @@ const PROJETOS_FAKE = [
     meta: 20,
     status: 'ativo',
     created_by: 'u1',
+    arquivado_em: null,
   },
 ]
 
@@ -172,24 +204,17 @@ const MODELOS_FAKE = [
 ]
 
 const SQUARES_FAKE = [
-  { id: 's1', projeto_id: 'p1', modelo_id: 'm1', posicao: 0, etapa: 'pronto', lote_id: null },
-  { id: 's2', projeto_id: 'p1', modelo_id: 'm1', posicao: 1, etapa: 'pronto', lote_id: null },
-  { id: 's3', projeto_id: 'p1', modelo_id: 'm1', posicao: 2, etapa: 'aguardando_borda', lote_id: 'l1' },
-  { id: 's4', projeto_id: 'p1', modelo_id: 'm1', posicao: 3, etapa: 'afazer', lote_id: null },
-]
-
-const LOTES_FAKE = [
+  { id: 's1', projeto_id: 'p1', modelo_id: 'm1', posicao: 0, etapa: 'pronto', responsavel_id: 'u2' },
+  { id: 's2', projeto_id: 'p1', modelo_id: 'm1', posicao: 1, etapa: 'pronto', responsavel_id: 'u2' },
   {
-    id: 'l1',
+    id: 's3',
     projeto_id: 'p1',
     modelo_id: 'm1',
-    quantidade: 1,
+    posicao: 2,
     etapa: 'aguardando_borda',
-    responsavel_id: null,
-    obs: 'miolo: Ana',
-    responsavel: null,
-    modelo: { letra: 'A', nome: 'Modelo A — Flor de Maio' },
+    responsavel_id: 'u4',
   },
+  { id: 's4', projeto_id: 'p1', modelo_id: 'm1', posicao: 3, etapa: 'afazer', responsavel_id: null },
 ]
 
 const FAIXAS_FAKE = [
@@ -263,6 +288,7 @@ const ENCONTROS_FAKE = [
     hora: '14:00',
     local: 'Sala 203',
     pauta: 'Bordas do Modelo A',
+    arquivado_em: null,
   },
   {
     id: 'en2',
@@ -271,6 +297,7 @@ const ENCONTROS_FAKE = [
     hora: '14:00',
     local: 'Sala 203',
     pauta: 'Montagem da Manta Primavera',
+    arquivado_em: null,
   },
 ]
 
@@ -289,6 +316,7 @@ const MOVIMENTACOES_FAKE = [
     tipo: 'entrada',
     valor_centavos: 42000,
     criado_por: 'u7',
+    arquivado_em: null,
   },
   {
     id: 'mv2',
@@ -298,11 +326,15 @@ const MOVIMENTACOES_FAKE = [
     tipo: 'saida',
     valor_centavos: 24000,
     criado_por: 'u1',
+    arquivado_em: null,
   },
 ]
 
 const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
-  profiles: { single: ADMIN_PROFILE, list: [ADMIN_PROFILE, ADMIN2_PROFILE, INTEGRANTE_PROFILE] },
+  profiles: {
+    single: ADMIN_PROFILE,
+    list: [ADMIN_PROFILE, ADMIN2_PROFILE, INTEGRANTE_PROFILE, SEM_CONTA_PROFILE],
+  },
   estoque_itens: { single: ESTOQUE_FAKE[0], list: ESTOQUE_FAKE },
   emprestimos: { single: EMPRESTIMOS_FAKE[0], list: EMPRESTIMOS_FAKE },
   devolucoes: { single: null, list: [] },
@@ -312,8 +344,8 @@ const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
   projetos: { single: PROJETOS_FAKE[0], list: PROJETOS_FAKE },
   manta_modelos: { single: MODELOS_FAKE[0], list: MODELOS_FAKE },
   squares: { single: SQUARES_FAKE[0], list: SQUARES_FAKE },
-  lotes: { single: LOTES_FAKE[0], list: LOTES_FAKE },
   faixas: { single: FAIXAS_FAKE[0], list: FAIXAS_FAKE },
+  estoque_movimentos: { single: null, list: [] },
   unidades: { single: UNIDADES_FAKE[0], list: UNIDADES_FAKE },
   comentarios: { single: COMENTARIOS_FAKE[0], list: COMENTARIOS_FAKE },
   atividades: { single: ATIVIDADES_FAKE[0], list: ATIVIDADES_FAKE },
@@ -358,7 +390,10 @@ function builder(table: string) {
     update: () => b,
     upsert: () => b,
     delete: () => b,
-    maybeSingle: async () => ({ data: null, error: null }),
+    maybeSingle: async () => ({
+      data: filtros.length > 0 ? (filtrada()[0] ?? null) : data.single,
+      error: null,
+    }),
     single: async () => {
       const hit = filtros.length > 0 ? (filtrada()[0] ?? null) : data.single
       return hit ? { data: hit, error: null } : { data: null, error: { message: 'não achou' } }
