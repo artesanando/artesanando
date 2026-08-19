@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
-import { __login, __reset } from './test/fakeSupabase'
+import { INTEGRANTE_PROFILE, __login, __reset } from './test/fakeSupabase'
 
 vi.mock('./lib/supabase', () => import('./test/fakeSupabase'))
 
@@ -104,11 +104,18 @@ describe('projetos (M3)', () => {
     expect(await screen.findByText(/#1–2 · Grace Hopper/)).toBeInTheDocument()
   })
 
-  it('faixa feita fica somente-leitura', async () => {
-    __login()
+  it('faixa feita fica somente-leitura para quem não pode reabrir', async () => {
+    __login(INTEGRANTE_PROFILE)
     renderAt('/projetos/p2')
     expect(await screen.findByText('FEITA · SOMENTE LEITURA')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Embaralhar ordem' })).toBeDisabled()
+  })
+
+  it('admin reabre faixa feita', async () => {
+    __login()
+    renderAt('/projetos/p2')
+    expect(await screen.findByText('EDITANDO')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Embaralhar ordem' })).toBeEnabled()
   })
 
   it('lote sem responsável mostra o pegar lote', async () => {
@@ -152,6 +159,8 @@ describe('integrantes (M4)', () => {
     __login()
     renderAt('/integrantes')
     expect(await screen.findByText(/@candida\.prof/)).toBeInTheDocument()
+    expect(screen.getByText('Sahudy Montenegro')).toBeInTheDocument()
+    expect(screen.getByText('Ada Lovelace')).toBeInTheDocument()
     expect(screen.getByText('ENTREGAS NO SEMESTRE')).toBeInTheDocument()
     expect(screen.getByText('FREQUÊNCIA')).toBeInTheDocument()
   })

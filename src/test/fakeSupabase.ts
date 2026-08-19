@@ -19,6 +19,33 @@ export const ADMIN_PROFILE: Profile = {
   desde: '2024.1',
 }
 
+/* segunda professora — os registros de admin se alternam entre as duas */
+export const ADMIN2_PROFILE: Profile = {
+  id: 'u7',
+  nome: 'Sahudy Montenegro',
+  usuario: 'sahudy.prof',
+  telefone: null,
+  preferencia: 'ambos',
+  avatar_color: '#7D9B76',
+  papel: 'admin',
+  ativo: true,
+  desde: '2024.1',
+}
+
+/* integrante sem nenhuma permissão marcada — usada para cobrir o que
+   depende de papel/responsável (faixa feita, botões bloqueados) */
+export const INTEGRANTE_PROFILE: Profile = {
+  id: 'u2',
+  nome: 'Ada Lovelace',
+  usuario: 'ada.lovelace',
+  telefone: null,
+  preferencia: 'croche',
+  avatar_color: '#A9BFA3',
+  papel: 'integrante',
+  ativo: true,
+  desde: '2025.1',
+}
+
 const ESTOQUE_FAKE = [
   {
     id: 'i1',
@@ -170,7 +197,7 @@ const FAIXAS_FAKE = [
     id: 'f1',
     projeto_id: 'p2',
     ordem: 1,
-    responsavel_id: 'u1',
+    responsavel_id: 'u3',
     status: 'feita',
     cores: ['#ECD97C', '#A9BFA3', '#DFA2AC'],
     responsavel: { nome: 'Alan Turing', avatar_color: '#C9B98F' },
@@ -179,7 +206,7 @@ const FAIXAS_FAKE = [
     id: 'f2',
     projeto_id: 'p2',
     ordem: 2,
-    responsavel_id: 'u1',
+    responsavel_id: 'u2',
     status: 'afazer',
     cores: ['#A9BFA3', '#ECD97C', '#DFA2AC'],
     responsavel: { nome: 'Ada Lovelace', avatar_color: '#A9BFA3' },
@@ -275,7 +302,7 @@ const MOVIMENTACOES_FAKE = [
 ]
 
 const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
-  profiles: { single: ADMIN_PROFILE, list: [ADMIN_PROFILE] },
+  profiles: { single: ADMIN_PROFILE, list: [ADMIN_PROFILE, ADMIN2_PROFILE, INTEGRANTE_PROFILE] },
   estoque_itens: { single: ESTOQUE_FAKE[0], list: ESTOQUE_FAKE },
   emprestimos: { single: EMPRESTIMOS_FAKE[0], list: EMPRESTIMOS_FAKE },
   devolucoes: { single: null, list: [] },
@@ -295,8 +322,8 @@ const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
   movimentacoes: { single: MOVIMENTACOES_FAKE[0], list: MOVIMENTACOES_FAKE },
 }
 
-export function __login() {
-  currentSession = { user: { id: ADMIN_PROFILE.id } }
+export function __login(profile: Profile = ADMIN_PROFILE) {
+  currentSession = { user: { id: profile.id } }
 }
 
 export function __reset() {
