@@ -3,14 +3,15 @@ import type { Permissoes, Profile } from '../../types/database'
 
 export type PermCol = 'progresso' | 'devolucoes' | 'comentarios' | 'financeiro'
 
-export interface PermissaoRow extends Pick<Profile, 'id' | 'nome' | 'avatar_color'> {
+export interface PermissaoRow
+  extends Pick<Profile, 'id' | 'nome' | 'avatar_color' | 'avatar_url' | 'email' | 'user_id'> {
   permissoes: Permissoes | null
 }
 
 export async function fetchPermissoes(): Promise<PermissaoRow[]> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, nome, avatar_color, permissoes(*)')
+    .select('id, nome, avatar_color, avatar_url, email, user_id, permissoes(*)')
     .eq('papel', 'integrante')
     .eq('ativo', true)
     .order('nome')

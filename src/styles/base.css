@@ -475,6 +475,50 @@ textarea.field::placeholder {
   border-radius: 4px;
 }
 
+/* tabela de permissões — vira ficha por integrante no celular */
+.linha-perm {
+  display: grid;
+  grid-template-columns: 1.6fr repeat(4, 1fr);
+  align-items: center;
+  padding: 13px 18px;
+  border-top: 1px solid var(--divider);
+  font-size: 13px;
+}
+.linha-perm.cabecalho {
+  padding: 10px 18px;
+  background: var(--sand-head);
+  border-top: none;
+}
+.cel-perm {
+  text-align: center;
+}
+.rotulo-perm {
+  display: none;
+}
+@media (max-width: 900px) {
+  .linha-perm {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 14px 16px;
+  }
+  .linha-perm.cabecalho {
+    display: none;
+  }
+  .cel-perm {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 38px;
+  }
+  .rotulo-perm {
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    color: var(--muted);
+  }
+}
+
 /* linha da tabela do estoque — vira cartão no celular */
 .linha-estoque {
   display: grid;

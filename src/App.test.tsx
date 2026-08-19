@@ -274,6 +274,23 @@ describe('integrantes (M4)', () => {
   })
 })
 
+describe('configurações', () => {
+  it('as abas Projeto e Encontros deixaram de ser placeholder', async () => {
+    __login()
+    renderAt('/configuracoes')
+    await userEvent.click(await screen.findByRole('button', { name: 'Projeto' }))
+    expect(screen.getByText('Semestre do projeto')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Encontros' }))
+    expect(screen.getByText('Encontros do semestre')).toBeInTheDocument()
+  })
+
+  it('integrante comum não chega em configurações', async () => {
+    __login(INTEGRANTE_PROFILE)
+    renderAt('/configuracoes')
+    expect(await screen.findByText(/, Ada$/)).toBeInTheDocument()
+  })
+})
+
 describe('perfil', () => {
   it('mostra o email da conta, que antes não aparecia em lugar nenhum', async () => {
     __login()
