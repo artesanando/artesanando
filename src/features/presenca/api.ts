@@ -8,6 +8,7 @@ export interface Encontro {
   hora: string | null
   local: string | null
   pauta: string | null
+  arquivado_em: string | null
 }
 
 export interface Presenca {
@@ -33,15 +34,15 @@ export async function fetchPresencas(): Promise<Presenca[]> {
 }
 
 export async function fetchIntegrantesAtivas(): Promise<
-  Pick<Profile, 'id' | 'nome' | 'avatar_color'>[]
+  Pick<Profile, 'id' | 'nome' | 'avatar_color' | 'avatar_url' | 'user_id'>[]
 > {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, nome, avatar_color')
+    .select('id, nome, avatar_color, avatar_url, user_id')
     .eq('ativo', true)
     .order('nome')
   if (error) throw error
-  return (data ?? []) as Pick<Profile, 'id' | 'nome' | 'avatar_color'>[]
+  return (data ?? []) as Pick<Profile, 'id' | 'nome' | 'avatar_color' | 'avatar_url' | 'user_id'>[]
 }
 
 /** Chamada clicável: upsert na PK (encontro, integrante) */
@@ -61,11 +62,52 @@ export async function criarEncontro(e: {
   local: string
   pauta: string
 }) {
-  const { data: sem } = await supabase.from('semestres').select('id').eq('ativo', true).single()
+  const { data: sem } = await supabase
+    .from('semestres')
+    .select('id')
+    .eq('ativo', true)
+    .maybeSingle()
   const { error } = await supabase
     .from('encontros')
     .insert({ ...e, semestre_id: (sem as { id: string } | null)?.id ?? null })
   if (error) throw error
+}
+
+export async function atualizarEncontro(
+  id: string,
+  patch: Partial<Pick<Encontro, 'data' | 'hora' | 'local' | 'pauta'>>,
+) {
+  const { error } = await supabase.from('encontros').update(patch).eq('id', id)
+  if (error) throw error
+}
+
+/* Integrante que só aparece na chamada: um perfil sem conta de acesso. Quando
+   ela for convidada depois, o trigger do banco liga a conta a este mesmo perfil
+   e as presenças de hoje continuam sendo dela. */
+export async function criarIntegranteSemConta(nome: string): Promise<string> {
+  const base = nome
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // tira os acentos que o NFD separou
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.|\.$/g, '')
+  const { data, error } = await supabase
+    .from('profiles')
+    .insert({ nome: nome.trim(), usuario: `${base}.${Date.now().toString(36).slice(-4)}` })
+    .select('id')
+    .single()
+  if (error) throw error
+  return (data as { id: string }).id
+}
+
+/** Encontros que batem com a busca por data, sala ou pauta */
+export function filtraEncontros(encontros: Encontro[], busca: string): Encontro[] {
+  const q = busca.trim().toLowerCase()
+  if (!q) return encontros
+  return encontros.filter((e) =>
+    [e.data, e.local ?? '', e.pauta ?? '', e.hora ?? ''].some((t) => t.toLowerCase().includes(q)),
+  )
 }
 
 /* ---------- Derivados (unit-testados) ---------- */

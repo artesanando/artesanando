@@ -5,11 +5,11 @@ import { StoreProvider } from './state/store'
 import { supabaseConfigured } from './lib/supabase'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ToastProvider } from './components/ui/Toast'
+import { ConfirmProvider } from './components/ui/Confirm'
 import { AppShell } from './components/layout/AppShell'
 import { LoginPage } from './features/auth/LoginPage'
-import { EsqueciPage } from './features/auth/EsqueciPage'
 import { NovaSenhaPage } from './features/auth/NovaSenhaPage'
-import { DashboardPage } from './features/dashboard/DashboardPage'
+import { InicioPage } from './features/inicio/InicioPage'
 import { ProjetosPage } from './features/projetos/ProjetosPage'
 import { ProjetoDetalhePage } from './features/projetos/ProjetoDetalhePage'
 import { IntegrantesPage } from './features/integrantes/IntegrantesPage'
@@ -77,7 +77,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <ToastProvider>
-        <AppRoutes />
+        <ConfirmProvider>
+          <AppRoutes />
+        </ConfirmProvider>
       </ToastProvider>
     </ErrorBoundary>
   )
@@ -89,7 +91,6 @@ function AppRoutes() {
       <StoreProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/esqueci" element={<EsqueciPage />} />
           <Route path="/redefinir-senha" element={<NovaSenhaPage modo="redefinir" />} />
           <Route path="/definir-senha" element={<NovaSenhaPage modo="definir" />} />
           <Route
@@ -99,7 +100,7 @@ function AppRoutes() {
               </RequireAuth>
             }
           >
-            <Route path="/" element={<DashboardPage />} />
+            <Route path="/" element={<InicioPage />} />
             <Route path="/projetos" element={<ProjetosPage />} />
             <Route path="/projetos/:id" element={<ProjetoDetalhePage />} />
             <Route path="/integrantes" element={<IntegrantesPage />} />

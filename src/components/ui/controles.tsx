@@ -1,0 +1,551 @@
+import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import { Popover, useGatilho } from './Popover'
+import { PALETTE } from '../../lib/paleta'
+import { dataLocal, fmtDataBarra } from '../../lib/format'
+
+/* Substitutos dos controles nativos: o <select>, o <input type=date|time|color>
+   e o window.confirm abrem janelas do sistema, que não seguem a estética do app
+   e mudam de navegador para navegador. */
+
+/* ---------- Select ---------- */
+
+export function Select<T extends string>({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+  style,
+  disabled,
+  /** acima disso o painel ganha um campo de busca */
+  buscaAPartirDe = 8,
+  placeholder = 'Escolher…',
+}: {
+  value: T
+  onChange: (v: T) => void
+  options: [T, string][]
+  ariaLabel?: string
+  style?: CSSProperties
+  disabled?: boolean
+  buscaAPartirDe?: number
+  placeholder?: string
+}) {
+  const g = useGatilho()
+  const [busca, setBusca] = useState('')
+
+  const atual = options.find(([v]) => v === value)
+  const comBusca = options.length >= buscaAPartirDe
+  const filtradas = useMemo(() => {
+    const q = busca.trim().toLowerCase()
+    if (!q) return options
+    return options.filter(([, label]) => label.toLowerCase().includes(q))
+  }, [options, busca])
+
+  const escolher = (v: T) => {
+    onChange(v)
+    setBusca('')
+    g.fechar()
+  }
+
+  return (
+    <>
+      <button
+        ref={g.ref}
+        type="button"
+        className="field campo-gatilho"
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={g.aberto}
+        disabled={disabled}
+        onClick={g.alternar}
+        style={style}
+      >
+        <span
+          style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            color: atual ? 'var(--ink)' : 'var(--faint)',
+          }}
+        >
+          {atual?.[1] ?? placeholder}
+        </span>
+        <span className="seta">▼</span>
+      </button>
+      <Popover aberto={g.aberto} aoFechar={g.fechar} ancora={g.ref.current} ariaLabel={ariaLabel}>
+        {comBusca && (
+          <input
+            className="field"
+            placeholder="Buscar…"
+            aria-label="Buscar na lista"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            style={{ marginBottom: 6, borderRadius: 8 }}
+          />
+        )}
+        <div role="listbox" aria-label={ariaLabel}>
+          {filtradas.map(([v, label]) => (
+            <button
+              key={v}
+              type="button"
+              role="option"
+              aria-selected={v === value}
+              className="opcao"
+              onClick={() => escolher(v)}
+            >
+              <span style={{ width: 12, flex: 'none' }}>{v === value ? '✓' : ''}</span>
+              {label}
+            </button>
+          ))}
+          {filtradas.length === 0 && (
+            <div style={{ padding: '10px 11px', fontSize: 12.5, color: 'var(--muted)' }}>
+              Nada encontrado.
+            </div>
+          )}
+        </div>
+      </Popover>
+    </>
+  )
+}
+
+/* ---------- Calendário ---------- */
+
+const DIAS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
+const MESES = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+]
+
+const iso = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+/** Dias da grade do mês, incluindo os vazios do começo da primeira semana */
+export function diasDoMes(ano: number, mes: number): (string | null)[] {
+  const primeiro = new Date(ano, mes, 1)
+  const total = new Date(ano, mes + 1, 0).getDate()
+  return [
+    ...Array.from({ length: primeiro.getDay() }, () => null),
+    ...Array.from({ length: total }, (_, i) => iso(new Date(ano, mes, i + 1))),
+  ]
+}
+
+export function Calendario({
+  valor,
+  onChange,
+  /** datas que ganham marcador — ex.: dias com encontro */
+  marcados = [],
+}: {
+  valor: string
+  onChange: (iso: string) => void
+  marcados?: string[]
+}) {
+  const base = valor ? dataLocal(valor) : new Date()
+  const [ano, setAno] = useState(base.getFullYear())
+  const [mes, setMes] = useState(base.getMonth())
+  const marcadosSet = useMemo(() => new Set(marcados), [marcados])
+  const hoje = iso(new Date())
+
+  const mover = (delta: number) => {
+    const d = new Date(ano, mes + delta, 1)
+    setAno(d.getFullYear())
+    setMes(d.getMonth())
+  }
+
+  return (
+    <div style={{ width: 250, padding: 4 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 8,
+        }}
+      >
+        <button type="button" className="kebab" aria-label="Mês anterior" onClick={() => mover(-1)}>
+          ‹
+        </button>
+        <b style={{ fontSize: 13 }}>
+          {MESES[mes]} {ano}
+        </b>
+        <button type="button" className="kebab" aria-label="Próximo mês" onClick={() => mover(1)}>
+          ›
+        </button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2 }}>
+        {DIAS.map((d, i) => (
+          <div
+            key={i}
+            className="lbl"
+            style={{ textAlign: 'center', fontSize: 10, padding: '2px 0' }}
+          >
+            {d}
+          </div>
+        ))}
+        {diasDoMes(ano, mes).map((dia, i) => {
+          if (!dia) return <span key={`v${i}`} />
+          const nun = Number(dia.slice(8))
+          const ativo = dia === valor
+          return (
+            <button
+              key={dia}
+              type="button"
+              onClick={() => onChange(dia)}
+              aria-label={`${nun} de ${MESES[mes]} de ${ano}`}
+              aria-pressed={ativo}
+              style={{
+                position: 'relative',
+                border: dia === hoje && !ativo ? '1px solid var(--field-border)' : 'none',
+                background: ativo ? 'var(--primary)' : 'transparent',
+                color: ativo ? '#fff' : 'var(--ink)',
+                fontWeight: ativo ? 800 : 600,
+                fontFamily: 'inherit',
+                fontSize: 12.5,
+                borderRadius: 8,
+                padding: '7px 0',
+                cursor: 'pointer',
+                transition: 'background var(--dur-rapida) var(--ease-suave)',
+              }}
+            >
+              {nun}
+              {marcadosSet.has(dia) && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    bottom: 3,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 4,
+                    height: 4,
+                    borderRadius: '50%',
+                    background: ativo ? '#fff' : 'var(--primary)',
+                  }}
+                />
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+export function DatePicker({
+  value,
+  onChange,
+  ariaLabel,
+  marcados,
+  disabled,
+}: {
+  value: string
+  onChange: (iso: string) => void
+  ariaLabel?: string
+  marcados?: string[]
+  disabled?: boolean
+}) {
+  const g = useGatilho()
+  return (
+    <>
+      <button
+        ref={g.ref}
+        type="button"
+        className="field campo-gatilho"
+        aria-label={ariaLabel}
+        aria-haspopup="dialog"
+        aria-expanded={g.aberto}
+        disabled={disabled}
+        onClick={g.alternar}
+      >
+        <span style={{ color: value ? 'var(--ink)' : 'var(--faint)' }}>
+          {value ? fmtDataBarra(value) : 'dd/mm'}
+        </span>
+        <span className="seta">▼</span>
+      </button>
+      <Popover
+        aberto={g.aberto}
+        aoFechar={g.fechar}
+        ancora={g.ref.current}
+        largura={262}
+        ariaLabel={ariaLabel ?? 'Escolher data'}
+      >
+        <Calendario
+          valor={value}
+          marcados={marcados}
+          onChange={(d) => {
+            onChange(d)
+            g.fechar()
+          }}
+        />
+      </Popover>
+    </>
+  )
+}
+
+/* ---------- Hora ---------- */
+
+export function TimePicker({
+  value,
+  onChange,
+  ariaLabel,
+  /** de meia em meia hora entre 7h e 22h cobre a rotina dos encontros */
+  passoMinutos = 30,
+}: {
+  value: string
+  onChange: (hora: string) => void
+  ariaLabel?: string
+  passoMinutos?: number
+}) {
+  const g = useGatilho()
+  const horas = useMemo(() => {
+    const out: string[] = []
+    for (let m = 7 * 60; m <= 22 * 60; m += passoMinutos) {
+      out.push(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`)
+    }
+    return out
+  }, [passoMinutos])
+
+  return (
+    <>
+      <button
+        ref={g.ref}
+        type="button"
+        className="field campo-gatilho"
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={g.aberto}
+        onClick={g.alternar}
+      >
+        <span style={{ color: value ? 'var(--ink)' : 'var(--faint)' }}>{value || '--:--'}</span>
+        <span className="seta">▼</span>
+      </button>
+      <Popover aberto={g.aberto} aoFechar={g.fechar} ancora={g.ref.current} ariaLabel={ariaLabel}>
+        <div role="listbox" aria-label={ariaLabel}>
+          {horas.map((h) => (
+            <button
+              key={h}
+              type="button"
+              role="option"
+              aria-selected={h === value}
+              className="opcao"
+              onClick={() => {
+                onChange(h)
+                g.fechar()
+              }}
+            >
+              <span style={{ width: 12, flex: 'none' }}>{h === value ? '✓' : ''}</span>
+              {h}
+            </button>
+          ))}
+        </div>
+      </Popover>
+    </>
+  )
+}
+
+/* ---------- Cor ---------- */
+
+export function ColorPicker({
+  value,
+  onChange,
+  ariaLabel = 'Cor',
+  /** deixa escolher qualquer cor além da paleta de fios */
+  livre = true,
+}: {
+  value: string
+  onChange: (hex: string) => void
+  ariaLabel?: string
+  livre?: boolean
+}) {
+  const g = useGatilho()
+  const nome = PALETTE.find(([c]) => c.toLowerCase() === value.toLowerCase())?.[1]
+
+  return (
+    <>
+      <button
+        ref={g.ref}
+        type="button"
+        className="field campo-gatilho"
+        aria-label={ariaLabel}
+        aria-haspopup="dialog"
+        aria-expanded={g.aberto}
+        onClick={g.alternar}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <span
+            style={{
+              width: 18,
+              height: 18,
+              borderRadius: '50%',
+              background: value,
+              border: '1px solid rgba(0,0,0,.12)',
+              flex: 'none',
+            }}
+          />
+          {nome ?? value}
+        </span>
+        <span className="seta">▼</span>
+      </button>
+      <Popover
+        aberto={g.aberto}
+        aoFechar={g.fechar}
+        ancora={g.ref.current}
+        largura={224}
+        ariaLabel={ariaLabel}
+      >
+        <div style={{ padding: 6 }}>
+          <div className="lbl" style={{ marginBottom: 8 }}>
+            PALETA DE FIOS
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+            {PALETTE.map(([c, n]) => (
+              <button
+                key={c}
+                type="button"
+                title={n}
+                aria-label={n}
+                aria-pressed={c.toLowerCase() === value.toLowerCase()}
+                onClick={() => {
+                  onChange(c)
+                  g.fechar()
+                }}
+                style={{
+                  height: 34,
+                  borderRadius: 8,
+                  background: c,
+                  border: '1px solid rgba(0,0,0,.12)',
+                  cursor: 'pointer',
+                  boxShadow:
+                    c.toLowerCase() === value.toLowerCase() ? '0 0 0 2px var(--ink)' : undefined,
+                  transition: 'transform var(--dur-rapida) var(--ease-mola)',
+                }}
+              />
+            ))}
+          </div>
+          {livre && (
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 9,
+                marginTop: 12,
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              <input
+                type="color"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                style={{
+                  width: 26,
+                  height: 26,
+                  border: 'none',
+                  padding: 0,
+                  background: 'none',
+                  cursor: 'pointer',
+                }}
+              />
+              Outra cor
+            </label>
+          )}
+        </div>
+      </Popover>
+    </>
+  )
+}
+
+/* ---------- Menu ⋮ ---------- */
+
+export interface AcaoMenu {
+  label: string
+  onSelect: () => void
+  perigo?: boolean
+  desabilitado?: boolean
+  dica?: string
+}
+
+export function MenuKebab({ acoes, ariaLabel = 'Ações' }: { acoes: AcaoMenu[]; ariaLabel?: string }) {
+  const g = useGatilho()
+  // sem permissão nenhuma a lista chega vazia — aí o botão não deve existir
+  if (acoes.length === 0) return null
+  return (
+    <>
+      <button
+        ref={g.ref}
+        type="button"
+        className="kebab"
+        aria-label={ariaLabel}
+        aria-haspopup="menu"
+        aria-expanded={g.aberto}
+        onClick={(e) => {
+          e.stopPropagation()
+          g.alternar()
+        }}
+      >
+        ⋮
+      </button>
+      <Popover
+        aberto={g.aberto}
+        aoFechar={g.fechar}
+        ancora={g.ref.current}
+        largura={196}
+        alinhamento="fim"
+        ariaLabel={ariaLabel}
+      >
+        <div role="menu">
+          {acoes.map((a) => (
+            <button
+              key={a.label}
+              type="button"
+              role="menuitem"
+              className={`opcao${a.perigo ? ' perigo' : ''}`}
+              disabled={a.desabilitado}
+              title={a.dica}
+              onClick={(e) => {
+                e.stopPropagation()
+                g.fechar()
+                a.onSelect()
+              }}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+      </Popover>
+    </>
+  )
+}
+
+/* ---------- Dica (tooltip) ---------- */
+
+export function Dica({ texto, children }: { texto: string; children: ReactNode }) {
+  const alvo = useRef<HTMLSpanElement>(null)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+
+  const mostrar = () => {
+    const r = alvo.current?.getBoundingClientRect()
+    if (r) setPos({ top: r.top + r.height / 2 - 12, left: r.right + 10 })
+  }
+
+  return (
+    <>
+      <span
+        ref={alvo}
+        onPointerEnter={mostrar}
+        onPointerLeave={() => setPos(null)}
+        onFocus={mostrar}
+        onBlur={() => setPos(null)}
+        style={{ display: 'contents' }}
+      >
+        {children}
+      </span>
+      {pos &&
+        createPortal(
+          <span role="tooltip" className="dica" style={{ top: pos.top, left: pos.left }}>
+            {texto}
+          </span>,
+          document.body,
+        )}
+    </>
+  )
+}

@@ -322,7 +322,7 @@ export function DetalheView({
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(4,1fr)',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
               gap: 10,
               marginBottom: 24,
             }}

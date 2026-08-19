@@ -5,8 +5,17 @@ import type { Receita } from '../../types/database'
 
 export type ProjetoTipo = 'manta_croche' | 'manta_trico' | 'amigurumi'
 export type SquareEtapa = 'afazer' | 'miolo' | 'aguardando_borda' | 'borda' | 'pronto'
-export type LoteEtapa = 'miolo' | 'aguardando_borda' | 'borda' | 'pronto'
 export type FaixaStatus = 'afazer' | 'fazendo' | 'feita'
+
+export const ETAPAS: SquareEtapa[] = ['afazer', 'miolo', 'aguardando_borda', 'borda', 'pronto']
+
+export const ETAPA_LABEL: Record<SquareEtapa, string> = {
+  afazer: 'A fazer',
+  miolo: 'Miolo',
+  aguardando_borda: 'Aguardando borda',
+  borda: 'Borda',
+  pronto: 'Pronto',
+}
 
 export interface Projeto {
   id: string
@@ -17,8 +26,11 @@ export interface Projeto {
   emoji: string | null
   receita_id: string | null
   meta: number | null
+  colunas: number | null
+  linhas: number | null
   status: 'ativo' | 'entregue' | 'arquivado'
   created_by: string | null
+  arquivado_em: string | null
 }
 
 export interface MantaModelo {
@@ -39,19 +51,7 @@ export interface Square {
   modelo_id: string
   posicao: number
   etapa: SquareEtapa
-  lote_id: string | null
-}
-
-export interface Lote {
-  id: string
-  projeto_id: string
-  modelo_id: string
-  quantidade: number
-  etapa: LoteEtapa
   responsavel_id: string | null
-  obs: string | null
-  responsavel?: { nome: string } | null
-  modelo?: { letra: string; nome: string } | null
 }
 
 export interface Faixa {
@@ -61,7 +61,7 @@ export interface Faixa {
   responsavel_id: string | null
   status: FaixaStatus
   cores: string[]
-  responsavel?: { nome: string; avatar_color: string } | null
+  responsavel?: { nome: string; avatar_color: string; avatar_url: string | null } | null
 }
 
 export interface Unidade {
@@ -79,7 +79,7 @@ export interface Comentario {
   autor_id: string
   texto: string
   created_at: string
-  autor?: { nome: string; avatar_color: string } | null
+  autor?: { nome: string; avatar_color: string; avatar_url: string | null } | null
 }
 
 export interface Atividade {
@@ -154,20 +154,10 @@ export async function fetchSquares(projetoId: string): Promise<Square[]> {
   return (data ?? []) as Square[]
 }
 
-export async function fetchLotes(projetoId: string): Promise<Lote[]> {
-  const { data, error } = await supabase
-    .from('lotes')
-    .select('*, responsavel:profiles!responsavel_id(nome), modelo:manta_modelos!modelo_id(letra, nome)')
-    .eq('projeto_id', projetoId)
-    .order('created_at')
-  if (error) throw error
-  return (data ?? []) as unknown as Lote[]
-}
-
 export async function fetchFaixas(projetoId: string): Promise<Faixa[]> {
   const { data, error } = await supabase
     .from('faixas')
-    .select('*, responsavel:profiles!responsavel_id(nome, avatar_color)')
+    .select('*, responsavel:profiles!responsavel_id(nome, avatar_color, avatar_url)')
     .eq('projeto_id', projetoId)
     .order('ordem')
   if (error) throw error
@@ -187,7 +177,7 @@ export async function fetchUnidades(projetoId: string): Promise<Unidade[]> {
 export async function fetchComentarios(projetoId: string): Promise<Comentario[]> {
   const { data, error } = await supabase
     .from('comentarios')
-    .select('*, autor:profiles!autor_id(nome, avatar_color)')
+    .select('*, autor:profiles!autor_id(nome, avatar_color, avatar_url)')
     .eq('projeto_id', projetoId)
     .order('created_at')
   if (error) throw error
@@ -236,10 +226,65 @@ export function progressoUnidades(unidades: Pick<Unidade, 'status'>[], meta: num
   return { done, total: meta ?? unidades.length }
 }
 
-/** Etapa para onde os squares vão quando uma etapa é concluída */
-export function proximaEtapa(concluida: 'miolo' | 'borda' | 'pronto'): SquareEtapa {
-  if (concluida === 'miolo') return 'aguardando_borda'
-  return 'pronto'
+/** Etapa seguinte no fluxo do square — usada pelo avanço rápido do mapa */
+export function proximaEtapa(atual: SquareEtapa): SquareEtapa {
+  const i = ETAPAS.indexOf(atual)
+  return ETAPAS[Math.min(i + 1, ETAPAS.length - 1)]
+}
+
+export interface ResumoEtapa {
+  etapa: SquareEtapa
+  total: number
+  porModelo: { letra: string; nome: string; total: number }[]
+}
+
+/** Substitui o kanban de lotes: o mesmo panorama, derivado dos próprios squares */
+export function resumoPorEtapa(squares: Square[], modelos: MantaModelo[]): ResumoEtapa[] {
+  const porId = new Map(modelos.map((m) => [m.id, m]))
+  return ETAPAS.map((etapa) => {
+    const daEtapa = squares.filter((s) => s.etapa === etapa)
+    const contagem = new Map<string, number>()
+    for (const s of daEtapa) contagem.set(s.modelo_id, (contagem.get(s.modelo_id) ?? 0) + 1)
+    return {
+      etapa,
+      total: daEtapa.length,
+      porModelo: [...contagem.entries()]
+        .map(([id, total]) => ({
+          letra: porId.get(id)?.letra ?? '?',
+          nome: porId.get(id)?.nome ?? 'Modelo',
+          total,
+        }))
+        .sort((a, b) => a.letra.localeCompare(b.letra)),
+    }
+  })
+}
+
+/** Quantos squares prontos cada integrante entregou nesta manta */
+export function squaresPorResponsavel(squares: Square[]): Map<string, number> {
+  const map = new Map<string, number>()
+  for (const s of squares) {
+    if (s.etapa !== 'pronto' || !s.responsavel_id) continue
+    map.set(s.responsavel_id, (map.get(s.responsavel_id) ?? 0) + 1)
+  }
+  return map
+}
+
+/** Linha/coluna de um square na grade da manta */
+export function coordenada(posicao: number, colunas: number) {
+  return { linha: Math.floor(posicao / colunas) + 1, coluna: (posicao % colunas) + 1 }
+}
+
+/** Posições dentro do retângulo entre dois cantos — seleção por arrasto no mapa */
+export function retangulo(de: number, ate: number, colunas: number): number[] {
+  const a = coordenada(de, colunas)
+  const b = coordenada(ate, colunas)
+  const l1 = Math.min(a.linha, b.linha)
+  const l2 = Math.max(a.linha, b.linha)
+  const c1 = Math.min(a.coluna, b.coluna)
+  const c2 = Math.max(a.coluna, b.coluna)
+  const out: number[] = []
+  for (let l = l1; l <= l2; l++) for (let c = c1; c <= c2; c++) out.push((l - 1) * colunas + (c - 1))
+  return out
 }
 
 export interface GrupoUnidades {
@@ -285,85 +330,145 @@ export async function inserirAtividade(a: {
   await supabase.from('atividades').insert(a)
 }
 
-/** Assumir um lote "precisa de alguém": vira borda em andamento da integrante */
-export async function pegarLote(lote: Lote, userId: string) {
-  const { error } = await supabase
-    .from('lotes')
-    .update({ responsavel_id: userId, etapa: 'borda' })
-    .eq('id', lote.id)
-  if (error) throw error
-  await supabase.from('squares').update({ etapa: 'borda' }).eq('lote_id', lote.id)
-  await inserirAtividade({
-    autor_id: userId,
-    tipo: 'lote',
-    projeto_id: lote.projeto_id,
-    payload: {
-      texto: `pegou ${lote.modelo?.nome ?? 'lote'} ×${lote.quantidade}`,
-      detalhe: 'aguardando → borda',
-    },
-  })
-}
-
-/** Registrar produção: move N squares do lote para a próxima etapa */
-export async function registrarProducao(opts: {
-  lote: Lote
-  quantidade: number
-  etapaConcluida: 'miolo' | 'borda' | 'pronto'
-  responsavelNome: string
+/** Registrar produção: marca a etapa (e quem fez) dos squares selecionados no mapa */
+export async function marcarSquares(opts: {
+  projetoId: string
+  ids: string[]
+  etapa: SquareEtapa
+  responsavelId: string | null
+  responsavelNome: string | null
   autorId: string
 }) {
-  const { lote, quantidade, etapaConcluida, responsavelNome, autorId } = opts
-  const destino = proximaEtapa(etapaConcluida)
+  const { projetoId, ids, etapa, responsavelId, responsavelNome, autorId } = opts
+  if (ids.length === 0) return
 
-  const { data: squares, error } = await supabase
+  const { error } = await supabase
     .from('squares')
-    .select('id')
-    .eq('lote_id', lote.id)
-    .order('posicao')
+    .update({ etapa, responsavel_id: etapa === 'afazer' ? null : responsavelId })
+    .in('id', ids)
   if (error) throw error
-  const ids = ((squares ?? []) as { id: string }[]).slice(0, quantidade).map((s) => s.id)
-  const restam = (squares?.length ?? 0) - ids.length
-
-  if (ids.length > 0) {
-    const patch =
-      destino === 'pronto' ? { etapa: destino, lote_id: null } : { etapa: destino }
-    const { error: e2 } = await supabase.from('squares').update(patch).in('id', ids)
-    if (e2) throw e2
-  }
-
-  if (destino === 'pronto') {
-    if (restam === 0) await supabase.from('lotes').delete().eq('id', lote.id)
-    else await supabase.from('lotes').update({ quantidade: restam }).eq('id', lote.id)
-  } else {
-    // miolo concluído → lote aguarda alguém pegar a borda
-    await supabase
-      .from('lotes')
-      .update({ etapa: destino, responsavel_id: null, quantidade: ids.length })
-      .eq('id', lote.id)
-  }
 
   await inserirAtividade({
     autor_id: autorId,
     tipo: 'producao',
-    projeto_id: lote.projeto_id,
+    projeto_id: projetoId,
     payload: {
-      texto: `registrou ${etapaConcluida} de ${lote.modelo?.nome ?? 'lote'} ×${ids.length} (${responsavelNome})`,
-      detalhe: `→ ${destino.replace('_', ' ')}`,
+      texto: `marcou ${ids.length} square${ids.length > 1 ? 's' : ''} como ${ETAPA_LABEL[etapa].toLowerCase()}`,
+      detalhe: responsavelNome ?? undefined,
     },
   })
 }
 
-export async function salvarFaixas(mudadas: { id: string; cores: string[] }[]) {
-  for (const f of mudadas) {
-    const { error } = await supabase.from('faixas').update({ cores: f.cores }).eq('id', f.id)
+/** Troca dois squares de lugar no mapa (o desenho muda, o progresso vai junto) */
+export async function trocarSquares(a: Square, b: Square) {
+  // posicao é unique por projeto (e tem check >= 0): passa por um valor alto e
+  // livre antes de cruzar, senão o UPDATE do meio colide com a posição do outro
+  const limbo = 1_000_000 + a.posicao
+  const passos = [
+    { id: a.id, posicao: limbo },
+    { id: b.id, posicao: a.posicao },
+    { id: a.id, posicao: b.posicao },
+  ]
+  for (const p of passos) {
+    const { error } = await supabase.from('squares').update({ posicao: p.posicao }).eq('id', p.id)
     if (error) throw error
   }
 }
 
-export async function adicionarUnidade(projetoId: string, numero: number, responsavelId: string) {
+/** Pinta um modelo sobre vários squares — redesenha o padrão da manta */
+export async function pintarSquares(ids: string[], modeloId: string) {
+  if (ids.length === 0) return
+  const { error } = await supabase.from('squares').update({ modelo_id: modeloId }).in('id', ids)
+  if (error) throw error
+}
+
+export interface FaixaPatch {
+  id: string
+  cores?: string[]
+  status?: FaixaStatus
+  responsavel_id?: string | null
+}
+
+export async function salvarFaixas(mudadas: FaixaPatch[]) {
+  for (const { id, ...patch } of mudadas) {
+    const { error } = await supabase.from('faixas').update(patch).eq('id', id)
+    if (error) throw error
+  }
+}
+
+/** Pegar faixa para si; concluir; ou reabrir (admin ou a própria responsável) */
+export async function mudarStatusFaixa(opts: {
+  faixa: Faixa
+  status: FaixaStatus
+  perfilId: string
+  autorId: string
+}) {
+  const { faixa, status, perfilId, autorId } = opts
+  const patch: FaixaPatch = { id: faixa.id, status }
+  if (status === 'fazendo') patch.responsavel_id = perfilId
+  if (status === 'afazer') patch.responsavel_id = null
+  await salvarFaixas([patch])
+
+  const texto =
+    status === 'fazendo'
+      ? `pegou a faixa ${faixa.ordem}`
+      : status === 'feita'
+        ? `concluiu a faixa ${faixa.ordem}`
+        : `reabriu a faixa ${faixa.ordem}`
+  await inserirAtividade({
+    autor_id: autorId,
+    tipo: 'faixa',
+    projeto_id: faixa.projeto_id,
+    payload: { texto },
+  })
+}
+
+export async function adicionarFaixa(projetoId: string, ordem: number, cores: string[]) {
+  const { error } = await supabase
+    .from('faixas')
+    .insert({ projeto_id: projetoId, ordem, cores })
+  if (error) throw error
+}
+
+export async function removerFaixa(id: string) {
+  const { error } = await supabase.from('faixas').delete().eq('id', id)
+  if (error) throw error
+}
+
+/** Cria N unidades de uma vez para a mesma integrante */
+export async function adicionarUnidades(
+  projetoId: string,
+  aPartirDe: number,
+  quantidade: number,
+  responsavelId: string,
+) {
+  const linhas = Array.from({ length: quantidade }, (_, i) => ({
+    projeto_id: projetoId,
+    numero: aPartirDe + i,
+    responsavel_id: responsavelId,
+  }))
+  const { error } = await supabase.from('unidades').insert(linhas)
+  if (error) throw error
+}
+
+export async function reatribuirUnidades(ids: string[], responsavelId: string) {
   const { error } = await supabase
     .from('unidades')
-    .insert({ projeto_id: projetoId, numero, responsavel_id: responsavelId })
+    .update({ responsavel_id: responsavelId })
+    .in('id', ids)
+  if (error) throw error
+}
+
+export async function removerUnidades(ids: string[]) {
+  const { error } = await supabase.from('unidades').delete().in('id', ids)
+  if (error) throw error
+}
+
+export async function reabrirUnidades(ids: string[]) {
+  const { error } = await supabase
+    .from('unidades')
+    .update({ status: 'em_producao' })
+    .in('id', ids)
   if (error) throw error
 }
 
@@ -375,11 +480,28 @@ export async function concluirUnidades(ids: string[]) {
   if (error) throw error
 }
 
+export async function editarComentario(id: string, texto: string) {
+  const { error } = await supabase.from('comentarios').update({ texto }).eq('id', id)
+  if (error) throw error
+}
+
+export async function apagarComentario(id: string) {
+  const { error } = await supabase.from('comentarios').delete().eq('id', id)
+  if (error) throw error
+}
+
 export async function comentar(projetoId: string, autorId: string, texto: string) {
   const { error } = await supabase
     .from('comentarios')
     .insert({ projeto_id: projetoId, autor_id: autorId, texto })
   if (error) throw error
+}
+
+export interface ModeloNovo {
+  letra: string
+  nome: string
+  cor_borda: string
+  cor_miolo: string
 }
 
 export interface NovoProjeto {
@@ -390,19 +512,48 @@ export interface NovoProjeto {
   receita_id?: string | null
   meta?: number | null
   created_by: string
+  // manta crochê: grade e modelos (do zero ou vindos de um esquema da biblioteca)
+  colunas?: number
+  linhas?: number
+  modelos?: ModeloNovo[]
+  celulas?: string[][]
   // manta tricô: padrão das faixas
   faixaSeq?: string[]
   faixaCount?: number
 }
 
-const MODELOS_PADRAO = [
-  { letra: 'A', nome: 'Modelo A — Flor de Maio', cor_borda: '#C4798A', cor_miolo: '#DFA2AC', total: 40 },
-  { letra: 'B', nome: 'Modelo B — Sunburst', cor_borda: '#B99BC4', cor_miolo: '#E3C07A', total: 24 },
-  { letra: 'C', nome: 'Modelo C — Clássico', cor_borda: '#7D9B76', cor_miolo: '#A9BFA3', total: 16 },
-]
+/** Grade padrão quando a manta começa do zero: alterna os modelos em xadrez */
+export function gradePadrao(colunas: number, linhas: number, letras: string[]): string[][] {
+  return Array.from({ length: linhas }, (_, l) =>
+    Array.from({ length: colunas }, (_, c) => letras[(l + c) % letras.length]),
+  )
+}
 
 export async function criarProjeto(novo: NovoProjeto): Promise<string> {
-  const { data: sem } = await supabase.from('semestres').select('id').eq('ativo', true).single()
+  // manta de crochê nasce inteira numa transação só (projeto + modelos + squares),
+  // senão uma falha no meio deixava um projeto pela metade
+  if (novo.tipo === 'manta_croche') {
+    const modelos = novo.modelos ?? []
+    const colunas = novo.colunas ?? 8
+    const linhas = novo.linhas ?? 10
+    const { data, error } = await supabase.rpc('criar_projeto_manta', {
+      p_nome: novo.nome,
+      p_destino: novo.destino,
+      p_emoji: novo.emoji,
+      p_colunas: colunas,
+      p_linhas: linhas,
+      p_modelos: modelos,
+      p_celulas: novo.celulas ?? gradePadrao(colunas, linhas, modelos.map((m) => m.letra)),
+    })
+    if (error) throw error
+    return data as string
+  }
+
+  const { data: sem } = await supabase
+    .from('semestres')
+    .select('id')
+    .eq('ativo', true)
+    .maybeSingle()
   const { data, error } = await supabase
     .from('projetos')
     .insert({
@@ -419,25 +570,6 @@ export async function criarProjeto(novo: NovoProjeto): Promise<string> {
     .single()
   if (error || !data) throw error ?? new Error('sem id')
   const projetoId = (data as { id: string }).id
-
-  if (novo.tipo === 'manta_croche') {
-    const { data: modelos, error: e1 } = await supabase
-      .from('manta_modelos')
-      .insert(MODELOS_PADRAO.map((m) => ({ ...m, projeto_id: projetoId })))
-      .select('id, letra')
-    if (e1) throw e1
-    const porLetra = Object.fromEntries(
-      ((modelos ?? []) as { id: string; letra: string }[]).map((m) => [m.letra, m.id]),
-    )
-    // mesma distribuição embaralhada do protótipo: posição p ← índice (p*13)%80
-    const squares = Array.from({ length: 80 }, (_, p) => {
-      const i = (p * 13) % 80
-      const letra = i < 40 ? 'A' : i < 64 ? 'B' : 'C'
-      return { projeto_id: projetoId, modelo_id: porLetra[letra], posicao: p, etapa: 'afazer' }
-    })
-    const { error: e2 } = await supabase.from('squares').insert(squares)
-    if (e2) throw e2
-  }
 
   if (novo.tipo === 'manta_trico') {
     const seq = novo.faixaSeq ?? []
@@ -459,4 +591,42 @@ export async function criarProjeto(novo: NovoProjeto): Promise<string> {
   })
 
   return projetoId
+}
+
+export async function atualizarProjeto(
+  id: string,
+  patch: Partial<Pick<Projeto, 'nome' | 'destino' | 'emoji' | 'meta' | 'receita_id' | 'status'>>,
+) {
+  const { error } = await supabase.from('projetos').update(patch).eq('id', id)
+  if (error) throw error
+}
+
+/* ---------- Estrutura da manta (admin) ---------- */
+
+export async function redimensionarManta(projetoId: string, colunas: number, linhas: number) {
+  const { error } = await supabase.rpc('redimensionar_manta', {
+    p_projeto: projetoId,
+    p_colunas: colunas,
+    p_linhas: linhas,
+  })
+  if (error) throw error
+}
+
+/** Quantos squares já feitos somem se a manta encolher para este tamanho */
+export async function squaresPerdidos(projetoId: string, colunas: number, linhas: number) {
+  const { data, error } = await supabase.rpc('squares_perdidos', {
+    p_projeto: projetoId,
+    p_colunas: colunas,
+    p_linhas: linhas,
+  })
+  if (error) throw error
+  return (data as number) ?? 0
+}
+
+export async function atualizarModelo(
+  id: string,
+  patch: Partial<Pick<MantaModelo, 'nome' | 'cor_borda' | 'cor_miolo'>>,
+) {
+  const { error } = await supabase.from('manta_modelos').update(patch).eq('id', id)
+  if (error) throw error
 }

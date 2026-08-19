@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { saldo, totalDoMes } from './api'
+import { filtraPeriodo, limitesDoMes, saldo, totalDoMes, totalDoTipo } from './api'
 
 const MOVS = [
   { tipo: 'entrada' as const, valor_centavos: 42000, data: '2026-07-08' },
@@ -21,5 +21,28 @@ describe('kpis do financeiro', () => {
     expect(saldo([...MOVS, { tipo: 'saida', valor_centavos: 5000, data: '2026-07-10' }])).toBe(
       saldo(MOVS) - 5000,
     )
+  })
+})
+
+describe('filtro de período', () => {
+  it('inclui as duas pontas do intervalo', () => {
+    expect(filtraPeriodo(MOVS, '2026-07-02', '2026-07-08')).toHaveLength(3)
+    expect(filtraPeriodo(MOVS, '2026-07-05', '2026-07-05')).toHaveLength(1)
+  })
+
+  it('período sem movimentação devolve lista vazia', () => {
+    expect(filtraPeriodo(MOVS, '2026-08-01', '2026-08-31')).toEqual([])
+  })
+
+  it('os totais do período usam a lista já recortada', () => {
+    const julho = filtraPeriodo(MOVS, '2026-07-01', '2026-07-31')
+    expect(totalDoTipo(julho, 'entrada')).toBe(68000)
+    expect(totalDoTipo(julho, 'saida')).toBe(24000)
+  })
+
+  it('limitesDoMes pega o último dia certo, inclusive em fevereiro', () => {
+    expect(limitesDoMes('2026-07-15')).toEqual({ de: '2026-07-01', ate: '2026-07-31' })
+    expect(limitesDoMes('2026-02-10')).toEqual({ de: '2026-02-01', ate: '2026-02-28' })
+    expect(limitesDoMes('2024-02-10').ate).toBe('2024-02-29')
   })
 })

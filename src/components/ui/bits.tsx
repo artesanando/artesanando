@@ -87,12 +87,17 @@ export function Avatar({
   fontSize = 10,
   children,
   style,
+  src,
+  alt,
 }: {
   color: string
   size?: number
   fontSize?: number
   children: ReactNode
   style?: CSSProperties
+  /** foto do perfil; sem ela ficam as iniciais sobre a cor */
+  src?: string | null
+  alt?: string
 }) {
   return (
     <div
@@ -108,10 +113,19 @@ export function Avatar({
         fontWeight: 800,
         fontSize,
         flex: 'none',
+        overflow: 'hidden',
         ...style,
       }}
     >
-      {children}
+      {src ? (
+        <img
+          src={src}
+          alt={alt ?? ''}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      ) : (
+        children
+      )}
     </div>
   )
 }
@@ -132,36 +146,17 @@ export function Progress({
   )
 }
 
-/* Controles reais (M2) */
+/* Controles reais (M2) — o Select vive em ./controles porque abre pop-up próprio */
 
-export function Select<T extends string>({
-  value,
-  onChange,
-  options,
-  style,
-  ariaLabel,
-}: {
-  value: T
-  onChange: (v: T) => void
-  options: [T, string][]
-  style?: CSSProperties
-  ariaLabel?: string
-}) {
-  return (
-    <select
-      className="field"
-      value={value}
-      onChange={(e) => onChange(e.target.value as T)}
-      aria-label={ariaLabel}
-      style={{ width: '100%', appearance: 'none', cursor: 'pointer', ...style }}
-    >
-      {options.map(([v, label]) => (
-        <option key={v} value={v}>
-          {label}
-        </option>
-      ))}
-    </select>
-  )
+const passo: CSSProperties = {
+  border: 'none',
+  background: 'none',
+  fontFamily: 'inherit',
+  fontWeight: 800,
+  fontSize: 15,
+  padding: '0 8px',
+  cursor: 'pointer',
+  lineHeight: 1,
 }
 
 export function Stepper({
@@ -170,46 +165,56 @@ export function Stepper({
   min = 1,
   max = 99,
   suffix,
+  ariaLabel,
+  id,
 }: {
   value: number
   onChange: (v: number) => void
   min?: number
   max?: number
   suffix?: string
+  ariaLabel?: string
+  id?: string
 }) {
   return (
     <div
       className="field"
       style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
     >
-      <span
+      <button
+        type="button"
+        aria-label="Diminuir"
+        disabled={value <= min}
         onClick={() => onChange(Math.max(min, value - 1))}
-        style={{
-          cursor: 'pointer',
-          color: 'var(--faint)',
-          fontWeight: 800,
-          padding: '0 6px',
-          opacity: value <= min ? 0.4 : 1,
-        }}
+        style={{ ...passo, color: 'var(--faint)', opacity: value <= min ? 0.4 : 1 }}
       >
         −
-      </span>
-      <b>
+      </button>
+      <b
+        id={id}
+        role="spinbutton"
+        tabIndex={0}
+        aria-label={ariaLabel}
+        aria-valuenow={value}
+        aria-valuemin={min}
+        aria-valuemax={max}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowUp') onChange(Math.min(max, value + 1))
+          if (e.key === 'ArrowDown') onChange(Math.max(min, value - 1))
+        }}
+      >
         {value}
         {suffix ? ` ${suffix}` : ''}
       </b>
-      <span
+      <button
+        type="button"
+        aria-label="Aumentar"
+        disabled={value >= max}
         onClick={() => onChange(Math.min(max, value + 1))}
-        style={{
-          cursor: 'pointer',
-          color: 'var(--accent)',
-          fontWeight: 800,
-          padding: '0 6px',
-          opacity: value >= max ? 0.4 : 1,
-        }}
+        style={{ ...passo, color: 'var(--accent)', opacity: value >= max ? 0.4 : 1 }}
       >
         +
-      </span>
+      </button>
     </div>
   )
 }

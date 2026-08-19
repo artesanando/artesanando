@@ -12,7 +12,8 @@ export type ModalKind =
   | 'receita'
   | 'emprestimo'
   | 'devolucao'
-  | 'producao'
+  | 'movimento-estoque'
+  | 'ficha-projeto'
   | 'integrante'
   | 'encontro'
   | 'granny'
@@ -30,6 +31,10 @@ interface StoreState {
   creatorReturn: ModalKind | null
   devolucaoId: string | null
   projetoId: string | null
+  /** item de estoque sendo editado ou movimentado */
+  estoqueItemId: string | null
+  /** encontro sendo editado; null = novo encontro */
+  encontroId: string | null
   finKind: 'entrada' | 'saida'
   projCat: 'manta' | 'amig'
   projTec: 'croche' | 'trico'
@@ -47,6 +52,8 @@ const INITIAL: StoreState = {
   creatorReturn: null,
   devolucaoId: null,
   projetoId: null,
+  estoqueItemId: null,
+  encontroId: null,
   finKind: 'entrada',
   projCat: 'manta',
   projTec: 'croche',
@@ -64,7 +71,11 @@ export interface Store extends StoreState {
   open: (m: ModalKind) => void
   close: () => void
   openDevolucao: (emprestimoId: string | null) => void
-  openProducao: (projetoId: string) => void
+  /** abre o formulário de material; sem id, é cadastro novo */
+  openMaterial: (itemId: string | null) => void
+  openMovimentoEstoque: (itemId: string) => void
+  openFichaProjeto: (projetoId: string) => void
+  openEncontro: (encontroId: string | null) => void
   setFinKind: (k: 'entrada' | 'saida') => void
   openFin: (k: 'entrada' | 'saida') => void
   setProjCat: (c: 'manta' | 'amig') => void
@@ -102,9 +113,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     ...s,
     isAdmin,
     open: (modal) => set({ modal }),
-    close: () => set({ modal: null, devolucaoId: null, projetoId: null }),
+    close: () =>
+      set({
+        modal: null,
+        devolucaoId: null,
+        projetoId: null,
+        estoqueItemId: null,
+        encontroId: null,
+      }),
     openDevolucao: (devolucaoId) => set({ modal: 'devolucao', devolucaoId }),
-    openProducao: (projetoId) => set({ modal: 'producao', projetoId }),
+    openMaterial: (estoqueItemId) => set({ modal: 'material', estoqueItemId }),
+    openMovimentoEstoque: (estoqueItemId) => set({ modal: 'movimento-estoque', estoqueItemId }),
+    openFichaProjeto: (projetoId) => set({ modal: 'ficha-projeto', projetoId }),
+    openEncontro: (encontroId) => set({ modal: 'encontro', encontroId }),
     setFinKind: (finKind) => set({ finKind }),
     openFin: (finKind) => set({ modal: 'financeiro', finKind }),
     setProjCat: (projCat) => set({ projCat }),

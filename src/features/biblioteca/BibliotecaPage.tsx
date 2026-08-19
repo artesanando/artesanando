@@ -7,6 +7,9 @@ import { abrirPdf, fetchReceitas, filtraReceitas } from './api'
 import { CAT_CARD } from './meta'
 import { DetalheView } from '../../modals/DetalheView'
 import { IconPdf } from '../../components/ui/icons'
+import { MenuKebab } from '../../components/ui/controles'
+import { useAcoesArquivo } from '../../components/ui/useAcoesItem'
+import { separaArquivados } from '../../lib/arquivo'
 
 const CHIPS: [ReceitaCategoria | 'todos', string][] = [
   ['todos', 'Todos'],
@@ -20,6 +23,8 @@ export function BibliotecaPage() {
   const { isAdmin, open, openGranny, openFaixa } = useStore()
   const [busca, setBusca] = useState('')
   const [cat, setCat] = useState<ReceitaCategoria | 'todos'>('todos')
+  const [verArquivadas, setVerArquivadas] = useState(false)
+  const acoesArquivo = useAcoesArquivo()
   const [params, setParams] = useSearchParams()
 
   const { data: receitas, isLoading, isError } = useQuery({
@@ -27,14 +32,15 @@ export function BibliotecaPage() {
     queryFn: fetchReceitas,
   })
 
-  const filtradas = filtraReceitas(receitas ?? [], busca, cat)
+  const { ativos, arquivados } = separaArquivados(receitas ?? [])
+  const filtradas = filtraReceitas(verArquivadas ? arquivados : ativos, busca, cat)
   const aberta = (receitas ?? []).find((r) => r.id === params.get('receita'))
 
   const abrir = (id: string) => setParams({ receita: id })
   const fechar = () => setParams({})
 
   return (
-    <div style={{ padding: '30px 40px' }}>
+    <div className="pagina">
       <div
         style={{
           display: 'flex',
@@ -98,6 +104,15 @@ export function BibliotecaPage() {
             {label}
           </span>
         ))}
+        {arquivados.length > 0 && (
+          <button
+            className="crumb"
+            style={{ border: 'none', background: 'none', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+            onClick={() => setVerArquivadas((v) => !v)}
+          >
+            {verArquivadas ? '‹ Ativas' : `Arquivadas (${arquivados.length}) ›`}
+          </button>
+        )}
       </div>
       {isLoading && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>}
       {isError && (
@@ -184,9 +199,26 @@ export function BibliotecaPage() {
                     <span />
                   )}
                   <span
-                    style={{ fontSize: 12, fontWeight: 700, color: c.fg, whiteSpace: 'nowrap' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    Abrir →
+                    <span
+                      style={{ fontSize: 12, fontWeight: 700, color: c.fg, whiteSpace: 'nowrap' }}
+                    >
+                      Abrir →
+                    </span>
+                    <MenuKebab
+                      ariaLabel={`Ações de ${r.nome}`}
+                      acoes={acoesArquivo({
+                        tabela: 'receitas',
+                        id: r.id,
+                        nome: `"${r.nome}"`,
+                        rotulo: 'a receita',
+                        motivoHistorico: 'Os projetos que usam esta receita',
+                        arquivado: Boolean(r.arquivado_em),
+                        invalidar: ['receitas'],
+                      })}
+                    />
                   </span>
                 </div>
               </div>

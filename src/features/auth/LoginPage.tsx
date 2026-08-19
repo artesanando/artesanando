@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../state/auth'
 import { Lbl, PasswordField } from '../../components/ui/bits'
 import { AuthShell } from './AuthShell'
@@ -47,17 +47,9 @@ export function LoginPage() {
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 7 }}>
           <span className="lbl">SENHA</span>
-          <Link
-            to="/esqueci"
-            style={{
-              fontSize: 11.5,
-              fontWeight: 700,
-              color: 'var(--accent)',
-              textDecoration: 'none',
-            }}
-          >
-            esqueci
-          </Link>
+          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+            esqueceu? peça o link a uma administradora
+          </span>
         </div>
         <PasswordField
           value={senha}

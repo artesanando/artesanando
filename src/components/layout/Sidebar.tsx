@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../state/auth'
-import { Avatar } from '../ui/bits'
+import { AvatarPerfil } from '../ui/AvatarPerfil'
+import { Dica, MenuKebab } from '../ui/controles'
 import { PAPEL_LABEL } from '../../types/database'
-import { ini } from '../../lib/format'
 import {
   IconBib,
   IconDash,
@@ -15,7 +15,7 @@ import {
 } from '../ui/icons'
 
 const ITEMS = [
-  { to: '/', label: 'Dashboard', Icon: IconDash },
+  { to: '/', label: 'Início', Icon: IconDash },
   { to: '/projetos', label: 'Projetos', Icon: IconProj },
   { to: '/integrantes', label: 'Integrantes', Icon: IconInt },
   { to: '/estoque', label: 'Estoque', Icon: IconEst },
@@ -24,90 +24,122 @@ const ITEMS = [
   { to: '/financeiro', label: 'Financeiro', Icon: IconFin },
 ]
 
-export function Sidebar() {
+const CHAVE = 'artesanando:menu-encolhido'
+
+export function useMenuEncolhido() {
+  const [encolhido, setEncolhido] = useState(
+    () => localStorage.getItem(CHAVE) === '1',
+  )
+  useEffect(() => {
+    localStorage.setItem(CHAVE, encolhido ? '1' : '0')
+  }, [encolhido])
+  return [encolhido, () => setEncolhido((e) => !e)] as const
+}
+
+export function Sidebar({
+  encolhido,
+  aoAlternar,
+  aoNavegar,
+}: {
+  encolhido: boolean
+  aoAlternar: () => void
+  /** no celular, navegar fecha a gaveta */
+  aoNavegar?: () => void
+}) {
   const { profile, isAdmin, logout } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const [menu, setMenu] = useState(false)
 
   const isActive = (to: string) => (to === '/' ? pathname === '/' : pathname.startsWith(to))
   const go = (to: string) => {
-    setMenu(false)
     navigate(to)
+    aoNavegar?.()
   }
 
   return (
-    <div className="sidebar">
-      <div
-        className="h"
-        style={{ fontSize: 19, letterSpacing: '-.2px', marginBottom: 28 }}
-      >
-        Artesanando<span style={{ color: 'var(--primary)' }}>.</span>
+    <nav className={`sidebar${encolhido ? ' encolhida' : ''}`} aria-label="Navegação principal">
+      <div className="sidebar-marca h">
+        {encolhido ? (
+          <span style={{ color: 'var(--primary)' }}>A.</span>
+        ) : (
+          <>
+            Artesanando<span style={{ color: 'var(--primary)' }}>.</span>
+          </>
+        )}
       </div>
+
       <div className="nav-list">
         {ITEMS.map(({ to, label, Icon }) => {
           const on = isActive(to)
-          return (
-            <div
-              key={to}
+          const botao = (
+            <button
+              type="button"
               className="nav"
               onClick={() => go(to)}
+              aria-current={on ? 'page' : undefined}
+              aria-label={encolhido ? label : undefined}
               style={{ color: on ? 'var(--ink)' : 'var(--muted)' }}
             >
               <Icon />
-              {label}
-              {on && (
-                <span
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    background: 'var(--primary)',
-                    marginLeft: 'auto',
-                  }}
-                />
-              )}
+              {!encolhido && label}
+              {on && <span className="nav-marca" />}
+            </button>
+          )
+          return (
+            <div key={to}>
+              {encolhido ? <Dica texto={label}>{botao}</Dica> : botao}
             </div>
           )
         })}
       </div>
-      {menu && (
-        <div className="menu">
-          <div onClick={() => go('/perfil')}>Meu perfil</div>
-          {isAdmin && <div onClick={() => go('/configuracoes')}>Configurações</div>}
-          <div
-            onClick={() => {
-              setMenu(false)
-              logout()
-            }}
-            style={{ borderTop: '1px solid var(--divider)', color: 'var(--accent)' }}
-          >
-            Sair
+
+      <div className="sidebar-user">
+        <AvatarPerfil
+          nome={profile?.nome ?? '?'}
+          avatarColor={profile?.avatar_color ?? 'var(--fill)'}
+          avatarUrl={profile?.avatar_url}
+          size={32}
+          fontSize={12}
+        />
+        {!encolhido && (
+          <div style={{ lineHeight: 1.25, flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontWeight: 800,
+                fontSize: 12.5,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {profile?.nome ?? '—'}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+              {profile ? PAPEL_LABEL[profile.papel] : ''}
+            </div>
           </div>
-        </div>
-      )}
-      <div className="sidebar-user" onClick={() => setMenu((m) => !m)}>
-        <Avatar color={profile?.avatar_color ?? 'var(--fill)'} size={32} fontSize={12}>
-          {profile ? ini(profile.nome) : '?'}
-        </Avatar>
-        <div style={{ lineHeight: 1.25, flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontWeight: 800,
-              fontSize: 12.5,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {profile?.nome ?? '—'}
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
-            {profile ? PAPEL_LABEL[profile.papel] : ''}
-          </div>
-        </div>
-        <span style={{ color: 'var(--faint-2)', fontSize: 11 }}>▾</span>
+        )}
+        <MenuKebab
+          ariaLabel="Menu da conta"
+          acoes={[
+            { label: 'Meu perfil', onSelect: () => go('/perfil') },
+            ...(isAdmin
+              ? [{ label: 'Configurações', onSelect: () => go('/configuracoes') }]
+              : []),
+            { label: 'Sair', onSelect: () => void logout(), perigo: true },
+          ]}
+        />
       </div>
-    </div>
+
+      <button
+        type="button"
+        className="sidebar-encolher"
+        onClick={aoAlternar}
+        aria-label={encolhido ? 'Expandir menu' : 'Encolher menu'}
+        aria-pressed={encolhido}
+      >
+        {encolhido ? '›' : '‹ Encolher'}
+      </button>
+    </nav>
   )
 }

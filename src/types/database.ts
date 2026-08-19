@@ -6,15 +6,22 @@ export type Papel = 'admin' | 'integrante'
 
 export interface Profile {
   id: string
+  /** conta do auth ligada a este perfil — null em integrante que só entra na chamada */
+  user_id: string | null
   nome: string
   usuario: string
+  email: string | null
   telefone: string | null
   preferencia: Preferencia
   avatar_color: string
+  avatar_url: string | null
   papel: Papel
   ativo: boolean
   desde: string | null
 }
+
+/** Integrante anotada na chamada que ainda não tem acesso ao app */
+export const semConta = (p: Pick<Profile, 'user_id'>) => p.user_id === null
 
 export interface Permissoes {
   profile_id: string
@@ -44,6 +51,29 @@ export interface EstoqueItem {
   vendidos: number
   minimo: number
   custo_centavos: number | null
+  arquivado_em: string | null
+}
+
+export type MotivoMovimento = 'compra' | 'doacao' | 'ajuste' | 'perda' | 'venda'
+
+export interface EstoqueMovimento {
+  id: string
+  item_id: string
+  /** positivo entra, negativo sai */
+  delta: number
+  motivo: MotivoMovimento
+  obs: string | null
+  criado_por: string | null
+  created_at: string
+  autor?: { nome: string } | null
+}
+
+export const MOTIVO_LABEL: Record<MotivoMovimento, string> = {
+  compra: 'Compra',
+  doacao: 'Doação',
+  ajuste: 'Ajuste de contagem',
+  perda: 'Perda',
+  venda: 'Venda',
 }
 
 export interface Emprestimo {
@@ -88,7 +118,17 @@ export interface Receita {
   pdf_path: string | null
   origem: 'manual' | 'criador'
   criado_por: string | null
+  arquivado_em: string | null
 }
+
+/** Tabelas que o app arquiva em vez de apagar — chave usada em `pode_excluir` */
+export type Arquivavel =
+  | 'projetos'
+  | 'encontros'
+  | 'receitas'
+  | 'estoque_itens'
+  | 'movimentacoes'
+  | 'profiles'
 
 export const PAPEL_LABEL: Record<Papel, string> = {
   admin: 'Administradora',

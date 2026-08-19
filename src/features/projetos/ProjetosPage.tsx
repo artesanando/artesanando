@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
 import { Progress } from '../../components/ui/bits'
+import { MenuKebab } from '../../components/ui/controles'
+import { useAcoesProjeto } from './useAcoesProjeto'
+import { separaArquivados } from '../../lib/arquivo'
+import { useLabelSemestre } from '../../lib/semestre'
 import {
   fetchProgressoGeral,
   fetchProjetos,
@@ -12,12 +16,14 @@ import {
   type Projeto,
 } from './api'
 
-type Aba = 'todos' | 'mantas' | 'amigurumis'
+type Aba = 'todos' | 'mantas' | 'amigurumis' | 'arquivados'
 
 export function ProjetosPage() {
   const { isAdmin, open } = useStore()
   const navigate = useNavigate()
   const [aba, setAba] = useState<Aba>('todos')
+  const semestre = useLabelSemestre()
+  const acoesProjeto = useAcoesProjeto()
 
   const { data: projetos, isLoading, isError } = useQuery({
     queryKey: ['projetos'],
@@ -25,7 +31,8 @@ export function ProjetosPage() {
   })
   const { data: prog } = useQuery({ queryKey: ['progresso-geral'], queryFn: fetchProgressoGeral })
 
-  const todos = projetos ?? []
+  const { ativos, arquivados } = separaArquivados(projetos ?? [])
+  const todos = aba === 'arquivados' ? arquivados : ativos
   const mantas = todos.filter((p) => p.tipo !== 'amigurumi')
   const amigurumis = todos.filter((p) => p.tipo === 'amigurumi')
 
@@ -53,7 +60,7 @@ export function ProjetosPage() {
   const mostraAmigs = aba !== 'mantas'
 
   return (
-    <div style={{ padding: '30px 40px' }}>
+    <div className="pagina">
       <div
         style={{
           display: 'flex',
@@ -79,7 +86,7 @@ export function ProjetosPage() {
                 gap: 8,
               }}
             >
-              2026.2
+              {semestre}
             </div>
           </div>
           <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
@@ -111,6 +118,11 @@ export function ProjetosPage() {
         <div onClick={() => setAba('amigurumis')} style={tabStyle(aba === 'amigurumis')}>
           Amigurumis <span style={{ color: 'var(--amber)' }}>{amigurumis.length}</span>
         </div>
+        {arquivados.length > 0 && (
+          <div onClick={() => setAba('arquivados')} style={tabStyle(aba === 'arquivados')}>
+            Arquivados <span style={{ color: 'var(--faint)' }}>{arquivados.length}</span>
+          </div>
+        )}
       </div>
       {isLoading && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>}
       {isError && (
@@ -158,8 +170,14 @@ export function ProjetosPage() {
                         {croche ? 'crochê' : 'tricô'}
                       </span>
                     </div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>
-                      {pr.done}/{pr.total}
+                    <span
+                      style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>
+                        {pr.done}/{pr.total}
+                      </span>
+                      <MenuKebab ariaLabel={`Ações de ${p.nome}`} acoes={acoesProjeto(p)} />
                     </span>
                   </div>
                   <Progress pct={`${pct(pr)}%`} />
@@ -193,12 +211,9 @@ export function ProjetosPage() {
               return (
                 <div
                   key={p.id}
-                  className="card"
+                  className="card cartao-amig"
                   onClick={() => navigate(`/projetos/${p.id}`)}
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1.7fr 1.3fr 1.4fr .5fr',
-                    gap: 14,
                     alignItems: 'center',
                     padding: '14px 18px',
                     cursor: 'pointer',
@@ -239,9 +254,8 @@ export function ProjetosPage() {
                       fillStyle={percent >= 100 ? { background: 'var(--green)' } : undefined}
                     />
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }} />
-                  {entregue ? (
-                    <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>
+                    {entregue && (
                       <span
                         className="tag"
                         style={{
@@ -251,10 +265,11 @@ export function ProjetosPage() {
                       >
                         ENTREGUE
                       </span>
-                    </div>
-                  ) : (
-                    <div style={{ textAlign: 'right', color: 'var(--faint-3)' }}>›</div>
-                  )}
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                    <MenuKebab ariaLabel={`Ações de ${p.nome}`} acoes={acoesProjeto(p)} />
+                  </div>
                 </div>
               )
             })}

@@ -1,26 +1,41 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
-import { Avatar, Lbl, Progress } from '../../components/ui/bits'
-import { ini } from '../../lib/format'
+import { supabase } from '../../lib/supabase'
+import { Lbl, Progress } from '../../components/ui/bits'
+import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
+import { MenuKebab, Select } from '../../components/ui/controles'
+import { useToast } from '../../components/ui/Toast'
+import { useConfirmar } from '../../components/ui/Confirm'
 import { hojeIso } from '../../lib/format'
 import { fetchEmprestimosAtivos } from '../estoque/api'
 import { fetchEncontros, fetchPresencas, frequenciaDe } from '../presenca/api'
 import {
+  definirAtivo,
   emprestadosDe,
   entregasDe,
   fetchEntregasLight,
   fetchIntegrantes,
   filtraIntegrantes,
+  vincularPerfil,
 } from './api'
 import { PREFERENCIA_LABEL } from '../../types/database'
 
 export function IntegrantesPage() {
   const { isAdmin, open } = useStore()
   const navigate = useNavigate()
+  const qc = useQueryClient()
+  const toast = useToast()
+  const confirmar = useConfirmar()
   const { id } = useParams()
   const [busca, setBusca] = useState('')
+  const [vinculando, setVinculando] = useState<string | null>(null)
+  const [destino, setDestino] = useState('')
+  const [linkSenhaPara, setLinkSenhaPara] = useState<string | null>(null)
+  const [linkSenha, setLinkSenha] = useState<string | null>(null)
+  const [gerandoLink, setGerandoLink] = useState(false)
+  const [copiadoSenha, setCopiadoSenha] = useState(false)
   const hoje = hojeIso()
 
   const { data: integrantes, isLoading } = useQuery({
@@ -38,13 +53,44 @@ export function IntegrantesPage() {
   const freqDe = (pid: string) => frequenciaDe(pid, encontros ?? [], presencas ?? [], hoje)
 
   const selFreq = sel ? freqDe(sel.id) : { presentes: 0, total: 0, pct: 0 }
-  const selEntregas = sel && entregas ? entregasDe(sel.id, entregas) : { amigurumis: 0, faixas: 0, total: 0 }
+  const selEntregas =
+    sel && entregas
+      ? entregasDe(sel.id, entregas)
+      : { amigurumis: 0, faixas: 0, grannies: 0, total: 0 }
   const selEmprestados = sel ? emprestadosDe(sel.id, loans ?? []) : 0
+
+  /* Quem entrou pela chamada existe como perfil sem conta. Enquanto não for
+     convidada (ou juntada a uma ficha existente), fica sinalizada aqui. */
+  const semConta = (integrantes ?? []).filter((p) => !p.user_id)
+  const comConta = (integrantes ?? []).filter((p) => p.user_id)
+
+  const vincular = useMutation({
+    mutationFn: ({ origem, para }: { origem: string; para: string }) =>
+      vincularPerfil(origem, para),
+    onSuccess: () => {
+      setVinculando(null)
+      setDestino('')
+      qc.invalidateQueries({ queryKey: ['integrantes'] })
+      qc.invalidateQueries({ queryKey: ['presencas'] })
+      qc.invalidateQueries({ queryKey: ['entregas-light'] })
+      toast('Fichas juntadas ✓')
+    },
+    onError: () => toast('Não foi possível juntar as fichas.', 'erro'),
+  })
+
+  const desativar = useMutation({
+    mutationFn: ({ pid, ativo }: { pid: string; ativo: boolean }) => definirAtivo(pid, ativo),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['integrantes'] })
+      toast('Integrante atualizada ✓')
+    },
+    onError: () => toast('Não foi possível atualizar.', 'erro'),
+  })
 
   return (
     <div
-      className="pgrid"
-      style={{ padding: '30px 40px', '--cols': '1.1fr 1fr', '--gap': '40px' } as React.CSSProperties}
+      className="pagina pgrid"
+      style={{ '--cols': '1.1fr 1fr', '--gap': '40px' } as React.CSSProperties}
     >
       <div>
         <div
@@ -79,6 +125,87 @@ export function IntegrantesPage() {
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
+        {isAdmin && semConta.length > 0 && (
+          <div
+            style={{
+              background: 'var(--chip-warn)',
+              border: '1px solid #E7D6B8',
+              borderRadius: 12,
+              padding: '11px 14px',
+              marginBottom: 14,
+              fontSize: 12.5,
+              color: 'var(--gold-dark)',
+            }}
+          >
+            <b>
+              {semConta.length}{' '}
+              {semConta.length === 1 ? 'pessoa na chamada' : 'pessoas na chamada'} ainda sem
+              perfil.
+            </b>{' '}
+            Convide para o app, ou junte a ficha a uma integrante que já existe.
+            {semConta.map((p) => (
+              <div
+                key={p.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginTop: 8,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <b style={{ flex: 1, minWidth: 100 }}>{p.nome}</b>
+                {vinculando === p.id ? (
+                  <>
+                    <span style={{ minWidth: 170, flex: 1 }}>
+                      <Select
+                        ariaLabel={`Juntar ${p.nome} a qual integrante`}
+                        value={destino}
+                        onChange={setDestino}
+                        options={[
+                          ['', 'Juntar com…'],
+                          ...comConta.map((d) => [d.id, d.nome] as [string, string]),
+                        ]}
+                      />
+                    </span>
+                    <button
+                      className="pill"
+                      style={{ padding: '7px 14px', fontSize: 12 }}
+                      disabled={!destino || vincular.isPending}
+                      onClick={() => vincular.mutate({ origem: p.id, para: destino })}
+                    >
+                      Juntar
+                    </button>
+                    <button
+                      className="pill ghost"
+                      style={{ padding: '7px 14px', fontSize: 12 }}
+                      onClick={() => setVinculando(null)}
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="pill ghost"
+                      style={{ padding: '7px 14px', fontSize: 12 }}
+                      onClick={() => open('integrante')}
+                    >
+                      Convidar
+                    </button>
+                    <button
+                      className="pill ghost"
+                      style={{ padding: '7px 14px', fontSize: 12 }}
+                      onClick={() => setVinculando(p.id)}
+                    >
+                      Juntar a outra
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
         <div style={{ borderTop: '1px solid var(--border)' }}>
           {isLoading && (
             <div style={{ padding: '12px 8px', fontSize: 13, color: 'var(--muted)' }}>
@@ -97,8 +224,8 @@ export function IntegrantesPage() {
             const sub = `${ent} entregas${emprestados > 0 ? ` · ${emprestados} itens em casa` : ''}`
             const freq = freqDe(p.id)
             return (
+              <div key={p.id}>
               <div
-                key={p.id}
                 onClick={() => navigate(`/integrantes/${p.id}`)}
                 style={{
                   display: 'flex',
@@ -111,11 +238,30 @@ export function IntegrantesPage() {
                     : { borderBottom: '1px solid var(--border)' }),
                 }}
               >
-                <Avatar color={p.avatar_color} size={32} fontSize={12}>
-                  {ini(p.nome)}
-                </Avatar>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: 14 }}>{p.nome}</div>
+                <AvatarPerfil
+                  nome={p.nome}
+                  avatarColor={p.avatar_color}
+                  avatarUrl={p.avatar_url}
+                  size={32}
+                  fontSize={12}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: 14 }}>
+                    {p.nome}
+                    {!p.user_id && (
+                      <span
+                        className="tag"
+                        style={{
+                          background: 'var(--chip-warn)',
+                          color: 'var(--gold-dark)',
+                          fontSize: 9.5,
+                          marginLeft: 6,
+                        }}
+                      >
+                        SEM PERFIL
+                      </span>
+                    )}
+                  </div>
                   <div
                     style={{
                       fontSize: 11.5,
@@ -135,6 +281,107 @@ export function IntegrantesPage() {
                 >
                   {freq.pct}%
                 </div>
+                {isAdmin && (
+                  <span onClick={(e) => e.stopPropagation()}>
+                    <MenuKebab
+                      ariaLabel={`Ações de ${p.nome}`}
+                      acoes={[
+                        ...(p.user_id
+                          ? [
+                              {
+                                label: 'Gerar link de nova senha',
+                                onSelect: async () => {
+                                  setLinkSenha(null)
+                                  setLinkSenhaPara(p.id)
+                                  setGerandoLink(true)
+                                  const { data, error } = await supabase.functions.invoke(
+                                    'reset-password-link',
+                                    {
+                                      body: {
+                                        profileId: p.id,
+                                        redirectTo: window.location.origin + '/redefinir-senha',
+                                      },
+                                    },
+                                  )
+                                  setGerandoLink(false)
+                                  const corpo = data as { error?: string; link?: string | null } | null
+                                  if (error || corpo?.error) {
+                                    toast(corpo?.error ?? 'Não foi possível gerar o link.', 'erro')
+                                    setLinkSenhaPara(null)
+                                    return
+                                  }
+                                  setLinkSenha(corpo?.link ?? null)
+                                },
+                              },
+                            ]
+                          : []),
+                        {
+                          label: 'Desativar',
+                          perigo: true,
+                          onSelect: async () => {
+                            const ok = await confirmar({
+                              titulo: `Desativar ${p.nome}?`,
+                              descricao:
+                                'Ela sai das listas e da chamada, mas o histórico dela continua inteiro.',
+                              okLabel: 'Desativar',
+                              perigo: true,
+                            })
+                            if (ok) desativar.mutate({ pid: p.id, ativo: false })
+                          },
+                        },
+                      ]}
+                    />
+                  </span>
+                )}
+              </div>
+              {linkSenhaPara === p.id && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ padding: '10px 8px 14px', borderBottom: '1px solid var(--border)' }}
+                >
+                  {gerandoLink && (
+                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>Gerando link…</div>
+                  )}
+                  {linkSenha && (
+                    <>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                        <input
+                          className="field"
+                          readOnly
+                          value={linkSenha}
+                          aria-label={`Link de nova senha de ${p.nome}`}
+                          onFocus={(e) => e.currentTarget.select()}
+                          style={{ flex: 1, minWidth: 180, fontSize: 12 }}
+                        />
+                        <button
+                          type="button"
+                          className="pill"
+                          onClick={async () => {
+                            await navigator.clipboard?.writeText(linkSenha)
+                            setCopiadoSenha(true)
+                            setTimeout(() => setCopiadoSenha(false), 2500)
+                          }}
+                        >
+                          {copiadoSenha ? 'Copiado ✓' : 'Copiar'}
+                        </button>
+                        <button
+                          type="button"
+                          className="pill ghost"
+                          onClick={() => {
+                            setLinkSenhaPara(null)
+                            setLinkSenha(null)
+                          }}
+                        >
+                          Fechar
+                        </button>
+                      </div>
+                      <div style={{ fontSize: 11.5, color: 'var(--gold-dark)' }}>
+                        Esse link vale como senha — mande só em conversa privada.
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
               </div>
             )
           })}
@@ -143,9 +390,13 @@ export function IntegrantesPage() {
       {sel && (
         <div className="card" style={{ borderRadius: 16, padding: '24px 26px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
-            <Avatar color={sel.avatar_color} size={52} fontSize={18}>
-              {ini(sel.nome)}
-            </Avatar>
+            <AvatarPerfil
+              nome={sel.nome}
+              avatarColor={sel.avatar_color}
+              avatarUrl={sel.avatar_url}
+              size={52}
+              fontSize={18}
+            />
             <div>
               <div className="h" style={{ fontSize: 19 }}>
                 {sel.nome}
@@ -183,6 +434,21 @@ export function IntegrantesPage() {
               <span style={{ width: 12, height: 12, borderRadius: 3, background: '#7D9B76' }} />
               <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>Faixas de tricô feitas</span>
               <b style={{ fontSize: 15 }}>{selEntregas.faixas}</b>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '11px 14px',
+                borderTop: '1px solid var(--border)',
+              }}
+            >
+              <span style={{ width: 12, height: 12, borderRadius: 3, background: '#C4798A' }} />
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>
+                Granny squares prontos
+              </span>
+              <b style={{ fontSize: 15 }}>{selEntregas.grannies}</b>
             </div>
           </div>
           {selEmprestados > 0 && (

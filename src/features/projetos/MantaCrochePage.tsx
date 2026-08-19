@@ -1,252 +1,373 @@
-import { useState, type CSSProperties, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useStore } from '../../state/store'
 import { useAuth } from '../../state/auth'
 import { Lbl, Progress } from '../../components/ui/bits'
+import { Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { Comentarios, Historico } from './Comentarios'
 import {
-  fetchLotes,
+  ETAPAS,
+  ETAPA_LABEL,
+  coordenada,
+  fetchIntegrantesAtivas,
   fetchModelos,
   fetchSquares,
-  pegarLote,
+  marcarSquares,
+  pintarSquares,
   progressoSquares,
-  type Lote,
-  type LoteEtapa,
+  resumoPorEtapa,
+  retangulo,
+  trocarSquares,
   type MantaModelo,
   type Projeto,
   type Square,
+  type SquareEtapa,
 } from './api'
 
-const seg = (on: boolean): CSSProperties =>
-  on
-    ? {
-        padding: '7px 16px',
-        borderRadius: 99,
-        background: 'var(--primary)',
-        color: '#fff',
-        fontWeight: 800,
-        fontSize: 12.5,
-        cursor: 'pointer',
-        whiteSpace: 'nowrap',
-      }
-    : {
-        padding: '7px 16px',
-        borderRadius: 99,
-        border: '1px solid var(--field-border)',
-        color: 'var(--ink-soft)',
-        fontWeight: 700,
-        fontSize: 12.5,
-        cursor: 'pointer',
-        whiteSpace: 'nowrap',
-      }
+type Modo = 'marcar' | 'mover' | 'pintar'
 
-const COL_META: Record<LoteEtapa, { titulo: string; bg: string; cor: string }> = {
-  miolo: { titulo: 'MIOLO', bg: '#F4EEE9', cor: 'var(--muted)' },
-  aguardando_borda: { titulo: 'AGUARDANDO BORDA', bg: '#FBF1E7', cor: 'var(--gold-dark)' },
-  borda: { titulo: 'BORDA', bg: '#F4EEE9', cor: 'var(--muted)' },
-  pronto: { titulo: 'PRONTO', bg: '#EEF3EA', cor: 'var(--green-dark)' },
+const MODOS: [Modo, string, string][] = [
+  ['marcar', 'Marcar', 'selecione squares e diga em que etapa estão'],
+  ['mover', 'Mover', 'arraste um square sobre outro para trocarem de lugar'],
+  ['pintar', 'Pintar', 'escolha um modelo e arraste pela grade'],
+]
+
+const seg = (on: boolean): CSSProperties => ({
+  padding: '7px 16px',
+  borderRadius: 99,
+  fontSize: 12.5,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+  border: on ? '1px solid var(--primary)' : '1px solid var(--field-border)',
+  background: on ? 'var(--primary)' : 'transparent',
+  color: on ? '#fff' : 'var(--ink-soft)',
+  fontWeight: on ? 800 : 700,
+  fontFamily: 'inherit',
+  transition: 'background var(--dur-rapida) var(--ease-saida), color var(--dur-rapida)',
+})
+
+const ETAPA_COR: Record<SquareEtapa, string> = {
+  afazer: 'var(--faint-2)',
+  miolo: 'var(--blue-dark)',
+  aguardando_borda: 'var(--gold-dark)',
+  borda: 'var(--lilac)',
+  pronto: 'var(--green-dark)',
 }
 
-function Fluxo({
+/* ---------- Mapa ---------- */
+
+function Mapa({
   projeto,
-  lotes,
-  modelos,
   squares,
+  modelos,
+  colunas,
 }: {
   projeto: Projeto
-  lotes: Lote[]
-  modelos: MantaModelo[]
   squares: Square[]
+  modelos: MantaModelo[]
+  colunas: number
 }) {
-  const { profile, can } = useAuth()
+  const { profile, can, isAdmin } = useAuth()
   const qc = useQueryClient()
   const toast = useToast()
 
-  const pegar = useMutation({
-    mutationFn: (lote: Lote) => pegarLote(lote, profile!.id),
-    onSuccess: () => toast('Lote assumido — bom trabalho! ✓'),
-    onError: () => toast('Não foi possível pegar o lote.', 'erro'),
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: ['lotes', projeto.id] })
-      qc.invalidateQueries({ queryKey: ['squares', projeto.id] })
-      qc.invalidateQueries({ queryKey: ['atividades', projeto.id] })
-    },
+  const [modo, setModo] = useState<Modo>('marcar')
+  const [sel, setSel] = useState<Set<number>>(new Set())
+  const [pincel, setPincel] = useState<string>(modelos[0]?.id ?? '')
+  const [respId, setRespId] = useState('')
+  const [arrastado, setArrastado] = useState<number | null>(null)
+  const [alvo, setAlvo] = useState<number | null>(null)
+
+  const grade = useRef<HTMLDivElement>(null)
+  const ancora = useRef<number | null>(null)
+  const pressionado = useRef(false)
+  /** houve arrasto de verdade? se sim, o clique que vem depois é ignorado */
+  const arrastou = useRef(false)
+
+  const { data: integrantes } = useQuery({
+    queryKey: ['integrantes-min'],
+    queryFn: fetchIntegrantesAtivas,
   })
 
-  const loteCard = (l: Lote) => (
-    <div
-      key={l.id}
-      className="card"
-      style={{
-        padding: '11px 12px',
-        marginBottom: 8,
-        borderColor: l.etapa === 'aguardando_borda' ? '#E7D6B8' : undefined,
-      }}
-    >
-      <div style={{ fontWeight: 800, fontSize: 13 }}>
-        Modelo {l.modelo?.letra ?? '?'} ×{l.quantidade}
-      </div>
-      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-        {l.responsavel?.nome ?? l.obs ?? '—'}
-      </div>
-      {!l.responsavel_id && l.etapa === 'aguardando_borda' && (
-        <div
-          onClick={can('progresso') ? () => pegar.mutate(l) : undefined}
-          style={{
-            fontSize: 10.5,
-            fontWeight: 800,
-            color: 'var(--gold-dark)',
-            marginTop: 6,
-            cursor: can('progresso') ? 'pointer' : 'default',
-          }}
-        >
-          ↳ precisa de alguém
-          {can('progresso') && (
-            <>
-              {' '}
-              · <span style={{ textDecoration: 'underline' }}>Pegar lote</span>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  )
+  const porPosicao = useMemo(() => new Map(squares.map((s) => [s.posicao, s])), [squares])
+  const porModelo = useMemo(() => new Map(modelos.map((m) => [m.id, m])), [modelos])
 
-  const prontosPorModelo = modelos
-    .map((m) => ({
-      modelo: m,
-      prontos: squares.filter((s) => s.modelo_id === m.id && s.etapa === 'pronto').length,
-    }))
-    .filter((x) => x.prontos > 0)
-
-  const coluna = (etapa: LoteEtapa, conteudo: ReactNode, n: number) => {
-    const meta = COL_META[etapa]
-    return (
-      <div style={{ background: meta.bg, borderRadius: 14, padding: 12 }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            fontSize: 11,
-            fontWeight: 800,
-            color: meta.cor,
-            marginBottom: 10,
-          }}
-        >
-          <span>{meta.titulo}</span>
-          <span>{n}</span>
-        </div>
-        {conteudo}
-      </div>
-    )
+  const invalidar = () => {
+    qc.invalidateQueries({ queryKey: ['squares', projeto.id] })
+    qc.invalidateQueries({ queryKey: ['atividades', projeto.id] })
+    qc.invalidateQueries({ queryKey: ['progresso-geral'] })
   }
 
-  const dos = (etapa: LoteEtapa) => lotes.filter((l) => l.etapa === etapa)
+  const marcar = useMutation({
+    mutationFn: (etapa: SquareEtapa) => {
+      const ids = [...sel].map((p) => porPosicao.get(p)?.id).filter((x): x is string => !!x)
+      const resp = (integrantes ?? []).find((p) => p.id === respId)
+      return marcarSquares({
+        projetoId: projeto.id,
+        ids,
+        etapa,
+        responsavelId: respId || profile!.id,
+        responsavelNome: resp?.nome ?? profile!.nome,
+        autorId: profile!.id,
+      })
+    },
+    onSuccess: () => {
+      setSel(new Set())
+      invalidar()
+      toast('Progresso registrado ✓')
+    },
+    onError: () => toast('Não foi possível registrar.', 'erro'),
+  })
+
+  const trocar = useMutation({
+    mutationFn: ({ de, para }: { de: Square; para: Square }) => trocarSquares(de, para),
+    onSuccess: invalidar,
+    onError: () => toast('Não foi possível trocar os squares.', 'erro'),
+  })
+
+  const pintar = useMutation({
+    mutationFn: (posicoes: number[]) => {
+      const ids = posicoes.map((p) => porPosicao.get(p)?.id).filter((x): x is string => !!x)
+      return pintarSquares(ids, pincel)
+    },
+    onSuccess: invalidar,
+    onError: () => toast('Não foi possível pintar.', 'erro'),
+  })
+
+  const podeEditar = can('progresso')
+
+  /* A célula é um <button>: clicar funciona no teclado e no leitor de tela, e é o
+     caminho único de interação. O arrasto abaixo é reforço para mouse e toque —
+     estende a seleção, arrasta para trocar, pinta em área. */
+  const aoClicar = (pos: number) => {
+    if (!podeEditar || arrastou.current) return
+    if (modo === 'pintar') {
+      pintar.mutate([pos])
+      return
+    }
+    if (modo === 'mover') {
+      if (arrastado === null) {
+        setArrastado(pos)
+      } else if (arrastado !== pos) {
+        const de = porPosicao.get(arrastado)
+        const para = porPosicao.get(pos)
+        if (de && para) trocar.mutate({ de, para })
+        setArrastado(null)
+      } else {
+        setArrastado(null)
+      }
+      return
+    }
+    setSel((atual) => {
+      const novo = new Set(atual)
+      if (novo.has(pos)) novo.delete(pos)
+      else novo.add(pos)
+      return novo
+    })
+  }
+
+  /* posição sob o ponteiro — o mesmo caminho no mouse e no toque */
+  const posSob = (x: number, y: number): number | null => {
+    const el = document.elementFromPoint?.(x, y)?.closest('[data-pos]')
+    return el ? Number((el as HTMLElement).dataset.pos) : null
+  }
+
+  const onDown = (e: React.PointerEvent) => {
+    if (!podeEditar) return
+    const pos = posSob(e.clientX, e.clientY)
+    if (pos === null) return
+    grade.current?.setPointerCapture(e.pointerId)
+    pressionado.current = true
+    arrastou.current = false
+    ancora.current = pos
+    if (modo === 'mover') setArrastado(pos)
+  }
+
+  const onMove = (e: React.PointerEvent) => {
+    if (!pressionado.current || ancora.current === null) return
+    const pos = posSob(e.clientX, e.clientY)
+    if (pos === null || pos === ancora.current) return
+    arrastou.current = true
+
+    if (modo === 'mover') {
+      setAlvo(pos)
+      return
+    }
+    setSel(new Set(retangulo(ancora.current, pos, colunas)))
+  }
+
+  const onUp = () => {
+    if (!pressionado.current) return
+    pressionado.current = false
+
+    if (arrastou.current) {
+      if (modo === 'mover' && arrastado !== null && alvo !== null && alvo !== arrastado) {
+        const de = porPosicao.get(arrastado)
+        const para = porPosicao.get(alvo)
+        if (de && para) trocar.mutate({ de, para })
+      }
+      if (modo === 'pintar' && sel.size > 0) {
+        pintar.mutate([...sel])
+        setSel(new Set())
+      }
+      setArrastado(null)
+    }
+    setAlvo(null)
+    ancora.current = null
+    // o clique chega logo depois do pointerup; solta a trava no próximo tique
+    setTimeout(() => {
+      arrastou.current = false
+    }, 0)
+  }
+
+  const trocarModo = (m: Modo) => {
+    setModo(m)
+    setSel(new Set())
+    setArrastado(null)
+    setAlvo(null)
+  }
+
+  const linhas = Math.ceil(squares.length / colunas)
+  const selecionado = sel.size === 1 ? porPosicao.get([...sel][0]) : undefined
+  const modeloSel = selecionado ? porModelo.get(selecionado.modelo_id) : undefined
 
   return (
     <>
-      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
-        miolo → aguardando borda → borda → pronto · o lote "precisa de alguém" fica livre para
-        outra integrante pegar
-      </div>
       <div
-        style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 26 }}
+        style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}
       >
-        {coluna('miolo', dos('miolo').map(loteCard), dos('miolo').length)}
-        {coluna(
-          'aguardando_borda',
-          dos('aguardando_borda').map(loteCard),
-          dos('aguardando_borda').length,
-        )}
-        {coluna('borda', dos('borda').map(loteCard), dos('borda').length)}
-        {coluna(
-          'pronto',
-          prontosPorModelo.map(({ modelo, prontos }) => (
-            <div
-              key={modelo.id}
-              className="card"
-              style={{ padding: '11px 12px', marginBottom: 8, borderColor: '#D8E0D2' }}
+        {MODOS.map(([m, label]) => (
+          <button key={m} onClick={() => trocarModo(m)} style={seg(modo === m)} disabled={!podeEditar}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
+        {podeEditar
+          ? MODOS.find(([m]) => m === modo)?.[2]
+          : 'você não tem permissão para registrar progresso — fale com a administradora'}
+      </div>
+
+      {modo === 'pintar' && (
+        <div
+          style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 14 }}
+        >
+          <span className="lbl">PINCEL</span>
+          {modelos.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => setPincel(m.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 7,
+                border: '1px solid var(--field-border)',
+                borderRadius: 99,
+                padding: '5px 12px 5px 6px',
+                cursor: 'pointer',
+                background: 'transparent',
+                fontFamily: 'inherit',
+                boxShadow: m.id === pincel ? '0 0 0 2px var(--ink)' : undefined,
+              }}
             >
-              <div style={{ fontWeight: 800, fontSize: 13 }}>
-                Modelo {modelo.letra} ×{prontos}
-              </div>
-              <div
+              <span
                 style={{
-                  fontSize: 11,
-                  color: 'var(--green-dark)',
-                  fontWeight: 700,
-                  marginTop: 2,
-                }}
-              >
-                ✓ {modelo.responsavel?.nome ?? 'concluídos'}
-              </div>
-            </div>
-          )),
-          prontosPorModelo.length,
-        )}
-      </div>
-    </>
-  )
-}
-
-function Mapa({
-  squares,
-  modelos,
-}: {
-  squares: Square[]
-  modelos: MantaModelo[]
-}) {
-  const [selPos, setSelPos] = useState(26)
-  const porId = Object.fromEntries(modelos.map((m) => [m.id, m]))
-  const sel = squares.find((s) => s.posicao === selPos) ?? squares[0]
-  const selModelo = sel ? porId[sel.modelo_id] : undefined
-  const cols = 10
-  const selCol = sel ? `L${Math.floor(sel.posicao / cols) + 1} C${(sel.posicao % cols) + 1}` : ''
-
-  return (
-    <>
-      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
-        Cada quadrinho é um granny da manta — a cor de fora é a borda, a de dentro o miolo. Toque
-        para ver o padrão. Esmaecidos ainda não foram feitos.
-      </div>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'auto 1fr',
-          gap: 26,
-          alignItems: 'start',
-          marginBottom: 26,
-        }}
-      >
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols},30px)`, gap: 3 }}>
-          {squares.map((sq) => {
-            const m = porId[sq.modelo_id]
-            const done = sq.etapa === 'pronto'
-            return (
-              <div
-                key={sq.id}
-                onClick={() => setSelPos(sq.posicao)}
-                title={`square ${sq.posicao}`}
-                style={{
-                  width: 30,
-                  height: 30,
-                  background: m?.cor_borda ?? '#ccc',
-                  opacity: done ? 1 : 0.38,
-                  boxShadow: sq.posicao === selPos ? '0 0 0 2px var(--ink)' : 'none',
+                  width: 22,
+                  height: 22,
+                  background: m.cor_borda,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  cursor: 'pointer',
-                  borderRadius: 2,
+                  borderRadius: 3,
+                  flex: 'none',
                 }}
               >
-                <div style={{ width: 16, height: 16, background: m?.cor_miolo ?? '#eee' }} />
-              </div>
-            )
-          })}
+                <span style={{ width: 11, height: 11, background: m.cor_miolo }} />
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 700 }}>{m.letra}</span>
+            </button>
+          ))}
         </div>
+      )}
+
+      <div
+        className="pgrid"
+        style={{ '--cols': 'auto 1fr', '--gap': '26px', marginBottom: 26 } as CSSProperties}
+      >
+        <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
+          <div
+            ref={grade}
+            onPointerDown={onDown}
+            onPointerMove={onMove}
+            onPointerUp={onUp}
+            onPointerCancel={onUp}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${colunas}, var(--celula, 30px))`,
+              gap: 3,
+              touchAction: 'none',
+              width: 'max-content',
+            }}
+          >
+            {Array.from({ length: linhas * colunas }, (_, pos) => {
+              const sq = porPosicao.get(pos)
+              const m = sq ? porModelo.get(sq.modelo_id) : undefined
+              const feito = sq?.etapa === 'pronto'
+              const naSelecao = sel.has(pos)
+              const ehArrastado = arrastado === pos
+              const ehAlvo = alvo === pos
+              const { linha, coluna } = coordenada(pos, colunas)
+              const descricao = `Square linha ${linha} coluna ${coluna}${
+                sq ? ` · ${ETAPA_LABEL[sq.etapa]}` : ''
+              }${m ? ` · modelo ${m.letra}` : ''}`
+              return (
+                <button
+                  key={pos}
+                  data-pos={pos}
+                  type="button"
+                  aria-label={descricao}
+                  aria-pressed={naSelecao || ehArrastado}
+                  title={descricao}
+                  disabled={!podeEditar}
+                  onClick={() => aoClicar(pos)}
+                  style={{
+                    width: 'var(--celula)',
+                    height: 'var(--celula)',
+                    padding: 0,
+                    border: 'none',
+                    background: m?.cor_borda ?? 'var(--sand)',
+                    opacity: ehArrastado ? 0.35 : feito ? 1 : 0.42,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 2,
+                    cursor: podeEditar ? (modo === 'mover' ? 'grab' : 'pointer') : 'default',
+                    outline: naSelecao
+                      ? '2px solid var(--ink)'
+                      : ehAlvo
+                        ? '2px dashed var(--primary)'
+                        : 'none',
+                    outlineOffset: -2,
+                    transform: ehAlvo ? 'scale(1.14)' : 'scale(1)',
+                    zIndex: ehAlvo || naSelecao ? 1 : 0,
+                    transition:
+                      'transform var(--dur-media) var(--ease-mola), opacity var(--dur-rapida)',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '53%',
+                      height: '53%',
+                      background: m?.cor_miolo ?? 'var(--card)',
+                    }}
+                  />
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         <div style={{ minWidth: 200 }}>
           <div className="h" style={{ fontSize: 15, marginBottom: 10 }}>
             Padrões
@@ -274,10 +395,7 @@ function Mapa({
                     {m.nome.split('—')[0].trim()}
                   </span>
                   <span
-                    style={{
-                      fontWeight: 800,
-                      color: full ? 'var(--green-dark)' : 'var(--accent)',
-                    }}
+                    style={{ fontWeight: 800, color: full ? 'var(--green-dark)' : 'var(--accent)' }}
                   >
                     {done}/{doModelo.length}
                     {full ? ' ✓' : ''}
@@ -286,49 +404,142 @@ function Mapa({
               )
             })}
           </div>
-          {sel && selModelo && (
-            <div
-              style={{
-                border: '1px solid var(--border)',
-                borderRadius: 12,
-                background: 'var(--card)',
-                padding: '12px 14px',
-              }}
-            >
-              <Lbl style={{ marginBottom: 8 }}>SELECIONADO · {selCol}</Lbl>
+
+          {selecionado && modeloSel && (
+            <div className="card" style={{ padding: '12px 14px' }}>
+              <Lbl style={{ marginBottom: 8 }}>
+                SELECIONADO · L{coordenada(selecionado.posicao, colunas).linha} C
+                {coordenada(selecionado.posicao, colunas).coluna}
+              </Lbl>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div
                   style={{
                     width: 40,
                     height: 40,
-                    background: selModelo.cor_borda,
+                    background: modeloSel.cor_borda,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flex: 'none',
                   }}
                 >
-                  <div style={{ width: 22, height: 22, background: selModelo.cor_miolo }} />
+                  <div style={{ width: 22, height: 22, background: modeloSel.cor_miolo }} />
                 </div>
                 <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
-                  <b>{selModelo.nome}</b>
+                  <b>{modeloSel.nome}</b>
                   <br />
-                  <span style={{ color: 'var(--muted)' }}>miolo + borda</span>
+                  <span style={{ color: ETAPA_COR[selecionado.etapa], fontWeight: 700 }}>
+                    {ETAPA_LABEL[selecionado.etapa]}
+                  </span>
                 </div>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {modo === 'marcar' && sel.size > 0 && podeEditar && (
+        <div
+          className="card barra-acao"
+          style={{ padding: '14px 16px', marginBottom: 26, borderColor: 'var(--chip-rose-border)' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <b style={{ fontSize: 13 }}>
+              {sel.size} square{sel.size > 1 ? 's' : ''} selecionado{sel.size > 1 ? 's' : ''}
+            </b>
+            <div style={{ minWidth: 180, flex: 1 }}>
+              <Select
+                ariaLabel="Quem fez"
+                value={respId}
+                onChange={setRespId}
+                options={[
+                  ['', 'Quem fez… (eu)'],
+                  ...(integrantes ?? []).map((p) => [p.id, p.nome] as [string, string]),
+                ]}
+              />
+            </div>
+            <button className="pill ghost" onClick={() => setSel(new Set())}>
+              Limpar
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+            {ETAPAS.map((etapa) => (
+              <button
+                key={etapa}
+                className="pill ghost"
+                style={{ borderColor: ETAPA_COR[etapa], color: ETAPA_COR[etapa] }}
+                disabled={marcar.isPending}
+                onClick={() => marcar.mutate(etapa)}
+              >
+                {ETAPA_LABEL[etapa]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!isAdmin && (
+        <div style={{ fontSize: 11.5, color: 'var(--faint)', marginBottom: 20 }}>
+          Mudar o tamanho da manta e editar os modelos é coisa de administradora.
+        </div>
+      )}
     </>
   )
 }
 
+/* ---------- Panorama por etapa (substitui o kanban de lotes) ---------- */
+
+function PorEtapa({ squares, modelos }: { squares: Square[]; modelos: MantaModelo[] }) {
+  const resumo = resumoPorEtapa(squares, modelos)
+  return (
+    <>
+      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
+        a fazer → miolo → aguardando borda → borda → pronto · a contagem vem dos próprios
+        squares do mapa
+      </div>
+      <div
+        className="pgrid"
+        style={{ '--cols': 'repeat(auto-fit,minmax(150px,1fr))', '--gap': '12px', marginBottom: 26 } as CSSProperties}
+      >
+        {resumo.map(({ etapa, total, porModelo }) => (
+          <div key={etapa} style={{ background: 'var(--sand-soft)', borderRadius: 14, padding: 12 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: 11,
+                fontWeight: 800,
+                color: ETAPA_COR[etapa],
+                marginBottom: 10,
+              }}
+            >
+              <span>{ETAPA_LABEL[etapa].toUpperCase()}</span>
+              <span>{total}</span>
+            </div>
+            {porModelo.length === 0 && (
+              <div style={{ fontSize: 11.5, color: 'var(--faint)' }}>—</div>
+            )}
+            {porModelo.map((m) => (
+              <div
+                key={m.letra}
+                className="card"
+                style={{ padding: '9px 11px', marginBottom: 7, fontSize: 12.5 }}
+              >
+                <b>Modelo {m.letra}</b> ×{m.total}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </>
+  )
+}
+
+/* ---------- Página ---------- */
+
 export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
-  const { openProducao } = useStore()
-  const { can } = useAuth()
   const navigate = useNavigate()
-  const [view, setView] = useState<'fluxo' | 'mapa'>('fluxo')
+  const [view, setView] = useState<'mapa' | 'etapas'>('mapa')
 
   const { data: modelos } = useQuery({
     queryKey: ['modelos', projeto.id],
@@ -338,44 +549,29 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
     queryKey: ['squares', projeto.id],
     queryFn: () => fetchSquares(projeto.id),
   })
-  const { data: lotes } = useQuery({
-    queryKey: ['lotes', projeto.id],
-    queryFn: () => fetchLotes(projeto.id),
-  })
 
-  const prog = progressoSquares(squares ?? [])
+  const lista = squares ?? []
+  const prog = progressoSquares(lista)
   const pct = prog.total === 0 ? 0 : Math.round((prog.done / prog.total) * 100)
   const letras = (modelos ?? []).map((m) => m.letra).join('/')
+  // mantas criadas antes da grade configurável não têm colunas gravadas
+  const colunas = projeto.colunas ?? 10
 
   return (
-    <div style={{ padding: '26px 40px 34px' }}>
+    <div className="pagina">
       <div className="crumb" onClick={() => navigate('/projetos')} style={{ marginBottom: 8 }}>
         ‹ Projetos / <span style={{ color: 'var(--ink)' }}>{projeto.nome}</span>
       </div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 6,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div className="h" style={{ fontWeight: 500, fontSize: 26 }}>
-            {projeto.nome}
-          </div>
-          <span
-            className="tag"
-            style={{ border: '1px solid var(--chip-rose-border)', color: 'var(--accent)' }}
-          >
-            CROCHÊ
-          </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+        <div className="h" style={{ fontWeight: 500, fontSize: 26 }}>
+          {projeto.nome}
         </div>
-        {can('progresso') && (
-          <button className="pill" onClick={() => openProducao(projeto.id)}>
-            + Registrar produção
-          </button>
-        )}
+        <span
+          className="tag"
+          style={{ border: '1px solid var(--chip-rose-border)', color: 'var(--accent)' }}
+        >
+          CROCHÊ
+        </span>
       </div>
       <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 18 }}>
         {projeto.destino ? `Destino: ${projeto.destino} · ` : ''}
@@ -389,24 +585,24 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <div onClick={() => setView('fluxo')} style={seg(view === 'fluxo')}>
-          Fluxo por etapa
-        </div>
-        <div onClick={() => setView('mapa')} style={seg(view === 'mapa')}>
+        <button onClick={() => setView('mapa')} style={seg(view === 'mapa')}>
           Mapa de montagem
-        </div>
+        </button>
+        <button onClick={() => setView('etapas')} style={seg(view === 'etapas')}>
+          Por etapa
+        </button>
       </div>
-      {view === 'fluxo' ? (
-        <Fluxo
+      {view === 'mapa' ? (
+        <Mapa
           projeto={projeto}
-          lotes={lotes ?? []}
+          squares={lista}
           modelos={modelos ?? []}
-          squares={squares ?? []}
+          colunas={colunas}
         />
       ) : (
-        <Mapa squares={squares ?? []} modelos={modelos ?? []} />
+        <PorEtapa squares={lista} modelos={modelos ?? []} />
       )}
-      <div className="pgrid" style={{ '--cols': '1fr 1fr', '--gap': '24px' } as React.CSSProperties}>
+      <div className="pgrid" style={{ '--cols': '1fr 1fr', '--gap': '24px' } as CSSProperties}>
         <Comentarios projetoId={projeto.id} />
         <Historico projetoId={projeto.id} titulo="Histórico de alterações" />
       </div>

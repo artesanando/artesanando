@@ -1,20 +1,26 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Lbl, Select, Stepper } from '../components/ui/bits'
+import { Lbl, Stepper } from '../components/ui/bits'
+import { DatePicker, Select, TimePicker } from '../components/ui/controles'
+import { Campo, LegendaObrigatorio, useFormulario } from '../components/ui/Campo'
 import { ModalBox, ModalHeader } from './shared'
 import { supabase } from '../lib/supabase'
 import { useStore } from '../state/store'
-import type { EstoqueCategoria, Papel, Preferencia, ReceitaCategoria } from '../types/database'
+import type { ReceitaCategoria } from '../types/database'
 import {
   criarEmprestimo,
-  criarItemEstoque,
   fetchEmprestimosAtivos,
   fetchEstoque,
   saldoEmprestimo,
 } from '../features/estoque/api'
 import { criarReceita, uploadPdf } from '../features/biblioteca/api'
-import { fetchIntegrantesAtivas, fetchLotes, registrarProducao } from '../features/projetos/api'
-import { criarEncontro } from '../features/presenca/api'
+import { fetchIntegrantesAtivas } from '../features/projetos/api'
+import {
+  atualizarEncontro,
+  criarEncontro,
+  fetchEncontros,
+  type Encontro,
+} from '../features/presenca/api'
 import { hojeIso } from '../lib/format'
 import { useAuth } from '../state/auth'
 
@@ -37,144 +43,6 @@ function ErroBox({ children }: { children: ReactNode }) {
   )
 }
 
-const CATS: [EstoqueCategoria, string][] = [
-  ['novelos', 'Novelo'],
-  ['agulhas', 'Agulha'],
-  ['olhos', 'Olhos'],
-  ['enchimento', 'Enchimento'],
-  ['feira', 'Feira'],
-]
-
-export function ModalMaterial() {
-  const { close } = useStore()
-  const qc = useQueryClient()
-  const [categoria, setCategoria] = useState<EstoqueCategoria>('novelos')
-  const [nome, setNome] = useState('')
-  const [detalhe, setDetalhe] = useState('')
-  const [cor, setCor] = useState('#DFA2AC')
-  const [quantidade, setQuantidade] = useState(12)
-  const [minimo, setMinimo] = useState(2)
-  const [erro, setErro] = useState<string | null>(null)
-
-  const salvar = useMutation({
-    mutationFn: () =>
-      criarItemEstoque({
-        categoria,
-        nome: nome.trim(),
-        detalhe: detalhe.trim() || null,
-        cor_hex: categoria === 'novelos' ? cor : null,
-        quantidade,
-        minimo,
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['estoque'] })
-      close()
-    },
-    onError: () => setErro('Não foi possível salvar o material.'),
-  })
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    setErro(null)
-    if (!nome.trim()) {
-      setErro('Informe a marca/linha do material.')
-      return
-    }
-    salvar.mutate()
-  }
-
-  return (
-    <ModalBox maxWidth={560}>
-      <ModalHeader title="Novo material" sub="Adicionar ao estoque coletivo" />
-      <form onSubmit={submit}>
-        <Lbl style={{ marginBottom: 7 }}>TIPO</Lbl>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-          {CATS.map(([k, label]) => (
-            <div
-              key={k}
-              className="seg"
-              onClick={() => setCategoria(k)}
-              style={
-                categoria === k
-                  ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }
-                  : undefined
-              }
-            >
-              {label}
-            </div>
-          ))}
-        </div>
-        <div className="grid2" style={{ marginBottom: 18 }}>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>MARCA / LINHA</Lbl>
-            <input
-              className="field"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Círculo Balloon"
-            />
-          </div>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>{categoria === 'novelos' ? 'COR' : 'DETALHE'}</Lbl>
-            <div className="field" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {categoria === 'novelos' && (
-                <input
-                  type="color"
-                  value={cor}
-                  onChange={(e) => setCor(e.target.value)}
-                  aria-label="Cor do novelo"
-                  style={{
-                    width: 18,
-                    height: 18,
-                    border: 'none',
-                    padding: 0,
-                    background: 'none',
-                    cursor: 'pointer',
-                    flex: 'none',
-                  }}
-                />
-              )}
-              <input
-                value={detalhe}
-                onChange={(e) => setDetalhe(e.target.value)}
-                placeholder={categoria === 'novelos' ? 'rosé' : '3,0 mm'}
-                style={{
-                  border: 'none',
-                  outline: 'none',
-                  background: 'none',
-                  fontFamily: 'inherit',
-                  fontSize: 13,
-                  color: 'var(--ink)',
-                  width: '100%',
-                }}
-              />
-            </div>
-          </div>
-        </div>
-        <div className="grid2" style={{ marginBottom: 24 }}>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>QUANTIDADE</Lbl>
-            <Stepper value={quantidade} onChange={setQuantidade} min={1} max={999} />
-          </div>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>MÍNIMO (ALERTA ⚠)</Lbl>
-            <Stepper value={minimo} onChange={setMinimo} min={0} max={99} />
-          </div>
-        </div>
-        {erro && <ErroBox>{erro}</ErroBox>}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button type="button" className="pill ghost" onClick={close}>
-            Cancelar
-          </button>
-          <button type="submit" className="pill" disabled={salvar.isPending}>
-            {salvar.isPending ? 'Salvando…' : 'Adicionar ao estoque'}
-          </button>
-        </div>
-      </form>
-    </ModalBox>
-  )
-}
-
 const REC_CATS: [ReceitaCategoria, string][] = [
   ['amigurumi', 'Amigurumi'],
   ['granny', 'Granny square'],
@@ -186,6 +54,7 @@ export function ModalReceita() {
   const { close } = useStore()
   const { profile } = useAuth()
   const qc = useQueryClient()
+  const form = useFormulario<'nome'>()
   const [categoria, setCategoria] = useState<ReceitaCategoria>('amigurumi')
   const [nome, setNome] = useState('')
   const [obs, setObs] = useState('')
@@ -217,10 +86,7 @@ export function ModalReceita() {
   const submit = (e: FormEvent) => {
     e.preventDefault()
     setErro(null)
-    if (!nome.trim()) {
-      setErro('Dê um nome à receita.')
-      return
-    }
+    if (!form.checar({ nome: nome.trim() ? undefined : 'Dê um nome à receita.' })) return
     salvar.mutate()
   }
 
@@ -231,9 +97,11 @@ export function ModalReceita() {
         <Lbl style={{ marginBottom: 7 }}>CATEGORIA</Lbl>
         <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
           {REC_CATS.map(([k, label]) => (
-            <div
+            <button
               key={k}
+              type="button"
               className="seg"
+              aria-pressed={categoria === k}
               onClick={() => setCategoria(k)}
               style={
                 categoria === k
@@ -242,17 +110,23 @@ export function ModalReceita() {
               }
             >
               {label}
-            </div>
+            </button>
           ))}
         </div>
-        <Lbl style={{ marginBottom: 7 }}>NOME</Lbl>
-        <input
-          className="field"
-          style={{ marginBottom: 18 }}
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          placeholder="Capivara da Lú"
-        />
+        <Campo label="NOME" obrigatorio erro={form.erros.nome} style={{ marginBottom: 18 }}>
+          {(p) => (
+            <input
+              {...p}
+              className="field"
+              value={nome}
+              onChange={(e) => {
+                setNome(e.target.value)
+                form.aoMudar('nome')
+              }}
+              placeholder="Capivara da Lú"
+            />
+          )}
+        </Campo>
         <Lbl style={{ marginBottom: 7 }}>PDF (OPCIONAL)</Lbl>
         <label
           style={{
@@ -276,7 +150,7 @@ export function ModalReceita() {
             onChange={(e) => setPdf(e.target.files?.[0] ?? null)}
           />
         </label>
-        <Lbl style={{ marginBottom: 7 }}>OBSERVAÇÕES</Lbl>
+        <Lbl style={{ marginBottom: 7 }}>OBSERVAÇÕES (OPCIONAL)</Lbl>
         <textarea
           className="field"
           style={{ minHeight: 52, marginBottom: 24, resize: 'vertical' }}
@@ -285,13 +159,24 @@ export function ModalReceita() {
           placeholder="Ex.: usar fio 4mm, olhos de segurança 9mm…"
         />
         {erro && <ErroBox>{erro}</ErroBox>}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button type="button" className="pill ghost" onClick={close}>
-            Cancelar
-          </button>
-          <button type="submit" className="pill" disabled={salvar.isPending}>
-            {salvar.isPending ? 'Salvando…' : 'Salvar na biblioteca'}
-          </button>
+        <div
+          style={{
+            display: 'flex',
+            gap: 10,
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
+          <LegendaObrigatorio />
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="button" className="pill ghost" onClick={close}>
+              Cancelar
+            </button>
+            <button type="submit" className="pill" disabled={salvar.isPending}>
+              {salvar.isPending ? 'Salvando…' : 'Salvar na biblioteca'}
+            </button>
+          </div>
         </div>
       </form>
     </ModalBox>
@@ -301,6 +186,7 @@ export function ModalReceita() {
 export function ModalEmprestimo() {
   const { close } = useStore()
   const qc = useQueryClient()
+  const form = useFormulario<'integrante' | 'material'>()
   const { data: integrantes } = useQuery({
     queryKey: ['integrantes-min'],
     queryFn: fetchIntegrantesAtivas,
@@ -333,10 +219,11 @@ export function ModalEmprestimo() {
   const submit = (e: FormEvent) => {
     e.preventDefault()
     setErro(null)
-    if (!integranteId || !itemId) {
-      setErro('Escolha a integrante e o material.')
-      return
-    }
+    const ok = form.checar({
+      integrante: integranteId ? undefined : 'Escolha a integrante.',
+      material: itemId ? undefined : 'Escolha o material.',
+    })
+    if (!ok) return
     salvar.mutate()
   }
 
@@ -347,55 +234,77 @@ export function ModalEmprestimo() {
         sub="Saída de material para uma integrante levar para casa"
       />
       <form onSubmit={submit}>
-        <Lbl style={{ marginBottom: 7 }}>INTEGRANTE</Lbl>
-        <div style={{ marginBottom: 18 }}>
-          <Select
-            ariaLabel="Integrante"
-            value={integranteId}
-            onChange={setIntegranteId}
-            options={[
-              ['', 'Escolher…'],
-              ...(integrantes ?? []).map((p) => [p.id, p.nome] as [string, string]),
-            ]}
-          />
-        </div>
-        <Lbl style={{ marginBottom: 7 }}>MATERIAL</Lbl>
-        <div style={{ marginBottom: 18 }}>
-          <Select
-            ariaLabel="Material"
-            value={itemId}
-            onChange={setItemId}
-            options={[
-              ['', 'Escolher…'],
-              ...emprestaveis.map(
-                (i) => [i.id, `${i.nome}${i.detalhe ? ` · ${i.detalhe}` : ''}`] as [string, string],
-              ),
-            ]}
-          />
-        </div>
-        <div className="grid2" style={{ marginBottom: 24 }}>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>QUANTIDADE</Lbl>
-            <Stepper value={quantidade} onChange={setQuantidade} min={1} max={99} />
-          </div>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>PROJETO (OPCIONAL)</Lbl>
-            <input
-              className="field"
-              value={projeto}
-              onChange={(e) => setProjeto(e.target.value)}
-              placeholder="Manta Primavera"
+        <Campo label="INTEGRANTE" obrigatorio erro={form.erros.integrante} style={{ marginBottom: 18 }}>
+          {() => (
+            <Select
+              ariaLabel="Integrante"
+              value={integranteId}
+              onChange={(v) => {
+                setIntegranteId(v)
+                form.aoMudar('integrante')
+              }}
+              options={[
+                ['', 'Escolher…'],
+                ...(integrantes ?? []).map((p) => [p.id, p.nome] as [string, string]),
+              ]}
             />
-          </div>
+          )}
+        </Campo>
+        <Campo label="MATERIAL" obrigatorio erro={form.erros.material} style={{ marginBottom: 18 }}>
+          {() => (
+            <Select
+              ariaLabel="Material"
+              value={itemId}
+              onChange={(v) => {
+                setItemId(v)
+                form.aoMudar('material')
+              }}
+              options={[
+                ['', 'Escolher…'],
+                ...emprestaveis.map(
+                  (i) => [i.id, `${i.nome}${i.detalhe ? ` · ${i.detalhe}` : ''}`] as [string, string],
+                ),
+              ]}
+            />
+          )}
+        </Campo>
+        <div className="grid2" style={{ marginBottom: 24 }}>
+          <Campo label="QUANTIDADE">
+            {() => (
+              <Stepper value={quantidade} onChange={setQuantidade} min={1} max={99} ariaLabel="Quantidade" />
+            )}
+          </Campo>
+          <Campo label="PROJETO (OPCIONAL)">
+            {(p) => (
+              <input
+                {...p}
+                className="field"
+                value={projeto}
+                onChange={(e) => setProjeto(e.target.value)}
+                placeholder="Manta Primavera"
+              />
+            )}
+          </Campo>
         </div>
         {erro && <ErroBox>{erro}</ErroBox>}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button type="button" className="pill ghost" onClick={close}>
-            Cancelar
-          </button>
-          <button type="submit" className="pill" disabled={salvar.isPending}>
-            {salvar.isPending ? 'Registrando…' : 'Registrar empréstimo'}
-          </button>
+        <div
+          style={{
+            display: 'flex',
+            gap: 10,
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
+          <LegendaObrigatorio />
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="button" className="pill ghost" onClick={close}>
+              Cancelar
+            </button>
+            <button type="submit" className="pill" disabled={salvar.isPending}>
+              {salvar.isPending ? 'Registrando…' : 'Registrar empréstimo'}
+            </button>
+          </div>
         </div>
       </form>
     </ModalBox>
@@ -449,11 +358,16 @@ export function ModalDevolucao() {
           {ativos.map((e) => {
             const on = sel?.id === e.id
             return (
-              <div
+              <button
                 key={e.id}
+                type="button"
                 className="card"
+                aria-pressed={on}
                 onClick={() => escolher(e.id)}
                 style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  fontFamily: 'inherit',
                   padding: '13px 15px',
                   marginBottom: 10,
                   display: 'flex',
@@ -504,7 +418,7 @@ export function ModalDevolucao() {
                     {e.data.slice(5, 7)}
                   </div>
                 </div>
-              </div>
+              </button>
             )
           })}
           <Lbl style={{ margin: '10px 0 7px' }}>QUANTIDADE DEVOLVIDA</Lbl>
@@ -531,386 +445,113 @@ export function ModalDevolucao() {
   )
 }
 
-const ETAPAS_PROD: ['miolo' | 'borda' | 'pronto', string][] = [
-  ['miolo', 'Miolo'],
-  ['borda', 'Borda'],
-  ['pronto', 'Pronto'],
-]
-
-export function ModalProducao() {
-  const { close, projetoId } = useStore()
-  const { profile } = useAuth()
-  const qc = useQueryClient()
-
-  const { data: lotes } = useQuery({
-    queryKey: ['lotes', projetoId],
-    queryFn: () => fetchLotes(projetoId!),
-    enabled: !!projetoId,
-  })
-  const { data: integrantes } = useQuery({
-    queryKey: ['integrantes-min'],
-    queryFn: fetchIntegrantesAtivas,
-  })
-
-  const abertos = (lotes ?? []).filter((l) => l.etapa !== 'pronto')
-  const [loteId, setLoteId] = useState('')
-  const [qtd, setQtd] = useState<number | null>(null)
-  const [etapa, setEtapa] = useState<'miolo' | 'borda' | 'pronto'>('borda')
-  const [respId, setRespId] = useState('')
-  const [erro, setErro] = useState<string | null>(null)
-
-  const lote = abertos.find((l) => l.id === loteId) ?? abertos[0]
-  const quantidade = qtd ?? lote?.quantidade ?? 1
-
-  const registrar = useMutation({
-    mutationFn: () => {
-      const resp = (integrantes ?? []).find((p) => p.id === respId)
-      return registrarProducao({
-        lote: lote!,
-        quantidade,
-        etapaConcluida: etapa,
-        responsavelNome: resp?.nome ?? profile!.nome,
-        autorId: profile!.id,
-      })
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['lotes', projetoId] })
-      qc.invalidateQueries({ queryKey: ['squares', projetoId] })
-      qc.invalidateQueries({ queryKey: ['atividades', projetoId] })
-      qc.invalidateQueries({ queryKey: ['progresso-geral'] })
-      close()
-    },
-    onError: () => setErro('Não foi possível registrar a produção.'),
-  })
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    setErro(null)
-    if (!lote) {
-      setErro('Nenhum lote em andamento neste projeto.')
-      return
-    }
-    registrar.mutate()
-  }
-
-  return (
-    <ModalBox maxWidth={520}>
-      <ModalHeader title="Registrar produção" sub="Quem fez o quê — move o lote de etapa" />
-      <form onSubmit={submit}>
-        <div className="grid2" style={{ marginBottom: 18 }}>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>PADRÃO / LOTE</Lbl>
-            <Select
-              ariaLabel="Lote"
-              value={lote?.id ?? ''}
-              onChange={(v) => {
-                setLoteId(v)
-                setQtd(null)
-              }}
-              options={abertos.map((l) => [
-                l.id,
-                `Modelo ${l.modelo?.letra ?? '?'} ×${l.quantidade} · ${l.etapa.replace('_', ' ')}`,
-              ])}
-            />
-          </div>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>QUANTIDADE</Lbl>
-            <Stepper value={quantidade} onChange={setQtd} min={1} max={lote?.quantidade ?? 1} />
-          </div>
-        </div>
-        <Lbl style={{ marginBottom: 7 }}>ETAPA CONCLUÍDA</Lbl>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-          {ETAPAS_PROD.map(([k, label]) => (
-            <div
-              key={k}
-              className="seg"
-              onClick={() => setEtapa(k)}
-              style={
-                etapa === k
-                  ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }
-                  : undefined
-              }
-            >
-              {label}
-            </div>
-          ))}
-        </div>
-        <Lbl style={{ marginBottom: 7 }}>RESPONSÁVEL</Lbl>
-        <div style={{ marginBottom: 24 }}>
-          <Select
-            ariaLabel="Responsável"
-            value={respId}
-            onChange={setRespId}
-            options={[
-              ['', 'Escolher…'],
-              ...(integrantes ?? []).map((p) => [p.id, p.nome] as [string, string]),
-            ]}
-          />
-        </div>
-        {erro && <ErroBox>{erro}</ErroBox>}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button type="button" className="pill ghost" onClick={close}>
-            Cancelar
-          </button>
-          <button type="submit" className="pill" disabled={registrar.isPending || !lote}>
-            {registrar.isPending ? 'Registrando…' : 'Registrar'}
-          </button>
-        </div>
-      </form>
-    </ModalBox>
-  )
-}
-
-export function ModalIntegrante() {
-  const { close } = useStore()
-  const [nome, setNome] = useState('')
-  const [usuario, setUsuario] = useState('')
-  const [email, setEmail] = useState('')
-  const [telefone, setTelefone] = useState('')
-  const [preferencia, setPreferencia] = useState<Preferencia>('croche')
-  const [papel, setPapel] = useState<Papel>('integrante')
-  const [erro, setErro] = useState<string | null>(null)
-  const [ok, setOk] = useState(false)
-  const [enviando, setEnviando] = useState(false)
-
-  const cadastrar = async (e: FormEvent) => {
-    e.preventDefault()
-    setErro(null)
-    if (!nome.trim() || !usuario.trim() || !email.includes('@')) {
-      setErro('Preencha nome, usuário e um email válido.')
-      return
-    }
-    setEnviando(true)
-    const { data, error } = await supabase.functions.invoke('invite-member', {
-      body: {
-        nome: nome.trim(),
-        usuario: usuario.trim().toLowerCase(),
-        email: email.trim(),
-        telefone: telefone.trim() || null,
-        preferencia,
-        papel,
-        redirectTo: `${window.location.origin}/definir-senha`,
-      },
-    })
-    setEnviando(false)
-    const bodyErr = (data as { error?: string } | null)?.error
-    if (error || bodyErr) {
-      setErro(bodyErr ?? 'Não foi possível enviar o convite. Tente novamente.')
-      return
-    }
-    setOk(true)
-  }
-
-  const segStyle = (on: boolean) =>
-    on
-      ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }
-      : undefined
-
-  return (
-    <ModalBox maxWidth={520}>
-      <ModalHeader
-        title="Cadastrar integrante"
-        sub="Ela recebe um convite por email para criar a senha"
-      />
-      {ok ? (
-        <>
-          <div
-            style={{
-              background: 'var(--chip-green)',
-              border: '1px solid var(--chip-green-border)',
-              borderRadius: 10,
-              padding: '12px 14px',
-              fontSize: 13,
-              color: 'var(--green-dark)',
-              marginBottom: 24,
-            }}
-          >
-            ✓ Convite enviado para <b>{email}</b>. Ela define a senha pelo link do email.
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button className="pill" onClick={close}>
-              Fechar
-            </button>
-          </div>
-        </>
-      ) : (
-        <form onSubmit={cadastrar}>
-          <div className="grid2" style={{ marginBottom: 18 }}>
-            <div>
-              <Lbl style={{ marginBottom: 7 }}>NOME COMPLETO</Lbl>
-              <input
-                className="field"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder="Giulia Santos"
-              />
-            </div>
-            <div>
-              <Lbl style={{ marginBottom: 7 }}>USUÁRIO</Lbl>
-              <input
-                className="field"
-                value={usuario}
-                onChange={(e) => setUsuario(e.target.value)}
-                placeholder="giulia.santos"
-              />
-            </div>
-          </div>
-          <Lbl style={{ marginBottom: 7 }}>EMAIL</Lbl>
-          <input
-            className="field"
-            type="email"
-            style={{ marginBottom: 18 }}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="giulia@email.com"
-          />
-          <div className="grid2" style={{ marginBottom: 18 }}>
-            <div>
-              <Lbl style={{ marginBottom: 7 }}>TELEFONE / WHATSAPP</Lbl>
-              <input
-                className="field"
-                value={telefone}
-                onChange={(e) => setTelefone(e.target.value)}
-                placeholder="(11) 9 8888-0000"
-              />
-            </div>
-            <div>
-              <Lbl style={{ marginBottom: 7 }}>PREFERÊNCIA</Lbl>
-              <select
-                className="field"
-                value={preferencia}
-                onChange={(e) => setPreferencia(e.target.value as Preferencia)}
-                style={{ width: '100%', appearance: 'none', cursor: 'pointer' }}
-              >
-                <option value="croche">Crochê</option>
-                <option value="trico">Tricô</option>
-                <option value="ambos">Crochê e tricô</option>
-              </select>
-            </div>
-          </div>
-          <Lbl style={{ marginBottom: 7 }}>PERFIL</Lbl>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-            <div
-              className="seg"
-              onClick={() => setPapel('integrante')}
-              style={segStyle(papel === 'integrante')}
-            >
-              Integrante
-            </div>
-            <div
-              className="seg"
-              onClick={() => setPapel('admin')}
-              style={segStyle(papel === 'admin')}
-            >
-              Administradora
-            </div>
-          </div>
-          {erro && (
-            <div
-              role="alert"
-              style={{
-                background: 'var(--chip-soft)',
-                border: '1px solid var(--chip-rose-border)',
-                borderRadius: 10,
-                padding: '9px 13px',
-                fontSize: 12.5,
-                color: 'var(--primary-dark)',
-                marginBottom: 14,
-              }}
-            >
-              {erro}
-            </div>
-          )}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-            <button type="button" className="pill ghost" onClick={close}>
-              Cancelar
-            </button>
-            <button type="submit" className="pill" disabled={enviando}>
-              {enviando ? 'Enviando…' : 'Enviar convite'}
-            </button>
-          </div>
-        </form>
-      )}
-    </ModalBox>
-  )
-}
-
 export function ModalEncontro() {
+  const { encontroId } = useStore()
+  const { data: encontros } = useQuery({ queryKey: ['encontros'], queryFn: fetchEncontros })
+  const encontro = (encontros ?? []).find((e) => e.id === encontroId)
+
+  // criando: monta direto. editando: espera o encontro para o estado nascer cheio
+  if (encontroId && !encontro) return null
+  return <FormEncontro encontro={encontro} />
+}
+
+function FormEncontro({ encontro }: { encontro?: Encontro }) {
   const { close } = useStore()
   const qc = useQueryClient()
-  const [data, setData] = useState(hojeIso())
-  const [hora, setHora] = useState('14:00')
-  const [local, setLocal] = useState('')
-  const [pauta, setPauta] = useState('')
+  const form = useFormulario<'data'>()
+  const editando = Boolean(encontro)
+
+  const [data, setData] = useState(encontro?.data ?? hojeIso())
+  const [hora, setHora] = useState(encontro?.hora?.slice(0, 5) ?? '14:00')
+  const [local, setLocal] = useState(encontro?.local ?? '')
+  const [pauta, setPauta] = useState(encontro?.pauta ?? '')
   const [erro, setErro] = useState<string | null>(null)
 
   const salvar = useMutation({
-    mutationFn: () => criarEncontro({ data, hora, local: local.trim(), pauta: pauta.trim() }),
+    mutationFn: () => {
+      const campos = { data, hora, local: local.trim(), pauta: pauta.trim() }
+      return encontro ? atualizarEncontro(encontro.id, campos) : criarEncontro(campos)
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['encontros'] })
       close()
     },
-    onError: () => setErro('Não foi possível criar o encontro.'),
+    onError: () => setErro('Não foi possível salvar o encontro.'),
   })
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
     setErro(null)
-    if (!data) {
-      setErro('Escolha a data do encontro.')
-      return
-    }
+    if (!form.checar({ data: data ? undefined : 'Escolha a data do encontro.' })) return
     salvar.mutate()
   }
 
   return (
     <ModalBox maxWidth={520}>
-      <ModalHeader title="Novo encontro" sub="Abre a chamada e a pauta do dia" />
+      <ModalHeader
+        title={editando ? 'Editar encontro' : 'Novo encontro'}
+        sub={editando ? 'A chamada já feita continua valendo' : 'Abre a chamada e a pauta do dia'}
+      />
       <form onSubmit={submit}>
         <div className="grid2" style={{ marginBottom: 18 }}>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>DATA</Lbl>
-            <input
-              className="field"
-              type="date"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-            />
-          </div>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>HORÁRIO</Lbl>
-            <input
-              className="field"
-              type="time"
-              value={hora}
-              onChange={(e) => setHora(e.target.value)}
-            />
-          </div>
+          <Campo label="DATA" obrigatorio erro={form.erros.data}>
+            {() => (
+              <DatePicker
+                value={data}
+                onChange={(d) => {
+                  setData(d)
+                  form.aoMudar('data')
+                }}
+                ariaLabel="Data do encontro"
+              />
+            )}
+          </Campo>
+          <Campo label="HORÁRIO">
+            {() => <TimePicker value={hora} onChange={setHora} ariaLabel="Horário do encontro" />}
+          </Campo>
         </div>
-        <Lbl style={{ marginBottom: 7 }}>SALA</Lbl>
-        <input
-          className="field"
-          style={{ marginBottom: 18 }}
-          value={local}
-          onChange={(e) => setLocal(e.target.value)}
-          placeholder="Sala 203"
-        />
-        <Lbl style={{ marginBottom: 7 }}>PAUTA</Lbl>
-        <textarea
-          className="field"
-          style={{ minHeight: 52, marginBottom: 24, resize: 'vertical' }}
-          value={pauta}
-          onChange={(e) => setPauta(e.target.value)}
-          placeholder="Montagem da Manta Primavera"
-        />
+        <Campo label="SALA (OPCIONAL)" style={{ marginBottom: 18 }}>
+          {(p) => (
+            <input
+              {...p}
+              className="field"
+              value={local}
+              onChange={(e) => setLocal(e.target.value)}
+              placeholder="Sala 203"
+            />
+          )}
+        </Campo>
+        <Campo label="PAUTA (OPCIONAL)" style={{ marginBottom: 24 }}>
+          {(p) => (
+            <textarea
+              {...p}
+              className="field"
+              style={{ minHeight: 52, resize: 'vertical' }}
+              value={pauta}
+              onChange={(e) => setPauta(e.target.value)}
+              placeholder="Montagem da Manta Primavera"
+            />
+          )}
+        </Campo>
         {erro && <ErroBox>{erro}</ErroBox>}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button type="button" className="pill ghost" onClick={close}>
-            Cancelar
-          </button>
-          <button type="submit" className="pill" disabled={salvar.isPending}>
-            {salvar.isPending ? 'Criando…' : 'Criar encontro'}
-          </button>
+        <div
+          style={{
+            display: 'flex',
+            gap: 10,
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
+          <LegendaObrigatorio />
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="button" className="pill ghost" onClick={close}>
+              Cancelar
+            </button>
+            <button type="submit" className="pill" disabled={salvar.isPending}>
+              {salvar.isPending ? 'Salvando…' : editando ? 'Salvar' : 'Criar encontro'}
+            </button>
+          </div>
         </div>
       </form>
     </ModalBox>

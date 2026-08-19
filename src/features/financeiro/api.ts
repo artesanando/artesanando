@@ -8,6 +8,7 @@ export interface Movimentacao {
   tipo: 'entrada' | 'saida'
   valor_centavos: number
   criado_por: string | null
+  arquivado_em: string | null
 }
 
 export async function fetchMovimentacoes(): Promise<Movimentacao[]> {
@@ -17,6 +18,14 @@ export async function fetchMovimentacoes(): Promise<Movimentacao[]> {
     .order('data', { ascending: false })
   if (error) throw error
   return (data ?? []) as Movimentacao[]
+}
+
+export async function atualizarMovimentacao(
+  id: string,
+  patch: Partial<Omit<Movimentacao, 'id' | 'criado_por' | 'arquivado_em'>>,
+) {
+  const { error } = await supabase.from('movimentacoes').update(patch).eq('id', id)
+  if (error) throw error
 }
 
 export async function criarMovimentacao(m: {
@@ -50,4 +59,29 @@ export function totalDoMes(
   return movs
     .filter((m) => m.tipo === tipo && m.data.startsWith(mesRef))
     .reduce((s, m) => s + m.valor_centavos, 0)
+}
+
+/** Recorte por intervalo de datas ISO, ambas as pontas incluídas */
+export function filtraPeriodo<T extends Pick<Movimentacao, 'data'>>(
+  movs: T[],
+  de: string,
+  ate: string,
+): T[] {
+  return movs.filter((m) => m.data >= de && m.data <= ate)
+}
+
+/** Total do tipo dentro de uma lista já recortada, em centavos */
+export function totalDoTipo(
+  movs: Pick<Movimentacao, 'tipo' | 'valor_centavos'>[],
+  tipo: 'entrada' | 'saida',
+): number {
+  return movs.filter((m) => m.tipo === tipo).reduce((s, m) => s + m.valor_centavos, 0)
+}
+
+/** Primeiro e último dia do mês de uma data ISO */
+export function limitesDoMes(iso: string): { de: string; ate: string } {
+  const [ano, mes] = iso.split('-').map(Number)
+  const ultimo = new Date(ano, mes, 0).getDate()
+  const mm = String(mes).padStart(2, '0')
+  return { de: `${ano}-${mm}-01`, ate: `${ano}-${mm}-${String(ultimo).padStart(2, '0')}` }
 }

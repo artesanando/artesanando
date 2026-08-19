@@ -14,24 +14,30 @@ interface AuthCtx {
   can: (perm: Perm) => boolean
   login: (usuarioOuEmail: string, senha: string, manter: boolean) => Promise<void>
   logout: () => Promise<void>
-  resetPassword: (email: string) => Promise<void>
   updatePassword: (senha: string) => Promise<void>
   refreshProfile: () => Promise<void>
 }
 
 const Ctx = createContext<AuthCtx | null>(null)
 
+/* O id do perfil não é mais o id da conta: uma integrante pode existir só para a
+   chamada (sem conta) e ganhar acesso depois, mantendo o mesmo perfil. Por isso a
+   busca é por `user_id`, e as permissões dependem do perfil encontrado. */
 async function fetchProfile(userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle()
   if (error) return null
-  return data as Profile
+  return (data as Profile | null) ?? null
 }
 
-async function fetchPermissoes(userId: string): Promise<Permissoes | null> {
+async function fetchPermissoes(profileId: string): Promise<Permissoes | null> {
   const { data } = await supabase
     .from('permissoes')
     .select('*')
-    .eq('profile_id', userId)
+    .eq('profile_id', profileId)
     .maybeSingle()
   return (data as Permissoes | null) ?? null
 }
@@ -62,13 +68,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
     let alive = true
-    Promise.all([fetchProfile(userId), fetchPermissoes(userId)]).then(([p, pm]) => {
-      if (alive) {
-        setProfile(p)
-        setPerms(pm)
+    fetchProfile(userId)
+      .then(async (p) => (alive ? ([p, p ? await fetchPermissoes(p.id) : null] as const) : null))
+      .then((res) => {
+        if (!alive || !res) return
+        setProfile(res[0])
+        setPerms(res[1])
         setLoading(false)
-      }
-    })
+      })
     return () => {
       alive = false
     }
@@ -92,13 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
-  const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/redefinir-senha`,
-    })
-    if (error) throw new Error('Não foi possível enviar o email. Tente novamente.')
-  }
-
   const updatePassword = async (senha: string) => {
     const { error } = await supabase.auth.updateUser({ password: senha })
     if (error) throw new Error(error.message)
@@ -120,7 +120,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         can: (perm) => isAdmin || Boolean(perms?.[perm]),
         login,
         logout,
-        resetPassword,
         updatePassword,
         refreshProfile,
       }}

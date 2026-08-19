@@ -1,0 +1,75 @@
+// Edge Function: gera um link de nova senha para uma integrante que já tem
+// conta (só admin). Mesmo motivo do invite-member: sem SMTP configurado, o
+// link sai na resposta para a admin mandar na mão.
+// Deploy: supabase functions deploy reset-password-link
+import { createClient } from 'npm:@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+
+    // Identifica quem chamou a partir do JWT do request
+    const authHeader = req.headers.get('Authorization') ?? ''
+    const caller = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    })
+    const {
+      data: { user },
+    } = await caller.auth.getUser()
+    if (!user) return json({ error: 'não autenticada' }, 401)
+
+    const admin = createClient(supabaseUrl, serviceRole)
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('papel, ativo')
+      .eq('id', user.id)
+      .single()
+    if (!profile || profile.papel !== 'admin' || !profile.ativo) {
+      return json({ error: 'apenas administradoras geram links de senha' }, 403)
+    }
+
+    const { profileId, redirectTo } = await req.json()
+    if (!profileId) return json({ error: 'profileId é obrigatório' }, 400)
+
+    // O email vem do perfil, nunca do corpo da requisição — senão qualquer
+    // conta autenticada poderia pedir o link de outra pessoa.
+    const { data: target } = await admin
+      .from('profiles')
+      .select('user_id, email')
+      .eq('id', profileId)
+      .maybeSingle()
+    if (!target) return json({ error: 'integrante não encontrada' }, 404)
+    if (!target.user_id) {
+      return json({ error: 'esta integrante ainda não tem conta — use o convite' }, 400)
+    }
+    if (!target.email) return json({ error: 'esta integrante não tem email cadastrado' }, 400)
+
+    const gerado = await admin.auth.admin.generateLink({
+      type: 'recovery',
+      email: target.email,
+      options: { redirectTo },
+    })
+    if (gerado.error) return json({ error: gerado.error.message }, 400)
+
+    return json({ ok: true, link: gerado.data.properties?.action_link ?? null })
+  } catch (e) {
+    return json({ error: e instanceof Error ? e.message : 'erro inesperado' }, 500)
+  }
+})
