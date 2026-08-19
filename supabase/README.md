@@ -61,6 +61,15 @@ Nada de rodar SQL na mão no painel.
    próprio (Resend/Brevo) em *Authentication → SMTP Settings* antes de convidar as
    integrantes.
 
+## Apagar os dados de teste
+
+[`reset-dados.sql`](reset-dados.sql) limpa tudo que é transacional (projetos, produção,
+encontros, chamada, estoque, empréstimos, biblioteca, caixa e feed) e **preserva**
+`profiles`, `permissoes` e `semestres` — você continua logada, com as mesmas integrantes.
+
+Não é uma migration: cole no *SQL Editor* e rode quando quiser recomeçar. Os arquivos nos
+buckets `receitas` e `avatares` não saem no truncate — apague-os pelo *Storage*.
+
 ## Nova migration
 
 ```powershell
