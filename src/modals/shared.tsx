@@ -2,7 +2,9 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { useStore } from '../state/store'
 import { usePrendeFoco } from '../components/ui/Popover'
 
-export function ModalHeader({ title, sub }: { title: string; sub: string }) {
+/* `sub` só existe onde a linha carrega informação que o título não dá — não é
+   lugar de explicar o óbvio. */
+export function ModalHeader({ title, sub }: { title: string; sub?: string }) {
   const { close } = useStore()
   return (
     <>
@@ -11,7 +13,7 @@ export function ModalHeader({ title, sub }: { title: string; sub: string }) {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 4,
+          marginBottom: sub ? 4 : 20,
         }}
       >
         <div className="h" style={{ fontSize: 22 }}>
@@ -21,7 +23,9 @@ export function ModalHeader({ title, sub }: { title: string; sub: string }) {
           ×
         </button>
       </div>
-      <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 20 }}>{sub}</div>
+      {sub && (
+        <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 20 }}>{sub}</div>
+      )}
     </>
   )
 }

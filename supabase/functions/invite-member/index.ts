@@ -35,18 +35,34 @@ Deno.serve(async (req) => {
     if (!user) return json({ error: 'não autenticada' }, 401)
 
     const admin = createClient(supabaseUrl, serviceRole)
+    // `profiles.id` deixou de ser o id do auth na migration 130000 — quem
+    // identifica a chamadora agora é `user_id`.
     const { data: profile } = await admin
       .from('profiles')
       .select('papel, ativo')
-      .eq('id', user.id)
-      .single()
+      .eq('user_id', user.id)
+      .maybeSingle()
     if (!profile || profile.papel !== 'admin' || !profile.ativo) {
       return json({ error: 'apenas administradoras convidam integrantes' }, 403)
     }
 
-    const { email, nome, usuario, telefone, preferencia, papel, redirectTo } = await req.json()
+    const { email, nome, usuario, telefone, preferencia, papel, redirectTo, profileId } =
+      await req.json()
     if (!email || !nome || !usuario) {
       return json({ error: 'email, nome e usuario são obrigatórios' }, 400)
+    }
+
+    /* Convite de quem já entrou pela chamada: o perfil existe e o que falta é a
+       conta. O id vai no metadata para o trigger ligar exatamente nele, em vez
+       de tentar adivinhar por usuário/email e acabar criando ficha duplicada. */
+    if (profileId) {
+      const { data: alvo } = await admin
+        .from('profiles')
+        .select('id, user_id')
+        .eq('id', profileId)
+        .maybeSingle()
+      if (!alvo) return json({ error: 'integrante não encontrada' }, 404)
+      if (alvo.user_id) return json({ error: 'esta integrante já tem conta' }, 409)
     }
 
     const { data: existing } = await admin
@@ -54,7 +70,9 @@ Deno.serve(async (req) => {
       .select('id')
       .eq('usuario', usuario)
       .maybeSingle()
-    if (existing) return json({ error: 'já existe uma integrante com esse usuário' }, 409)
+    if (existing && existing.id !== profileId) {
+      return json({ error: 'já existe uma integrante com esse usuário' }, 409)
+    }
 
     const metadata = {
       nome,
@@ -62,6 +80,7 @@ Deno.serve(async (req) => {
       telefone: telefone ?? null,
       preferencia: preferencia ?? 'ambos',
       papel: papel === 'admin' ? 'admin' : 'integrante',
+      perfil_id: profileId ?? null,
     }
 
     const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {

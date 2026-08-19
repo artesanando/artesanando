@@ -23,7 +23,7 @@ import {
 import { PREFERENCIA_LABEL } from '../../types/database'
 
 export function IntegrantesPage() {
-  const { isAdmin, open } = useStore()
+  const { isAdmin, openIntegrante } = useStore()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const toast = useToast()
@@ -111,7 +111,7 @@ export function IntegrantesPage() {
             <button
               className="pill"
               style={{ padding: '8px 16px' }}
-              onClick={() => open('integrante')}
+              onClick={() => openIntegrante(null)}
             >
               + Cadastrar
             </button>
@@ -189,7 +189,7 @@ export function IntegrantesPage() {
                     <button
                       className="pill ghost"
                       style={{ padding: '7px 14px', fontSize: 12 }}
-                      onClick={() => open('integrante')}
+                      onClick={() => openIntegrante(p.id)}
                     >
                       Convidar
                     </button>

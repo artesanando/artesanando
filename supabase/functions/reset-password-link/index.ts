@@ -36,11 +36,13 @@ Deno.serve(async (req) => {
     if (!user) return json({ error: 'não autenticada' }, 401)
 
     const admin = createClient(supabaseUrl, serviceRole)
+    // `profiles.id` deixou de ser o id do auth na migration 130000 — quem
+    // identifica a chamadora agora é `user_id`.
     const { data: profile } = await admin
       .from('profiles')
       .select('papel, ativo')
-      .eq('id', user.id)
-      .single()
+      .eq('user_id', user.id)
+      .maybeSingle()
     if (!profile || profile.papel !== 'admin' || !profile.ativo) {
       return json({ error: 'apenas administradoras geram links de senha' }, 403)
     }

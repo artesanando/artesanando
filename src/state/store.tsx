@@ -35,6 +35,8 @@ interface StoreState {
   estoqueItemId: string | null
   /** encontro sendo editado; null = novo encontro */
   encontroId: string | null
+  /** perfil sem conta sendo convidado; null = cadastro do zero */
+  integranteId: string | null
   finKind: 'entrada' | 'saida'
   projCat: 'manta' | 'amig'
   projTec: 'croche' | 'trico'
@@ -54,6 +56,7 @@ const INITIAL: StoreState = {
   projetoId: null,
   estoqueItemId: null,
   encontroId: null,
+  integranteId: null,
   finKind: 'entrada',
   projCat: 'manta',
   projTec: 'croche',
@@ -76,6 +79,8 @@ export interface Store extends StoreState {
   openMovimentoEstoque: (itemId: string) => void
   openFichaProjeto: (projetoId: string) => void
   openEncontro: (encontroId: string | null) => void
+  /** com id, convida o perfil sem conta que já existe; sem id, cadastra do zero */
+  openIntegrante: (integranteId: string | null) => void
   setFinKind: (k: 'entrada' | 'saida') => void
   openFin: (k: 'entrada' | 'saida') => void
   setProjCat: (c: 'manta' | 'amig') => void
@@ -120,12 +125,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         projetoId: null,
         estoqueItemId: null,
         encontroId: null,
+        integranteId: null,
       }),
     openDevolucao: (devolucaoId) => set({ modal: 'devolucao', devolucaoId }),
     openMaterial: (estoqueItemId) => set({ modal: 'material', estoqueItemId }),
     openMovimentoEstoque: (estoqueItemId) => set({ modal: 'movimento-estoque', estoqueItemId }),
     openFichaProjeto: (projetoId) => set({ modal: 'ficha-projeto', projetoId }),
     openEncontro: (encontroId) => set({ modal: 'encontro', encontroId }),
+    openIntegrante: (integranteId) => set({ modal: 'integrante', integranteId }),
     setFinKind: (finKind) => set({ finKind }),
     openFin: (finKind) => set({ modal: 'financeiro', finKind }),
     setProjCat: (projCat) => set({ projCat }),
