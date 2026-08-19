@@ -46,7 +46,10 @@ export async function fetchSemConta(): Promise<Profile[]> {
 
 /** Junta a ficha de "só chamada" numa integrante que já tem conta */
 export async function vincularPerfil(origem: string, destino: string) {
-  const { error } = await supabase.rpc('vincular_perfil', { origem, destino })
+  const { error } = await supabase.rpc('vincular_perfil', {
+    p_origem: origem,
+    p_destino: destino,
+  })
   if (error) throw error
 }
 
