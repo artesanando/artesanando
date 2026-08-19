@@ -2,7 +2,8 @@ import { useState, type CSSProperties, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../state/store'
 import { useAuth } from '../state/auth'
-import { CurrencyField, Lbl } from '../components/ui/bits'
+import { CurrencyField } from '../components/ui/bits'
+import { Campo, LegendaObrigatorio, useFormulario } from '../components/ui/Campo'
 import { DatePicker, Select } from '../components/ui/controles'
 import { ModalBox, ModalHeader } from './shared'
 import { criarMovimentacao, fetchMovimentacoes, saldo } from '../features/financeiro/api'
@@ -21,6 +22,7 @@ const box = (on: boolean, bg: string, bd: string, c: string): CSSProperties =>
         fontSize: 13.5,
         color: c,
         cursor: 'pointer',
+        fontFamily: 'inherit',
       }
     : {
         flex: 1,
@@ -32,6 +34,8 @@ const box = (on: boolean, bg: string, bd: string, c: string): CSSProperties =>
         fontSize: 13.5,
         color: 'var(--muted)',
         cursor: 'pointer',
+        background: 'transparent',
+        fontFamily: 'inherit',
       }
 
 const CATEGORIAS: [string, string][] = [
@@ -45,6 +49,7 @@ export function ModalFin() {
   const { finKind, setFinKind, close } = useStore()
   const { profile } = useAuth()
   const qc = useQueryClient()
+  const form = useFormulario<'valor' | 'descricao'>()
   const entrada = finKind === 'entrada'
 
   const { data: movs } = useQuery({ queryKey: ['movimentacoes'], queryFn: fetchMovimentacoes })
@@ -75,14 +80,11 @@ export function ModalFin() {
   const submit = (e: FormEvent) => {
     e.preventDefault()
     setErro(null)
-    if (valor <= 0) {
-      setErro('Informe um valor maior que zero.')
-      return
-    }
-    if (!descricao.trim()) {
-      setErro('Descreva a movimentação.')
-      return
-    }
+    const ok = form.checar({
+      valor: valor > 0 ? undefined : 'Informe um valor maior que zero.',
+      descricao: descricao.trim() ? undefined : 'Descreva a movimentação.',
+    })
+    if (!ok) return
     salvar.mutate()
   }
 
@@ -94,49 +96,64 @@ export function ModalFin() {
       />
       <form onSubmit={submit}>
         <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-          <div
+          <button
+            type="button"
+            aria-pressed={entrada}
             onClick={() => setFinKind('entrada')}
             style={box(entrada, 'var(--chip-green)', 'var(--chip-green-border)', 'var(--green-dark)')}
           >
             ↑ Entrada
-          </div>
-          <div
+          </button>
+          <button
+            type="button"
+            aria-pressed={!entrada}
             onClick={() => setFinKind('saida')}
             style={box(!entrada, 'var(--chip-soft)', 'var(--chip-rose-border)', 'var(--accent)')}
           >
             ↓ Saída
-          </div>
+          </button>
         </div>
-        <Lbl style={{ marginBottom: 7 }}>VALOR</Lbl>
-        <div style={{ marginBottom: 18 }}>
-          <CurrencyField
-            centavos={valor}
-            onChange={setValor}
-            color={entrada ? 'var(--green-dark)' : 'var(--accent)'}
-          />
-        </div>
-        <Lbl style={{ marginBottom: 7 }}>DESCRIÇÃO</Lbl>
-        <input
-          className="field"
-          style={{ marginBottom: 18 }}
-          value={descricao}
-          onChange={(e) => setDescricao(e.target.value)}
-          placeholder="Bazar beneficente da faculdade"
-        />
-        <div className="grid2" style={{ marginBottom: 24 }}>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>CATEGORIA</Lbl>
-            <Select
-              ariaLabel="Categoria"
-              value={categoria}
-              onChange={setCategoria}
-              options={CATEGORIAS}
+        <Campo label="VALOR" obrigatorio erro={form.erros.valor} style={{ marginBottom: 18 }}>
+          {() => (
+            <CurrencyField
+              centavos={valor}
+              onChange={(v) => {
+                setValor(v)
+                form.aoMudar('valor')
+              }}
+              color={entrada ? 'var(--green-dark)' : 'var(--accent)'}
+              ariaLabel="Valor"
             />
-          </div>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>DATA</Lbl>
-            <DatePicker value={data} onChange={setData} ariaLabel="Data da movimentação" />
-          </div>
+          )}
+        </Campo>
+        <Campo label="DESCRIÇÃO" obrigatorio erro={form.erros.descricao} style={{ marginBottom: 18 }}>
+          {(p) => (
+            <input
+              {...p}
+              className="field"
+              value={descricao}
+              onChange={(e) => {
+                setDescricao(e.target.value)
+                form.aoMudar('descricao')
+              }}
+              placeholder="Bazar beneficente da faculdade"
+            />
+          )}
+        </Campo>
+        <div className="grid2" style={{ marginBottom: 24 }}>
+          <Campo label="CATEGORIA">
+            {() => (
+              <Select
+                ariaLabel="Categoria"
+                value={categoria}
+                onChange={setCategoria}
+                options={CATEGORIAS}
+              />
+            )}
+          </Campo>
+          <Campo label="DATA">
+            {() => <DatePicker value={data} onChange={setData} ariaLabel="Data da movimentação" />}
+          </Campo>
         </div>
         {erro && (
           <div
@@ -154,17 +171,24 @@ export function ModalFin() {
             {erro}
           </div>
         )}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button type="button" className="pill ghost" onClick={close}>
-            Cancelar
-          </button>
-          <button type="submit" className="pill" disabled={salvar.isPending}>
-            {salvar.isPending
-              ? 'Registrando…'
-              : entrada
-                ? 'Registrar entrada'
-                : 'Registrar saída'}
-          </button>
+        <div
+          style={{
+            display: 'flex',
+            gap: 10,
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
+          <LegendaObrigatorio />
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="button" className="pill ghost" onClick={close}>
+              Cancelar
+            </button>
+            <button type="submit" className="pill" disabled={salvar.isPending}>
+              {salvar.isPending ? 'Registrando…' : entrada ? 'Registrar entrada' : 'Registrar saída'}
+            </button>
+          </div>
         </div>
       </form>
     </ModalBox>

@@ -211,12 +211,9 @@ export function ProjetosPage() {
               return (
                 <div
                   key={p.id}
-                  className="card"
+                  className="card cartao-amig"
                   onClick={() => navigate(`/projetos/${p.id}`)}
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1.7fr 1.3fr 1.4fr .5fr',
-                    gap: 14,
                     alignItems: 'center',
                     padding: '14px 18px',
                     cursor: 'pointer',

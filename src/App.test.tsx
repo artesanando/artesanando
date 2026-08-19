@@ -366,4 +366,34 @@ describe('biblioteca (M2)', () => {
     expect(await screen.findByText('GRANNY SQUARE')).toBeInTheDocument()
     expect(screen.getByText('CARREIRAS')).toBeInTheDocument()
   })
+
+  it('nome vazio na receita mostra o erro sob o campo', async () => {
+    __login()
+    renderAt('/biblioteca')
+    await userEvent.click(await screen.findByRole('button', { name: '+ Receita' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar na biblioteca' }))
+    expect(await screen.findByText('Dê um nome à receita.')).toBeInTheDocument()
+  })
+})
+
+describe('empréstimo (M2)', () => {
+  it('integrante e material vazios mostram erro sob cada campo', async () => {
+    __login()
+    renderAt('/estoque')
+    await userEvent.click(await screen.findByRole('button', { name: '+ Empréstimo' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar empréstimo' }))
+    expect(await screen.findByText('Escolha a integrante.')).toBeInTheDocument()
+    expect(screen.getByText('Escolha o material.')).toBeInTheDocument()
+  })
+})
+
+describe('financeiro — modal', () => {
+  it('valor zero e descrição vazia mostram erro sob cada campo', async () => {
+    __login()
+    renderAt('/financeiro')
+    await userEvent.click(await screen.findByRole('button', { name: '↑ Entrada' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar entrada' }))
+    expect(await screen.findByText('Informe um valor maior que zero.')).toBeInTheDocument()
+    expect(screen.getByText('Descreva a movimentação.')).toBeInTheDocument()
+  })
 })

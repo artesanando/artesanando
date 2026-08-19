@@ -54,6 +54,7 @@ export function ModalReceita() {
   const { close } = useStore()
   const { profile } = useAuth()
   const qc = useQueryClient()
+  const form = useFormulario<'nome'>()
   const [categoria, setCategoria] = useState<ReceitaCategoria>('amigurumi')
   const [nome, setNome] = useState('')
   const [obs, setObs] = useState('')
@@ -85,10 +86,7 @@ export function ModalReceita() {
   const submit = (e: FormEvent) => {
     e.preventDefault()
     setErro(null)
-    if (!nome.trim()) {
-      setErro('Dê um nome à receita.')
-      return
-    }
+    if (!form.checar({ nome: nome.trim() ? undefined : 'Dê um nome à receita.' })) return
     salvar.mutate()
   }
 
@@ -99,9 +97,11 @@ export function ModalReceita() {
         <Lbl style={{ marginBottom: 7 }}>CATEGORIA</Lbl>
         <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
           {REC_CATS.map(([k, label]) => (
-            <div
+            <button
               key={k}
+              type="button"
               className="seg"
+              aria-pressed={categoria === k}
               onClick={() => setCategoria(k)}
               style={
                 categoria === k
@@ -110,17 +110,23 @@ export function ModalReceita() {
               }
             >
               {label}
-            </div>
+            </button>
           ))}
         </div>
-        <Lbl style={{ marginBottom: 7 }}>NOME</Lbl>
-        <input
-          className="field"
-          style={{ marginBottom: 18 }}
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          placeholder="Capivara da Lú"
-        />
+        <Campo label="NOME" obrigatorio erro={form.erros.nome} style={{ marginBottom: 18 }}>
+          {(p) => (
+            <input
+              {...p}
+              className="field"
+              value={nome}
+              onChange={(e) => {
+                setNome(e.target.value)
+                form.aoMudar('nome')
+              }}
+              placeholder="Capivara da Lú"
+            />
+          )}
+        </Campo>
         <Lbl style={{ marginBottom: 7 }}>PDF (OPCIONAL)</Lbl>
         <label
           style={{
@@ -144,7 +150,7 @@ export function ModalReceita() {
             onChange={(e) => setPdf(e.target.files?.[0] ?? null)}
           />
         </label>
-        <Lbl style={{ marginBottom: 7 }}>OBSERVAÇÕES</Lbl>
+        <Lbl style={{ marginBottom: 7 }}>OBSERVAÇÕES (OPCIONAL)</Lbl>
         <textarea
           className="field"
           style={{ minHeight: 52, marginBottom: 24, resize: 'vertical' }}
@@ -153,13 +159,24 @@ export function ModalReceita() {
           placeholder="Ex.: usar fio 4mm, olhos de segurança 9mm…"
         />
         {erro && <ErroBox>{erro}</ErroBox>}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button type="button" className="pill ghost" onClick={close}>
-            Cancelar
-          </button>
-          <button type="submit" className="pill" disabled={salvar.isPending}>
-            {salvar.isPending ? 'Salvando…' : 'Salvar na biblioteca'}
-          </button>
+        <div
+          style={{
+            display: 'flex',
+            gap: 10,
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
+          <LegendaObrigatorio />
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="button" className="pill ghost" onClick={close}>
+              Cancelar
+            </button>
+            <button type="submit" className="pill" disabled={salvar.isPending}>
+              {salvar.isPending ? 'Salvando…' : 'Salvar na biblioteca'}
+            </button>
+          </div>
         </div>
       </form>
     </ModalBox>
@@ -169,6 +186,7 @@ export function ModalReceita() {
 export function ModalEmprestimo() {
   const { close } = useStore()
   const qc = useQueryClient()
+  const form = useFormulario<'integrante' | 'material'>()
   const { data: integrantes } = useQuery({
     queryKey: ['integrantes-min'],
     queryFn: fetchIntegrantesAtivas,
@@ -201,10 +219,11 @@ export function ModalEmprestimo() {
   const submit = (e: FormEvent) => {
     e.preventDefault()
     setErro(null)
-    if (!integranteId || !itemId) {
-      setErro('Escolha a integrante e o material.')
-      return
-    }
+    const ok = form.checar({
+      integrante: integranteId ? undefined : 'Escolha a integrante.',
+      material: itemId ? undefined : 'Escolha o material.',
+    })
+    if (!ok) return
     salvar.mutate()
   }
 
@@ -215,55 +234,77 @@ export function ModalEmprestimo() {
         sub="Saída de material para uma integrante levar para casa"
       />
       <form onSubmit={submit}>
-        <Lbl style={{ marginBottom: 7 }}>INTEGRANTE</Lbl>
-        <div style={{ marginBottom: 18 }}>
-          <Select
-            ariaLabel="Integrante"
-            value={integranteId}
-            onChange={setIntegranteId}
-            options={[
-              ['', 'Escolher…'],
-              ...(integrantes ?? []).map((p) => [p.id, p.nome] as [string, string]),
-            ]}
-          />
-        </div>
-        <Lbl style={{ marginBottom: 7 }}>MATERIAL</Lbl>
-        <div style={{ marginBottom: 18 }}>
-          <Select
-            ariaLabel="Material"
-            value={itemId}
-            onChange={setItemId}
-            options={[
-              ['', 'Escolher…'],
-              ...emprestaveis.map(
-                (i) => [i.id, `${i.nome}${i.detalhe ? ` · ${i.detalhe}` : ''}`] as [string, string],
-              ),
-            ]}
-          />
-        </div>
-        <div className="grid2" style={{ marginBottom: 24 }}>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>QUANTIDADE</Lbl>
-            <Stepper value={quantidade} onChange={setQuantidade} min={1} max={99} />
-          </div>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>PROJETO (OPCIONAL)</Lbl>
-            <input
-              className="field"
-              value={projeto}
-              onChange={(e) => setProjeto(e.target.value)}
-              placeholder="Manta Primavera"
+        <Campo label="INTEGRANTE" obrigatorio erro={form.erros.integrante} style={{ marginBottom: 18 }}>
+          {() => (
+            <Select
+              ariaLabel="Integrante"
+              value={integranteId}
+              onChange={(v) => {
+                setIntegranteId(v)
+                form.aoMudar('integrante')
+              }}
+              options={[
+                ['', 'Escolher…'],
+                ...(integrantes ?? []).map((p) => [p.id, p.nome] as [string, string]),
+              ]}
             />
-          </div>
+          )}
+        </Campo>
+        <Campo label="MATERIAL" obrigatorio erro={form.erros.material} style={{ marginBottom: 18 }}>
+          {() => (
+            <Select
+              ariaLabel="Material"
+              value={itemId}
+              onChange={(v) => {
+                setItemId(v)
+                form.aoMudar('material')
+              }}
+              options={[
+                ['', 'Escolher…'],
+                ...emprestaveis.map(
+                  (i) => [i.id, `${i.nome}${i.detalhe ? ` · ${i.detalhe}` : ''}`] as [string, string],
+                ),
+              ]}
+            />
+          )}
+        </Campo>
+        <div className="grid2" style={{ marginBottom: 24 }}>
+          <Campo label="QUANTIDADE">
+            {() => (
+              <Stepper value={quantidade} onChange={setQuantidade} min={1} max={99} ariaLabel="Quantidade" />
+            )}
+          </Campo>
+          <Campo label="PROJETO (OPCIONAL)">
+            {(p) => (
+              <input
+                {...p}
+                className="field"
+                value={projeto}
+                onChange={(e) => setProjeto(e.target.value)}
+                placeholder="Manta Primavera"
+              />
+            )}
+          </Campo>
         </div>
         {erro && <ErroBox>{erro}</ErroBox>}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button type="button" className="pill ghost" onClick={close}>
-            Cancelar
-          </button>
-          <button type="submit" className="pill" disabled={salvar.isPending}>
-            {salvar.isPending ? 'Registrando…' : 'Registrar empréstimo'}
-          </button>
+        <div
+          style={{
+            display: 'flex',
+            gap: 10,
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
+          <LegendaObrigatorio />
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="button" className="pill ghost" onClick={close}>
+              Cancelar
+            </button>
+            <button type="submit" className="pill" disabled={salvar.isPending}>
+              {salvar.isPending ? 'Registrando…' : 'Registrar empréstimo'}
+            </button>
+          </div>
         </div>
       </form>
     </ModalBox>
@@ -317,11 +358,16 @@ export function ModalDevolucao() {
           {ativos.map((e) => {
             const on = sel?.id === e.id
             return (
-              <div
+              <button
                 key={e.id}
+                type="button"
                 className="card"
+                aria-pressed={on}
                 onClick={() => escolher(e.id)}
                 style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  fontFamily: 'inherit',
                   padding: '13px 15px',
                   marginBottom: 10,
                   display: 'flex',
@@ -372,7 +418,7 @@ export function ModalDevolucao() {
                     {e.data.slice(5, 7)}
                   </div>
                 </div>
-              </div>
+              </button>
             )
           })}
           <Lbl style={{ margin: '10px 0 7px' }}>QUANTIDADE DEVOLVIDA</Lbl>
