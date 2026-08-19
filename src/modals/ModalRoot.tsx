@@ -7,7 +7,6 @@ import {
   ModalEncontro,
   ModalIntegrante,
   ModalMaterial,
-  ModalProducao,
   ModalReceita,
 } from './forms'
 import { ModalGranny } from './ModalGranny'
@@ -24,7 +23,6 @@ export function ModalRoot() {
     receita: <ModalReceita />,
     emprestimo: <ModalEmprestimo />,
     devolucao: <ModalDevolucao />,
-    producao: <ModalProducao />,
     integrante: <ModalIntegrante />,
     encontro: <ModalEncontro />,
     granny: <ModalGranny />,

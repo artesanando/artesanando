@@ -94,7 +94,7 @@ describe('projetos (M3)', () => {
     __login()
     renderAt('/projetos/p1')
     expect(await screen.findByText('CROCHÊ')).toBeInTheDocument()
-    expect(screen.getByText('Fluxo por etapa')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Mapa de montagem' })).toBeInTheDocument()
   })
 
   it('polvo rosa abre o polvo, não a capivara', async () => {
@@ -118,10 +118,29 @@ describe('projetos (M3)', () => {
     expect(screen.getByRole('button', { name: 'Embaralhar ordem' })).toBeEnabled()
   })
 
-  it('lote sem responsável mostra o pegar lote', async () => {
+  it('o mapa mostra a etapa de cada square', async () => {
     __login()
     renderAt('/projetos/p1')
-    expect(await screen.findByText('Pegar lote')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: /linha 1 coluna 1 · Pronto/ }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /linha 1 coluna 3 · Aguardando borda/ }),
+    ).toBeInTheDocument()
+  })
+
+  it('selecionar squares no mapa abre a barra para marcar a etapa', async () => {
+    __login()
+    renderAt('/projetos/p1')
+    await userEvent.click(await screen.findByRole('button', { name: /linha 1 coluna 4/ }))
+    expect(screen.getByText('1 square selecionado')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Pronto' })).toBeInTheDocument()
+  })
+
+  it('integrante sem permissão de progresso não consegue marcar o mapa', async () => {
+    __login(INTEGRANTE_PROFILE)
+    renderAt('/projetos/p1')
+    expect(await screen.findByRole('button', { name: /linha 1 coluna 4/ })).toBeDisabled()
   })
 })
 

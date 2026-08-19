@@ -12,7 +12,6 @@ export type ModalKind =
   | 'receita'
   | 'emprestimo'
   | 'devolucao'
-  | 'producao'
   | 'integrante'
   | 'encontro'
   | 'granny'
@@ -64,7 +63,6 @@ export interface Store extends StoreState {
   open: (m: ModalKind) => void
   close: () => void
   openDevolucao: (emprestimoId: string | null) => void
-  openProducao: (projetoId: string) => void
   setFinKind: (k: 'entrada' | 'saida') => void
   openFin: (k: 'entrada' | 'saida') => void
   setProjCat: (c: 'manta' | 'amig') => void
@@ -104,7 +102,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     open: (modal) => set({ modal }),
     close: () => set({ modal: null, devolucaoId: null, projetoId: null }),
     openDevolucao: (devolucaoId) => set({ modal: 'devolucao', devolucaoId }),
-    openProducao: (projetoId) => set({ modal: 'producao', projetoId }),
     setFinKind: (finKind) => set({ finKind }),
     openFin: (finKind) => set({ modal: 'financeiro', finKind }),
     setProjCat: (projCat) => set({ projCat }),
