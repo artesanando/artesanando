@@ -56,19 +56,31 @@ Deno.serve(async (req) => {
       .maybeSingle()
     if (existing) return json({ error: 'já existe uma integrante com esse usuário' }, 409)
 
+    const metadata = {
+      nome,
+      usuario,
+      telefone: telefone ?? null,
+      preferencia: preferencia ?? 'ambos',
+      papel: papel === 'admin' ? 'admin' : 'integrante',
+    }
+
     const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
-      data: {
-        nome,
-        usuario,
-        telefone: telefone ?? null,
-        preferencia: preferencia ?? 'ambos',
-        papel: papel === 'admin' ? 'admin' : 'integrante',
-      },
+      data: metadata,
       redirectTo,
     })
     if (error) return json({ error: error.message }, 400)
 
-    return json({ ok: true, userId: data.user?.id })
+    // O email depende do SMTP estar configurado; o link vai junto na resposta
+    // para a admin poder mandar pelo WhatsApp quando o email não sair.
+    let link: string | null = null
+    const gerado = await admin.auth.admin.generateLink({
+      type: 'invite',
+      email,
+      options: { data: metadata, redirectTo },
+    })
+    if (!gerado.error) link = gerado.data.properties?.action_link ?? null
+
+    return json({ ok: true, userId: data.user?.id, link })
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : 'erro inesperado' }, 500)
   }

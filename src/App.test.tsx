@@ -141,6 +141,16 @@ describe('projetos (M3)', () => {
     expect(await screen.findByText(/#1–2 · Grace Hopper/)).toBeInTheDocument()
   })
 
+  it('unidade de amigurumi pode ser reatribuída ou removida', async () => {
+    __login()
+    renderAt('/projetos/p3')
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Ações das unidades de Grace Hopper/ }),
+    )
+    expect(screen.getByRole('menuitem', { name: 'Reatribuir' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Remover' })).toBeInTheDocument()
+  })
+
   it('faixa feita fica somente-leitura para quem não pode reabrir', async () => {
     __login(INTEGRANTE_PROFILE)
     renderAt('/projetos/p2')

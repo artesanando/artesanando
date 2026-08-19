@@ -6,11 +6,11 @@ import {
   ModalDevolucao,
   ModalEmprestimo,
   ModalEncontro,
-  ModalIntegrante,
   ModalReceita,
 } from './forms'
 import { ModalMaterial, ModalMovimentoEstoque } from './ModalEstoque'
 import { ModalFichaProjeto } from './ModalFichaProjeto'
+import { ModalIntegrante } from './ModalIntegrante'
 import { ModalGranny } from './ModalGranny'
 import { ModalFaixa } from './ModalFaixa'
 import { ModalLayout } from './ModalLayout'

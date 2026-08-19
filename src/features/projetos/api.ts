@@ -435,10 +435,40 @@ export async function removerFaixa(id: string) {
   if (error) throw error
 }
 
-export async function adicionarUnidade(projetoId: string, numero: number, responsavelId: string) {
+/** Cria N unidades de uma vez para a mesma integrante */
+export async function adicionarUnidades(
+  projetoId: string,
+  aPartirDe: number,
+  quantidade: number,
+  responsavelId: string,
+) {
+  const linhas = Array.from({ length: quantidade }, (_, i) => ({
+    projeto_id: projetoId,
+    numero: aPartirDe + i,
+    responsavel_id: responsavelId,
+  }))
+  const { error } = await supabase.from('unidades').insert(linhas)
+  if (error) throw error
+}
+
+export async function reatribuirUnidades(ids: string[], responsavelId: string) {
   const { error } = await supabase
     .from('unidades')
-    .insert({ projeto_id: projetoId, numero, responsavel_id: responsavelId })
+    .update({ responsavel_id: responsavelId })
+    .in('id', ids)
+  if (error) throw error
+}
+
+export async function removerUnidades(ids: string[]) {
+  const { error } = await supabase.from('unidades').delete().in('id', ids)
+  if (error) throw error
+}
+
+export async function reabrirUnidades(ids: string[]) {
+  const { error } = await supabase
+    .from('unidades')
+    .update({ status: 'em_producao' })
+    .in('id', ids)
   if (error) throw error
 }
 

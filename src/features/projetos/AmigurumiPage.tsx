@@ -2,12 +2,17 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../state/auth'
-import { Select } from '../../components/ui/controles'
+import { MenuKebab, Select } from '../../components/ui/controles'
+import { Stepper } from '../../components/ui/bits'
+import { useConfirmar } from '../../components/ui/Confirm'
 import { useToast } from '../../components/ui/Toast'
 import { Comentarios } from './Comentarios'
 import {
-  adicionarUnidade,
+  adicionarUnidades,
   concluirUnidades,
+  reabrirUnidades,
+  reatribuirUnidades,
+  removerUnidades,
   fetchIntegrantesAtivas,
   fetchReceitaNome,
   fetchUnidades,
@@ -22,8 +27,12 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const toast = useToast()
+  const confirmar = useConfirmar()
   const [addAberto, setAddAberto] = useState(false)
   const [respId, setRespId] = useState('')
+  const [quantas, setQuantas] = useState(1)
+  const [reatribuindo, setReatribuindo] = useState<string | null>(null)
+  const [novoResp, setNovoResp] = useState('')
 
   const { data: unidades } = useQuery({
     queryKey: ['unidades', projeto.id],
@@ -47,21 +56,56 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
   const adicionar = useMutation({
     mutationFn: async () => {
       const prox = Math.max(0, ...(unidades ?? []).map((u) => u.numero)) + 1
-      await adicionarUnidade(projeto.id, prox, respId)
+      await adicionarUnidades(projeto.id, prox, quantas, respId)
       await inserirAtividade({
         autor_id: profile!.id,
         tipo: 'unidade',
         projeto_id: projeto.id,
-        payload: { texto: `adicionou a unidade #${prox}` },
+        payload: {
+          texto:
+            quantas === 1
+              ? `adicionou a unidade #${prox}`
+              : `adicionou ${quantas} unidades (#${prox}–${prox + quantas - 1})`,
+        },
       })
     },
     onSuccess: () => {
       setAddAberto(false)
       setRespId('')
+      setQuantas(1)
       invalidar()
-      toast('Unidade adicionada ✓')
+      toast('Unidades adicionadas ✓')
     },
-    onError: () => toast('Não foi possível adicionar a unidade.', 'erro'),
+    onError: () => toast('Não foi possível adicionar as unidades.', 'erro'),
+  })
+
+  const reatribuir = useMutation({
+    mutationFn: (ids: string[]) => reatribuirUnidades(ids, novoResp),
+    onSuccess: () => {
+      setReatribuindo(null)
+      setNovoResp('')
+      invalidar()
+      toast('Unidades reatribuídas ✓')
+    },
+    onError: () => toast('Não foi possível reatribuir.', 'erro'),
+  })
+
+  const remover = useMutation({
+    mutationFn: (ids: string[]) => removerUnidades(ids),
+    onSuccess: () => {
+      invalidar()
+      toast('Unidades removidas ✓')
+    },
+    onError: () => toast('Não foi possível remover.', 'erro'),
+  })
+
+  const reabrir = useMutation({
+    mutationFn: (ids: string[]) => reabrirUnidades(ids),
+    onSuccess: () => {
+      invalidar()
+      toast('Unidades reabertas ✓')
+    },
+    onError: () => toast('Não foi possível reabrir.', 'erro'),
   })
 
   const concluir = useMutation({
@@ -161,10 +205,70 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
                   >
                     {g.concluido ? 'CONCLUÍDO' : 'EM PRODUÇÃO'}
                   </span>
+                  {can('progresso') && (
+                    <MenuKebab
+                      ariaLabel={`Ações das unidades de ${g.nome}`}
+                      acoes={[
+                        { label: 'Reatribuir', onSelect: () => setReatribuindo(g.ids.join(',')) },
+                        ...(g.concluido
+                          ? [{ label: 'Reabrir', onSelect: () => reabrir.mutate(g.ids) }]
+                          : []),
+                        {
+                          label: 'Remover',
+                          perigo: true,
+                          onSelect: async () => {
+                            const ok = await confirmar({
+                              titulo: `Remover ${g.ids.length} unidade(s) de ${g.nome}?`,
+                              descricao: 'Some do projeto e da contagem de entregas. Não tem volta.',
+                              okLabel: 'Remover',
+                              perigo: true,
+                            })
+                            if (ok) remover.mutate(g.ids)
+                          },
+                        },
+                      ]}
+                    />
+                  )}
                 </span>
               </div>
             ))}
           </div>
+          {reatribuindo && (
+            <div
+              className="card"
+              style={{
+                padding: '12px 14px',
+                marginTop: 10,
+                display: 'flex',
+                gap: 8,
+                alignItems: 'center',
+                flexWrap: 'wrap',
+              }}
+            >
+              <span style={{ fontSize: 12.5, fontWeight: 700 }}>Passar para</span>
+              <span style={{ flex: 1, minWidth: 150 }}>
+                <Select
+                  ariaLabel="Nova responsável"
+                  value={novoResp}
+                  onChange={setNovoResp}
+                  options={[
+                    ['', 'Escolher…'],
+                    ...(integrantes ?? []).map((p) => [p.id, p.nome] as [string, string]),
+                  ]}
+                />
+              </span>
+              <button
+                className="pill"
+                disabled={!novoResp || reatribuir.isPending}
+                onClick={() => reatribuir.mutate(reatribuindo.split(','))}
+              >
+                Passar
+              </button>
+              <button className="pill ghost" onClick={() => setReatribuindo(null)}>
+                Cancelar
+              </button>
+            </div>
+          )}
           {can('progresso') && !addAberto && (
             <div
               onClick={() => setAddAberto(true)}
@@ -176,14 +280,31 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
                 cursor: 'pointer',
               }}
             >
-              + Adicionar unidade
+              + Adicionar unidades
             </div>
           )}
           {addAberto && (
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 12 }}>
-              <div style={{ flex: 1 }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: 10,
+                alignItems: 'center',
+                marginTop: 12,
+                flexWrap: 'wrap',
+              }}
+            >
+              <div style={{ width: 110 }}>
+                <Stepper
+                  value={quantas}
+                  onChange={setQuantas}
+                  min={1}
+                  max={50}
+                  ariaLabel="Quantas unidades"
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: 150 }}>
                 <Select
-                  ariaLabel="Responsável pela unidade"
+                  ariaLabel="Responsável pelas unidades"
                   value={respId}
                   onChange={setRespId}
                   options={[
