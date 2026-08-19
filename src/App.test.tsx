@@ -386,9 +386,19 @@ describe('biblioteca (M2)', () => {
   it('nome vazio na receita mostra o erro sob o campo', async () => {
     __login()
     renderAt('/biblioteca')
-    await userEvent.click(await screen.findByRole('button', { name: '+ Receita' }))
+    await userEvent.click(await screen.findByRole('button', { name: '+ Adicionar' }))
     await userEvent.click(screen.getByRole('button', { name: 'Salvar na biblioteca' }))
     expect(await screen.findByText('Dê um nome à receita.')).toBeInTheDocument()
+  })
+
+  it('a categoria troca o editor sem sair do fluxo', async () => {
+    __login()
+    renderAt('/biblioteca')
+    await userEvent.click(await screen.findByRole('button', { name: '+ Adicionar' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Esquema de manta' }))
+    expect(await screen.findByRole('button', { name: 'Salvar esquema' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Granny square' }))
+    expect(await screen.findByRole('button', { name: 'Salvar padrão' })).toBeInTheDocument()
   })
 })
 

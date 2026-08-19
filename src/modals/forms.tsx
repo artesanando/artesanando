@@ -6,7 +6,6 @@ import { Campo, LegendaObrigatorio, useFormulario } from '../components/ui/Campo
 import { ModalBox, ModalHeader } from './shared'
 import { supabase } from '../lib/supabase'
 import { useStore } from '../state/store'
-import type { ReceitaCategoria } from '../types/database'
 import {
   criarEmprestimo,
   fetchEmprestimosAtivos,
@@ -14,6 +13,9 @@ import {
   saldoEmprestimo,
 } from '../features/estoque/api'
 import { criarReceita, uploadPdf } from '../features/biblioteca/api'
+import { CampoCapa } from '../components/ui/CampoCapa'
+import { SeletorCategoria } from './SeletorCategoria'
+import { ehLinkValido, subirCapa } from '../lib/capa'
 import { fetchIntegrantesAtivas } from '../features/projetos/api'
 import {
   atualizarEncontro,
@@ -43,35 +45,35 @@ function ErroBox({ children }: { children: ReactNode }) {
   )
 }
 
-const REC_CATS: [ReceitaCategoria, string][] = [
-  ['amigurumi', 'Amigurumi'],
-  ['granny', 'Granny square'],
-  ['faixa', 'Faixa de tricô'],
-  ['manta', 'Esquema de manta'],
-]
-
+/* Receita da biblioteca. Vem com PDF ou com link de vídeo — as duas coisas
+   circulam no grupo, e forçar PDF deixava metade do acervo de fora. */
 export function ModalReceita() {
   const { close } = useStore()
   const { profile } = useAuth()
   const qc = useQueryClient()
-  const form = useFormulario<'nome'>()
-  const [categoria, setCategoria] = useState<ReceitaCategoria>('amigurumi')
+  const form = useFormulario<'nome' | 'video'>()
   const [nome, setNome] = useState('')
   const [obs, setObs] = useState('')
+  const [fonte, setFonte] = useState<'pdf' | 'video'>('pdf')
   const [pdf, setPdf] = useState<File | null>(null)
+  const [video, setVideo] = useState('')
+  const [capa, setCapa] = useState<Blob | null>(null)
   const [erro, setErro] = useState<string | null>(null)
 
   const salvar = useMutation({
     mutationFn: async () => {
-      const pdf_path = pdf ? await uploadPdf(pdf) : null
+      const pdf_path = fonte === 'pdf' && pdf ? await uploadPdf(pdf) : null
+      const capa_path = capa ? await subirCapa(capa) : null
       await criarReceita({
         nome: nome.trim(),
-        categoria,
+        categoria: 'amigurumi',
         sub: null,
         resumo: obs.trim() || null,
         specs: [],
         conteudo: {},
         pdf_path,
+        video_url: fonte === 'video' ? video.trim() : null,
+        capa_path,
         origem: 'manual',
         criado_por: profile!.id,
       })
@@ -86,33 +88,23 @@ export function ModalReceita() {
   const submit = (e: FormEvent) => {
     e.preventDefault()
     setErro(null)
-    if (!form.checar({ nome: nome.trim() ? undefined : 'Dê um nome à receita.' })) return
+    const ok = form.checar({
+      nome: nome.trim() ? undefined : 'Dê um nome à receita.',
+      video:
+        fonte === 'video' && video.trim() && !ehLinkValido(video)
+          ? 'Cole o endereço completo do vídeo.'
+          : undefined,
+    })
+    if (!ok) return
     salvar.mutate()
   }
 
   return (
     <ModalBox maxWidth={560}>
-      <ModalHeader title="Adicionar à biblioteca" sub="Receita de amigurumi ou padrão de manta" />
+      <ModalHeader title="Adicionar à biblioteca" />
       <form onSubmit={submit}>
-        <Lbl style={{ marginBottom: 7 }}>CATEGORIA</Lbl>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
-          {REC_CATS.map(([k, label]) => (
-            <button
-              key={k}
-              type="button"
-              className="seg"
-              aria-pressed={categoria === k}
-              onClick={() => setCategoria(k)}
-              style={
-                categoria === k
-                  ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }
-                  : undefined
-              }
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <SeletorCategoria atual="amigurumi" />
+
         <Campo label="NOME" obrigatorio erro={form.erros.nome} style={{ marginBottom: 18 }}>
           {(p) => (
             <input
@@ -123,38 +115,87 @@ export function ModalReceita() {
                 setNome(e.target.value)
                 form.aoMudar('nome')
               }}
-              placeholder="Capivara da Lú"
+              placeholder="Capivara da Ada"
             />
           )}
         </Campo>
-        <Lbl style={{ marginBottom: 7 }}>PDF (OPCIONAL)</Lbl>
-        <label
-          style={{
-            display: 'block',
-            border: '2px dashed var(--field-border)',
-            borderRadius: 12,
-            padding: 18,
-            textAlign: 'center',
-            fontSize: 12,
-            color: pdf ? 'var(--accent)' : 'var(--faint)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            marginBottom: 18,
-          }}
-        >
-          {pdf ? `📄 ${pdf.name}` : '📄 Anexar PDF'}
-          <input
-            type="file"
-            accept="application/pdf"
-            style={{ display: 'none' }}
-            onChange={(e) => setPdf(e.target.files?.[0] ?? null)}
-          />
-        </label>
-        <Lbl style={{ marginBottom: 7 }}>OBSERVAÇÕES (OPCIONAL)</Lbl>
+
+        <div className="lbl" style={{ marginBottom: 7 }}>
+          COMO A RECEITA VEM
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+          {(['pdf', 'video'] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              className="seg"
+              aria-pressed={fonte === f}
+              onClick={() => setFonte(f)}
+              style={
+                fonte === f
+                  ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }
+                  : undefined
+              }
+            >
+              {f === 'pdf' ? 'PDF' : 'Vídeo'}
+            </button>
+          ))}
+        </div>
+
+        {fonte === 'pdf' ? (
+          <label
+            style={{
+              display: 'block',
+              border: '2px dashed var(--field-border)',
+              borderRadius: 12,
+              padding: 18,
+              textAlign: 'center',
+              fontSize: 12,
+              color: pdf ? 'var(--accent)' : 'var(--faint)',
+              fontWeight: 700,
+              cursor: 'pointer',
+              marginBottom: 18,
+            }}
+          >
+            {pdf ? `📄 ${pdf.name}` : '📄 Anexar PDF'}
+            <input
+              type="file"
+              accept="application/pdf"
+              style={{ display: 'none' }}
+              onChange={(e) => setPdf(e.target.files?.[0] ?? null)}
+            />
+          </label>
+        ) : (
+          <Campo label="LINK DO VÍDEO" erro={form.erros.video} style={{ marginBottom: 18 }}>
+            {(p) => (
+              <input
+                {...p}
+                className="field"
+                type="url"
+                value={video}
+                onChange={(e) => {
+                  setVideo(e.target.value)
+                  form.aoMudar('video')
+                }}
+                placeholder="https://youtube.com/watch?v=…"
+              />
+            )}
+          </Campo>
+        )}
+
+        <div className="lbl" style={{ marginBottom: 7 }}>
+          CAPA
+        </div>
+        <div style={{ marginBottom: 18 }}>
+          <CampoCapa blob={capa} aoEscolher={setCapa} />
+        </div>
+
+        <Lbl style={{ marginBottom: 7 }}>OBSERVAÇÕES</Lbl>
         <textarea
           className="field"
           style={{ minHeight: 52, marginBottom: 24, resize: 'vertical' }}
           value={obs}
+          aria-label="Observações"
           onChange={(e) => setObs(e.target.value)}
           placeholder="Ex.: usar fio 4mm, olhos de segurança 9mm…"
         />

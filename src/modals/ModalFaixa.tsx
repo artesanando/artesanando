@@ -4,6 +4,7 @@ import { useStore } from '../state/store'
 import { useAuth } from '../state/auth'
 import { Lbl } from '../components/ui/bits'
 import { ModalBox, ModalHeader } from './shared'
+import { SeletorCategoria } from './SeletorCategoria'
 import { criarReceita } from '../features/biblioteca/api'
 
 export function ModalFaixa() {
@@ -40,10 +41,8 @@ export function ModalFaixa() {
 
   return (
     <ModalBox maxWidth={560}>
-      <ModalHeader
-        title="Padrão das faixas de tricô"
-        sub="Cada faixa repete a mesma sequência de cores · toque numa célula para trocar a cor"
-      />
+      <ModalHeader title="Adicionar à biblioteca" />
+      <SeletorCategoria atual="faixa" />
       <Lbl style={{ marginBottom: 7 }}>NOME</Lbl>
       <input
         className="field"

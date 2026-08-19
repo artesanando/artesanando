@@ -18,6 +18,8 @@ export interface NovaReceita {
   specs: [string, string][]
   conteudo: ReceitaConteudo
   pdf_path?: string | null
+  video_url?: string | null
+  capa_path?: string | null
   origem: 'manual' | 'criador'
   criado_por: string
 }

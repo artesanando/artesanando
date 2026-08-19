@@ -62,3 +62,10 @@ export const IconPdf = () => (
     <path d="M14 3v5h5" />
   </svg>
 )
+
+export const IconVideo = () => (
+  <svg {...base} width={13} height={13}>
+    <rect x="3" y="6" width="12" height="12" rx="2" />
+    <path d="m15 11 6-3v8l-6-3z" />
+  </svg>
+)

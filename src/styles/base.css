@@ -565,6 +565,27 @@ textarea.field::placeholder {
   }
 }
 
+/* card tracejado de "+ Adicionar" no fim das grades */
+.card-adicionar {
+  border: 2px dashed var(--field-border);
+  border-radius: 14px;
+  background: none;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--faint);
+  cursor: pointer;
+  min-height: 150px;
+  transition: border-color var(--dur-rapida) var(--ease-suave);
+}
+.card-adicionar:hover {
+  border-color: var(--primary);
+  color: var(--accent);
+}
+
 /* Enquadramento de foto: a imagem inteira embaixo, moldura arrastável em cima */
 .palco-recorte {
   position: relative;

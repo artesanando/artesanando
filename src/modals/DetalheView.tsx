@@ -11,6 +11,8 @@ export interface DetalheProps {
   resumo: string | null
   specs: [string, string][]
   conteudo: ReceitaConteudo
+  /** url assinada da foto de capa, quando houver */
+  capa?: string | null
   onClose: () => void
   footerExtra?: ReactNode
 }
@@ -22,6 +24,7 @@ export function DetalheView({
   resumo,
   specs,
   conteudo,
+  capa,
   onClose,
   footerExtra,
 }: DetalheProps) {
@@ -310,6 +313,13 @@ export function DetalheView({
           ×
         </button>
       </div>
+      {capa && (
+        <img
+          src={capa}
+          alt=""
+          style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', display: 'block' }}
+        />
+      )}
       <div style={{ padding: '22px 26px' }}>
         {resumo && (
           <div

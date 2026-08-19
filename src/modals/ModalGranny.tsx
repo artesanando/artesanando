@@ -5,6 +5,7 @@ import { useAuth } from '../state/auth'
 import { PALETTE } from '../lib/paleta'
 import { Lbl } from '../components/ui/bits'
 import { ModalBox, ModalHeader } from './shared'
+import { SeletorCategoria } from './SeletorCategoria'
 import { criarReceita } from '../features/biblioteca/api'
 
 export function ModalGranny() {
@@ -59,10 +60,8 @@ export function ModalGranny() {
 
   return (
     <ModalBox maxWidth={580}>
-      <ModalHeader
-        title="Padrão de granny square"
-        sub="Vai para a biblioteca e pode ser usado em qualquer manta"
-      />
+      <ModalHeader title="Adicionar à biblioteca" />
+      <SeletorCategoria atual="granny" />
       <Lbl style={{ marginBottom: 7 }}>NOME</Lbl>
       <input
         className="field"

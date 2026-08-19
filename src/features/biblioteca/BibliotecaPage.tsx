@@ -6,10 +6,11 @@ import type { ReceitaCategoria } from '../../types/database'
 import { abrirPdf, fetchReceitas, filtraReceitas } from './api'
 import { CAT_CARD } from './meta'
 import { DetalheView } from '../../modals/DetalheView'
-import { IconPdf } from '../../components/ui/icons'
+import { IconPdf, IconVideo } from '../../components/ui/icons'
 import { MenuKebab } from '../../components/ui/controles'
 import { useAcoesArquivo } from '../../components/ui/useAcoesItem'
 import { separaArquivados } from '../../lib/arquivo'
+import { urlsDasCapas } from '../../lib/capa'
 
 const CHIPS: [ReceitaCategoria | 'todos', string][] = [
   ['todos', 'Todos'],
@@ -20,7 +21,7 @@ const CHIPS: [ReceitaCategoria | 'todos', string][] = [
 ]
 
 export function BibliotecaPage() {
-  const { isAdmin, open, openGranny, openFaixa } = useStore()
+  const { isAdmin, open, openGranny, openFaixa, openLayout } = useStore()
   const [busca, setBusca] = useState('')
   const [cat, setCat] = useState<ReceitaCategoria | 'todos'>('todos')
   const [verArquivadas, setVerArquivadas] = useState(false)
@@ -35,6 +36,23 @@ export function BibliotecaPage() {
   const { ativos, arquivados } = separaArquivados(receitas ?? [])
   const filtradas = filtraReceitas(verArquivadas ? arquivados : ativos, busca, cat)
   const aberta = (receitas ?? []).find((r) => r.id === params.get('receita'))
+
+  /* Um botão só: a categoria é que troca o editor. Se já há um filtro de
+     categoria ligado, ele começa por ela — e o seletor dentro do modal deixa
+     mudar de ideia sem fechar nada. */
+  const abrirCriador = () => {
+    if (cat === 'granny') return openGranny(null)
+    if (cat === 'faixa') return openFaixa(null)
+    if (cat === 'manta') return openLayout(null)
+    open('receita')
+  }
+
+  const comCapa = filtradas.filter((r) => r.capa_path).map((r) => r.capa_path!)
+  const { data: capas } = useQuery({
+    queryKey: ['capas-receitas', comCapa.join(',')],
+    queryFn: () => urlsDasCapas(comCapa),
+    enabled: comCapa.length > 0,
+  })
 
   const abrir = (id: string) => setParams({ receita: id })
   const fechar = () => setParams({})
@@ -53,29 +71,9 @@ export function BibliotecaPage() {
           Biblioteca
         </div>
         {isAdmin && (
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              className="pill ghost"
-              style={{ whiteSpace: 'nowrap' }}
-              onClick={() => openGranny(null)}
-            >
-              + Granny
-            </button>
-            <button
-              className="pill ghost"
-              style={{ whiteSpace: 'nowrap' }}
-              onClick={() => openFaixa(null)}
-            >
-              + Faixa
-            </button>
-            <button
-              className="pill"
-              style={{ whiteSpace: 'nowrap' }}
-              onClick={() => open('receita')}
-            >
-              + Receita
-            </button>
-          </div>
+          <button className="pill" style={{ whiteSpace: 'nowrap' }} onClick={abrirCriador}>
+            + Adicionar
+          </button>
         )}
       </div>
       <div style={{ display: 'flex', gap: 10, marginBottom: 22, alignItems: 'center' }}>
@@ -122,10 +120,13 @@ export function BibliotecaPage() {
       )}
       <div
         className="pgrid"
-        style={{ '--cols': 'repeat(4,1fr)', '--gap': '16px' } as React.CSSProperties}
+        style={
+          { '--cols': 'repeat(auto-fill, minmax(190px, 1fr))', '--gap': '16px' } as React.CSSProperties
+        }
       >
         {filtradas.map((r) => {
           const c = CAT_CARD[r.categoria]
+          const capa = r.capa_path ? capas?.get(r.capa_path) : null
           return (
             <div
               key={r.id}
@@ -138,7 +139,15 @@ export function BibliotecaPage() {
                 flexDirection: 'column',
               }}
             >
-              <div style={{ height: 5, background: c.accent }} />
+              {capa ? (
+                <img
+                  src={capa}
+                  alt=""
+                  style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', display: 'block' }}
+                />
+              ) : (
+                <div style={{ height: 5, background: c.accent }} />
+              )}
               <div
                 style={{
                   padding: '16px 16px 14px',
@@ -180,7 +189,7 @@ export function BibliotecaPage() {
                     borderTop: '1px solid var(--divider)',
                   }}
                 >
-                  {r.pdf_path ? (
+                  {r.pdf_path || r.video_url ? (
                     <span
                       style={{
                         display: 'inline-flex',
@@ -192,8 +201,8 @@ export function BibliotecaPage() {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      <IconPdf />
-                      PDF
+                      {r.pdf_path ? <IconPdf /> : <IconVideo />}
+                      {r.pdf_path ? 'PDF' : 'Vídeo'}
                     </span>
                   ) : (
                     <span />
@@ -238,28 +247,18 @@ export function BibliotecaPage() {
           </div>
         )}
         {isAdmin && (
-          <div
-            onClick={() => open('receita')}
-            style={{
-              border: '2px dashed var(--field-border)',
-              borderRadius: 14,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-              color: 'var(--faint)',
-              cursor: 'pointer',
-              minHeight: 150,
-            }}
+          <button
+            className="card-adicionar"
+            aria-label="Adicionar à biblioteca"
+            onClick={abrirCriador}
           >
-            <div style={{ fontSize: 22 }}>+</div>
-            <div style={{ fontSize: 12, fontWeight: 700, textAlign: 'center' }}>
+            <span aria-hidden style={{ fontSize: 22 }}>
+              +
+            </span>
+            <span aria-hidden style={{ fontSize: 12, fontWeight: 700 }}>
               Adicionar
-              <br />
-              receita ou padrão
-            </div>
-          </div>
+            </span>
+          </button>
         )}
       </div>
       {aberta && (
@@ -272,11 +271,21 @@ export function BibliotecaPage() {
             specs={aberta.specs}
             conteudo={aberta.conteudo}
             onClose={fechar}
+            capa={aberta.capa_path ? capas?.get(aberta.capa_path) : null}
             footerExtra={
               aberta.pdf_path ? (
                 <button className="pill" onClick={() => abrirPdf(aberta.pdf_path!)}>
                   Abrir PDF
                 </button>
+              ) : aberta.video_url ? (
+                <a
+                  className="pill"
+                  href={aberta.video_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Abrir vídeo
+                </a>
               ) : undefined
             }
           />

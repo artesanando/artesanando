@@ -8,6 +8,7 @@ import { useGradeInterativa, type ModoGrade } from '../components/ui/useGradeInt
 import { gradePadrao, redimensionaCelulas } from '../lib/grade'
 import { MODELS } from '../lib/paleta'
 import { ModalBox, ModalHeader } from './shared'
+import { SeletorCategoria } from './SeletorCategoria'
 import { criarReceita } from '../features/biblioteca/api'
 import type { ModeloNovo } from '../features/projetos/api'
 
@@ -179,7 +180,8 @@ export function ModalLayout() {
 
   return (
     <ModalBox maxWidth={680}>
-      <ModalHeader title="Esquema de manta" />
+      <ModalHeader title="Adicionar à biblioteca" />
+      <SeletorCategoria atual="manta" />
 
       <Lbl style={{ marginBottom: 7 }}>NOME</Lbl>
       <input
