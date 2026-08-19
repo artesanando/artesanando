@@ -138,17 +138,33 @@ describe('projetos (M3)', () => {
     __login()
     renderAt('/projetos/p3')
     expect((await screen.findAllByText('Amigurumi Polvo Rosa')).length).toBeGreaterThan(0)
-    expect(await screen.findByText(/#1–2 · Grace Hopper/)).toBeInTheDocument()
+    // o que já foi entregue aparece separado do que ainda está em produção
+    expect(await screen.findByText(/#1 · Grace Hopper/)).toBeInTheDocument()
+    expect(await screen.findByText(/#2–3 · Grace Hopper/)).toBeInTheDocument()
   })
 
   it('unidade de amigurumi pode ser reatribuída ou removida', async () => {
     __login()
     renderAt('/projetos/p3')
-    await userEvent.click(
-      await screen.findByRole('button', { name: /Ações das unidades de Grace Hopper/ }),
-    )
+    const menus = await screen.findAllByRole('button', {
+      name: /Ações das unidades de Grace Hopper/,
+    })
+    await userEvent.click(menus[0])
     expect(screen.getByRole('menuitem', { name: 'Reatribuir' })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: 'Remover' })).toBeInTheDocument()
+  })
+
+  it('concluir amigurumi abre o contador de quantas ficaram prontas', async () => {
+    __login()
+    renderAt('/projetos/p3')
+    await userEvent.click(await screen.findByRole('button', { name: 'Concluir ✓' }))
+    const contador = screen.getByRole('spinbutton', {
+      name: /Quantas unidades de Grace Hopper ficaram prontas/,
+    })
+    // começa nas 2 pendentes e dá para baixar para 1
+    expect(contador).toHaveAttribute('aria-valuenow', '2')
+    await userEvent.click(screen.getByRole('button', { name: 'Diminuir' }))
+    expect(contador).toHaveAttribute('aria-valuenow', '1')
   })
 
   it('faixa feita fica somente-leitura para quem não pode reabrir', async () => {

@@ -295,16 +295,19 @@ export interface GrupoUnidades {
   ids: string[]
 }
 
-/** Agrupa unidades em faixas consecutivas por responsável (ex.: "#1–3 · Ana") */
+/* Agrupa unidades em faixas consecutivas por responsável (ex.: "#1–3 · Ana").
+   O status também quebra o grupo: depois de concluir 2 de 5, o que sobra tem
+   que aparecer como duas faixas — senão "#1–5" continuava marcado como em
+   produção e escondia o que já foi entregue. */
 export function gruposUnidades(unidades: Unidade[]): GrupoUnidades[] {
   const sorted = [...unidades].sort((a, b) => a.numero - b.numero)
   const grupos: GrupoUnidades[] = []
   for (const u of sorted) {
     const nome = u.responsavel?.nome ?? '—'
+    const concluida = u.status === 'concluida'
     const last = grupos[grupos.length - 1]
-    if (last && last.nome === nome && u.numero === last.fim + 1) {
+    if (last && last.nome === nome && last.concluido === concluida && u.numero === last.fim + 1) {
       last.fim = u.numero
-      last.concluido = last.concluido && u.status === 'concluida'
       last.ids.push(u.id)
     } else {
       grupos.push({

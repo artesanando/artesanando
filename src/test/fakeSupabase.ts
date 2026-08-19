@@ -255,6 +255,14 @@ const UNIDADES_FAKE = [
     status: 'em_producao',
     responsavel: { nome: 'Grace Hopper' },
   },
+  {
+    id: 'un3',
+    projeto_id: 'p3',
+    numero: 3,
+    responsavel_id: 'u4',
+    status: 'em_producao',
+    responsavel: { nome: 'Grace Hopper' },
+  },
 ]
 
 const COMENTARIOS_FAKE = [

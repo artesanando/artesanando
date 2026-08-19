@@ -150,10 +150,10 @@ describe('gruposUnidades', () => {
     expect(grupos[1]).toMatchObject({ ini: 3, fim: 3, nome: 'Bia' })
     expect(grupos[2]).toMatchObject({ ini: 4, fim: 4, nome: 'Ana', concluido: false })
   })
-  it('grupo com uma unidade em produção não fica concluído', () => {
+  it('separa o que já foi concluído do que ainda está em produção', () => {
     const grupos = gruposUnidades([und(1, 'Ana', 'concluida'), und(2, 'Ana', 'em_producao')])
-    expect(grupos).toHaveLength(1)
-    expect(grupos[0].concluido).toBe(false)
-    expect(grupos[0].ids).toEqual(['u1', 'u2'])
+    expect(grupos).toHaveLength(2)
+    expect(grupos[0]).toMatchObject({ ini: 1, fim: 1, concluido: true, ids: ['u1'] })
+    expect(grupos[1]).toMatchObject({ ini: 2, fim: 2, concluido: false, ids: ['u2'] })
   })
 })

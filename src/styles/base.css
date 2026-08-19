@@ -565,6 +565,17 @@ textarea.field::placeholder {
   }
 }
 
+/* faixa "#1–5 · Ana" das unidades de amigurumi */
+.linha-grupo-und {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  font-size: 12.5px;
+  flex-wrap: wrap;
+}
+
 /* cartão de amigurumi na lista de projetos — 4 colunas no desktop,
    empilha no celular */
 .cartao-amig {

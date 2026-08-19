@@ -33,6 +33,10 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
   const [quantas, setQuantas] = useState(1)
   const [reatribuindo, setReatribuindo] = useState<string | null>(null)
   const [novoResp, setNovoResp] = useState('')
+  /* Quase nunca a integrante termina o lote inteiro de uma vez — concluir passa
+     por um contador de quantas ficaram prontas, da menor numeração para a maior. */
+  const [concluindo, setConcluindo] = useState<string | null>(null)
+  const [quantasProntas, setQuantasProntas] = useState(1)
 
   const { data: unidades } = useQuery({
     queryKey: ['unidades', projeto.id],
@@ -115,10 +119,14 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
         autor_id: profile!.id,
         tipo: 'unidade',
         projeto_id: projeto.id,
-        payload: { texto: `concluiu ${ids.length} unidade(s)` },
+        payload: {
+          texto: ids.length === 1 ? 'concluiu 1 unidade' : `concluiu ${ids.length} unidades`,
+        },
       })
     },
     onSuccess: () => {
+      setConcluindo(null)
+      setQuantasProntas(1)
       invalidar()
       toast('Unidades concluídas ✓')
     },
@@ -167,71 +175,115 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
                 Nenhuma unidade ainda — adicione a primeira.
               </div>
             )}
-            {grupos.map((g, i) => (
-              <div
-                key={`${g.ini}-${g.nome}`}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '12px 16px',
-                  borderTop: i > 0 ? '1px solid var(--border)' : undefined,
-                  fontSize: 12.5,
-                }}
-              >
-                <b>
-                  {g.ini === g.fim ? `#${g.ini}` : `#${g.ini}–${g.fim}`} · {g.nome}
-                </b>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  {!g.concluido && can('progresso') && (
-                    <span
-                      onClick={() => concluir.mutate(g.ids)}
+            {grupos.map((g, i) => {
+              const chave = g.ids.join(',')
+              const rotulo = g.ini === g.fim ? `#${g.ini}` : `#${g.ini}–${g.fim}`
+              return (
+                <div key={chave} style={{ borderTop: i > 0 ? '1px solid var(--border)' : undefined }}>
+                  <div className="linha-grupo-und">
+                    <b>
+                      {rotulo} · {g.nome}
+                    </b>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {!g.concluido && can('progresso') && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConcluindo(concluindo === chave ? null : chave)
+                            setQuantasProntas(g.ids.length)
+                          }}
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 800,
+                            color: 'var(--green-dark)',
+                            cursor: 'pointer',
+                            border: 'none',
+                            background: 'none',
+                            fontFamily: 'inherit',
+                            padding: 0,
+                          }}
+                        >
+                          Concluir ✓
+                        </button>
+                      )}
+                      <span
+                        className="tag"
+                        style={{
+                          border: `1px solid ${g.concluido ? 'var(--chip-green-border)' : 'var(--chip-rose-border)'}`,
+                          color: g.concluido ? 'var(--green-dark)' : 'var(--accent)',
+                        }}
+                      >
+                        {g.concluido ? 'CONCLUÍDO' : 'EM PRODUÇÃO'}
+                      </span>
+                      {can('progresso') && (
+                        <MenuKebab
+                          ariaLabel={`Ações das unidades de ${g.nome}`}
+                          acoes={[
+                            { label: 'Reatribuir', onSelect: () => setReatribuindo(chave) },
+                            ...(g.concluido
+                              ? [{ label: 'Reabrir', onSelect: () => reabrir.mutate(g.ids) }]
+                              : []),
+                            {
+                              label: 'Remover',
+                              perigo: true,
+                              onSelect: async () => {
+                                const ok = await confirmar({
+                                  titulo:
+                                    g.ids.length === 1
+                                      ? `Remover a unidade ${rotulo} de ${g.nome}?`
+                                      : `Remover ${g.ids.length} unidades de ${g.nome}?`,
+                                  okLabel: 'Remover',
+                                  perigo: true,
+                                })
+                                if (ok) remover.mutate(g.ids)
+                              },
+                            },
+                          ]}
+                        />
+                      )}
+                    </span>
+                  </div>
+
+                  {concluindo === chave && (
+                    <div
                       style={{
-                        fontSize: 11,
-                        fontWeight: 800,
-                        color: 'var(--green-dark)',
-                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '0 16px 12px',
+                        flexWrap: 'wrap',
+                        fontSize: 12.5,
                       }}
                     >
-                      Concluir ✓
-                    </span>
+                      <span style={{ fontWeight: 700 }}>Quantas ficaram prontas?</span>
+                      <div style={{ width: 110 }}>
+                        <Stepper
+                          value={Math.min(quantasProntas, g.ids.length)}
+                          onChange={setQuantasProntas}
+                          min={1}
+                          max={g.ids.length}
+                          ariaLabel={`Quantas unidades de ${g.nome} ficaram prontas`}
+                        />
+                      </div>
+                      <button
+                        className="pill"
+                        disabled={concluir.isPending}
+                        onClick={() =>
+                          concluir.mutate(
+                            g.ids.slice(0, Math.min(quantasProntas, g.ids.length)),
+                          )
+                        }
+                      >
+                        Concluir
+                      </button>
+                      <button className="pill ghost" onClick={() => setConcluindo(null)}>
+                        Cancelar
+                      </button>
+                    </div>
                   )}
-                  <span
-                    className="tag"
-                    style={{
-                      border: `1px solid ${g.concluido ? 'var(--chip-green-border)' : 'var(--chip-rose-border)'}`,
-                      color: g.concluido ? 'var(--green-dark)' : 'var(--accent)',
-                    }}
-                  >
-                    {g.concluido ? 'CONCLUÍDO' : 'EM PRODUÇÃO'}
-                  </span>
-                  {can('progresso') && (
-                    <MenuKebab
-                      ariaLabel={`Ações das unidades de ${g.nome}`}
-                      acoes={[
-                        { label: 'Reatribuir', onSelect: () => setReatribuindo(g.ids.join(',')) },
-                        ...(g.concluido
-                          ? [{ label: 'Reabrir', onSelect: () => reabrir.mutate(g.ids) }]
-                          : []),
-                        {
-                          label: 'Remover',
-                          perigo: true,
-                          onSelect: async () => {
-                            const ok = await confirmar({
-                              titulo: `Remover ${g.ids.length} unidade(s) de ${g.nome}?`,
-                              descricao: 'Some do projeto e da contagem de entregas. Não tem volta.',
-                              okLabel: 'Remover',
-                              perigo: true,
-                            })
-                            if (ok) remover.mutate(g.ids)
-                          },
-                        },
-                      ]}
-                    />
-                  )}
-                </span>
-              </div>
-            ))}
+                </div>
+              )
+            })}
           </div>
           {reatribuindo && (
             <div
@@ -260,7 +312,7 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
               <button
                 className="pill"
                 disabled={!novoResp || reatribuir.isPending}
-                onClick={() => reatribuir.mutate(reatribuindo.split(','))}
+                onClick={() => reatribuir.mutate(reatribuindo!.split(','))}
               >
                 Passar
               </button>
