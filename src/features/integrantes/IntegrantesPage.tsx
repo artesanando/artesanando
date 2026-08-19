@@ -43,8 +43,8 @@ export function IntegrantesPage() {
 
   return (
     <div
-      className="pgrid"
-      style={{ padding: '30px 40px', '--cols': '1.1fr 1fr', '--gap': '40px' } as React.CSSProperties}
+      className="pagina pgrid"
+      style={{ '--cols': '1.1fr 1fr', '--gap': '40px' } as React.CSSProperties}
     >
       <div>
         <div

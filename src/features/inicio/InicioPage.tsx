@@ -23,7 +23,7 @@ import {
   saudacao,
 } from './api'
 
-export function DashboardPage() {
+export function InicioPage() {
   const { isAdmin, open } = useStore()
   const { profile } = useAuth()
   const navigate = useNavigate()
@@ -70,7 +70,7 @@ export function DashboardPage() {
   const emProducao = (projetos ?? []).filter((p) => p.status === 'ativo')
 
   return (
-    <div style={{ padding: '30px 40px' }}>
+    <div className="pagina">
       <div
         style={{
           display: 'flex',

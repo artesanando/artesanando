@@ -143,7 +143,7 @@ export function EstoquePage() {
   }
 
   return (
-    <div style={{ padding: '30px 40px' }}>
+    <div className="pagina">
       <div
         style={{
           display: 'flex',

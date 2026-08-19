@@ -61,7 +61,7 @@ export function PresencaPage() {
   const presentesSel = selecionado ? presentesDe(presencas ?? [], selecionado.id) : 0
 
   return (
-    <div style={{ padding: '30px 40px' }}>
+    <div className="pagina">
       <div
         style={{
           display: 'flex',

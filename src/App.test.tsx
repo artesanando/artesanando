@@ -31,7 +31,7 @@ describe('auth', () => {
     expect(await screen.findByRole('button', { name: 'Entrar' })).toBeInTheDocument()
   })
 
-  it('entra pelo login e mostra o dashboard', async () => {
+  it('entra pelo login e mostra a pagina inicial', async () => {
     renderAt('/login')
     await userEvent.type(screen.getByLabelText('Usuário ou email'), 'candida.prof')
     await userEvent.type(screen.getByLabelText('Senha'), '12345678')
@@ -56,7 +56,7 @@ describe('auth', () => {
   })
 })
 
-describe('dashboard (M5)', () => {
+describe('inicio (M5)', () => {
   it('deriva projetos em produção e atividade recente do banco', async () => {
     __login()
     renderAt('/')
@@ -67,7 +67,7 @@ describe('dashboard (M5)', () => {
 })
 
 describe('navegação', () => {
-  it('abre o modal de novo projeto pelo dashboard', async () => {
+  it('abre o modal de novo projeto pela pagina inicial', async () => {
     __login()
     renderAt('/')
     await userEvent.click(await screen.findByRole('button', { name: '+ Novo projeto' }))

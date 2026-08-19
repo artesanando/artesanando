@@ -29,7 +29,7 @@ const loan = (item_id: string, quantidade: number): EmprestimoAtivo => ({
   item: null,
 })
 
-describe('kpis do dashboard', () => {
+describe('kpis da pagina inicial', () => {
   it('novelos em estoque descontam os emprestados; agulhas não contam', () => {
     const itens = [item('n1', 'novelos', 20), item('n2', 'novelos', 10), item('a1', 'agulhas', 8)]
     const loans = [loan('n1', 2), loan('a1', 3)]

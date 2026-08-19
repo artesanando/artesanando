@@ -65,7 +65,7 @@ export function PerfilPage() {
   }
 
   return (
-    <form onSubmit={salvar} style={{ padding: '30px 44px', maxWidth: 760 }}>
+    <form onSubmit={salvar} className="pagina" style={{ maxWidth: 760 }}>
       <div className="crumb" onClick={() => navigate('/')} style={{ marginBottom: 10 }}>
         ‹ Voltar
       </div>

@@ -29,8 +29,8 @@ export function ConfigPage() {
 
   return (
     <div
-      className="pgrid"
-      style={{ padding: '30px 40px', '--cols': '180px 1fr', '--gap': '34px' } as React.CSSProperties}
+      className="pagina pgrid"
+      style={{ '--cols': '180px 1fr', '--gap': '34px' } as React.CSSProperties}
     >
       <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div className="h" style={{ fontWeight: 500, fontSize: 26, marginBottom: 12 }}>

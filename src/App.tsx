@@ -10,7 +10,7 @@ import { AppShell } from './components/layout/AppShell'
 import { LoginPage } from './features/auth/LoginPage'
 import { EsqueciPage } from './features/auth/EsqueciPage'
 import { NovaSenhaPage } from './features/auth/NovaSenhaPage'
-import { DashboardPage } from './features/dashboard/DashboardPage'
+import { InicioPage } from './features/inicio/InicioPage'
 import { ProjetosPage } from './features/projetos/ProjetosPage'
 import { ProjetoDetalhePage } from './features/projetos/ProjetoDetalhePage'
 import { IntegrantesPage } from './features/integrantes/IntegrantesPage'
@@ -102,7 +102,7 @@ function AppRoutes() {
               </RequireAuth>
             }
           >
-            <Route path="/" element={<DashboardPage />} />
+            <Route path="/" element={<InicioPage />} />
             <Route path="/projetos" element={<ProjetosPage />} />
             <Route path="/projetos/:id" element={<ProjetoDetalhePage />} />
             <Route path="/integrantes" element={<IntegrantesPage />} />

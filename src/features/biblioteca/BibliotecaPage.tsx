@@ -34,7 +34,7 @@ export function BibliotecaPage() {
   const fechar = () => setParams({})
 
   return (
-    <div style={{ padding: '30px 40px' }}>
+    <div className="pagina">
       <div
         style={{
           display: 'flex',

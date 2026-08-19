@@ -85,7 +85,7 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
   const grupos = gruposUnidades(unidades ?? [])
 
   return (
-    <div style={{ padding: '26px 40px 34px' }}>
+    <div className="pagina">
       <div className="crumb" onClick={() => navigate('/projetos')} style={{ marginBottom: 8 }}>
         ‹ Projetos / <span style={{ color: 'var(--ink)' }}>Amigurumi {projeto.nome}</span>
       </div>

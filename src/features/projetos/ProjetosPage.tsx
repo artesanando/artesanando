@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
 import { Progress } from '../../components/ui/bits'
+import { useLabelSemestre } from '../../lib/semestre'
 import {
   fetchProgressoGeral,
   fetchProjetos,
@@ -18,6 +19,7 @@ export function ProjetosPage() {
   const { isAdmin, open } = useStore()
   const navigate = useNavigate()
   const [aba, setAba] = useState<Aba>('todos')
+  const semestre = useLabelSemestre()
 
   const { data: projetos, isLoading, isError } = useQuery({
     queryKey: ['projetos'],
@@ -53,7 +55,7 @@ export function ProjetosPage() {
   const mostraAmigs = aba !== 'mantas'
 
   return (
-    <div style={{ padding: '30px 40px' }}>
+    <div className="pagina">
       <div
         style={{
           display: 'flex',
@@ -79,7 +81,7 @@ export function ProjetosPage() {
                 gap: 8,
               }}
             >
-              2026.2
+              {semestre}
             </div>
           </div>
           <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
