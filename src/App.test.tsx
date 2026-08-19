@@ -114,8 +114,17 @@ describe('projetos (M3)', () => {
   it('admin reabre faixa feita', async () => {
     __login()
     renderAt('/projetos/p2')
-    expect(await screen.findByText('EDITANDO')).toBeInTheDocument()
+    expect(await screen.findByText('FEITA')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reabrir' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Embaralhar ordem' })).toBeEnabled()
+  })
+
+  it('faixa a fazer pode ser pega por quem tem permissão de progresso', async () => {
+    __login()
+    renderAt('/projetos/p2')
+    // F2 está como "a fazer" no fake
+    await userEvent.click(await screen.findByRole('button', { name: /Faixa 2, a fazer/ }))
+    expect(screen.getByRole('button', { name: 'Pegar faixa' })).toBeInTheDocument()
   })
 
   it('o mapa mostra a etapa de cada square', async () => {
