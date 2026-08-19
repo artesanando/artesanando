@@ -230,6 +230,29 @@ describe('integrantes (M4)', () => {
   })
 })
 
+describe('perfil', () => {
+  it('mostra o email da conta, que antes não aparecia em lugar nenhum', async () => {
+    __login()
+    renderAt('/perfil')
+    expect(await screen.findByText('candida@example.com')).toBeInTheDocument()
+  })
+
+  it('oferece adicionar foto quando ainda não há nenhuma', async () => {
+    __login()
+    renderAt('/perfil')
+    expect(await screen.findByRole('button', { name: 'Adicionar foto' })).toBeInTheDocument()
+  })
+
+  it('nome vazio mostra o erro embaixo do campo', async () => {
+    __login()
+    renderAt('/perfil')
+    const nome = await screen.findByLabelText(/NOME COMPLETO/)
+    await userEvent.clear(nome)
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }))
+    expect(await screen.findByText('O nome não pode ficar vazio.')).toBeInTheDocument()
+  })
+})
+
 describe('biblioteca (M2)', () => {
   it('lista receitas do banco', async () => {
     __login()

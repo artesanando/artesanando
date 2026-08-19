@@ -61,7 +61,7 @@ export interface Faixa {
   responsavel_id: string | null
   status: FaixaStatus
   cores: string[]
-  responsavel?: { nome: string; avatar_color: string } | null
+  responsavel?: { nome: string; avatar_color: string; avatar_url: string | null } | null
 }
 
 export interface Unidade {
@@ -79,7 +79,7 @@ export interface Comentario {
   autor_id: string
   texto: string
   created_at: string
-  autor?: { nome: string; avatar_color: string } | null
+  autor?: { nome: string; avatar_color: string; avatar_url: string | null } | null
 }
 
 export interface Atividade {
@@ -157,7 +157,7 @@ export async function fetchSquares(projetoId: string): Promise<Square[]> {
 export async function fetchFaixas(projetoId: string): Promise<Faixa[]> {
   const { data, error } = await supabase
     .from('faixas')
-    .select('*, responsavel:profiles!responsavel_id(nome, avatar_color)')
+    .select('*, responsavel:profiles!responsavel_id(nome, avatar_color, avatar_url)')
     .eq('projeto_id', projetoId)
     .order('ordem')
   if (error) throw error
@@ -177,7 +177,7 @@ export async function fetchUnidades(projetoId: string): Promise<Unidade[]> {
 export async function fetchComentarios(projetoId: string): Promise<Comentario[]> {
   const { data, error } = await supabase
     .from('comentarios')
-    .select('*, autor:profiles!autor_id(nome, avatar_color)')
+    .select('*, autor:profiles!autor_id(nome, avatar_color, avatar_url)')
     .eq('projeto_id', projetoId)
     .order('created_at')
   if (error) throw error

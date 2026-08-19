@@ -33,15 +33,15 @@ export async function fetchPresencas(): Promise<Presenca[]> {
 }
 
 export async function fetchIntegrantesAtivas(): Promise<
-  Pick<Profile, 'id' | 'nome' | 'avatar_color'>[]
+  Pick<Profile, 'id' | 'nome' | 'avatar_color' | 'avatar_url' | 'user_id'>[]
 > {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, nome, avatar_color')
+    .select('id, nome, avatar_color, avatar_url, user_id')
     .eq('ativo', true)
     .order('nome')
   if (error) throw error
-  return (data ?? []) as Pick<Profile, 'id' | 'nome' | 'avatar_color'>[]
+  return (data ?? []) as Pick<Profile, 'id' | 'nome' | 'avatar_color' | 'avatar_url' | 'user_id'>[]
 }
 
 /** Chamada clicável: upsert na PK (encontro, integrante) */

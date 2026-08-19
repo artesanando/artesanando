@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../state/auth'
-import { Avatar } from '../ui/bits'
+import { AvatarPerfil } from '../ui/AvatarPerfil'
 import { Dica, MenuKebab } from '../ui/controles'
 import { PAPEL_LABEL } from '../../types/database'
-import { ini } from '../../lib/format'
 import {
   IconBib,
   IconDash,
@@ -95,15 +94,13 @@ export function Sidebar({
       </div>
 
       <div className="sidebar-user">
-        <Avatar
-          color={profile?.avatar_color ?? 'var(--fill)'}
-          src={profile?.avatar_url}
-          alt=""
+        <AvatarPerfil
+          nome={profile?.nome ?? '?'}
+          avatarColor={profile?.avatar_color ?? 'var(--fill)'}
+          avatarUrl={profile?.avatar_url}
           size={32}
           fontSize={12}
-        >
-          {profile ? ini(profile.nome) : '?'}
-        </Avatar>
+        />
         {!encolhido && (
           <div style={{ lineHeight: 1.25, flex: 1, minWidth: 0 }}>
             <div

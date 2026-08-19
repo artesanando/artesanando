@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../state/auth'
-import { Avatar } from '../../components/ui/bits'
+import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
 import { useToast } from '../../components/ui/Toast'
-import { ini, tempoRelativo } from '../../lib/format'
+import { tempoRelativo } from '../../lib/format'
 import { comentar, fetchAtividades, fetchComentarios } from './api'
 
 export function Comentarios({ projetoId }: { projetoId: string }) {
@@ -33,9 +33,13 @@ export function Comentarios({ projetoId }: { projetoId: string }) {
       </div>
       {(comentarios ?? []).map((c) => (
         <div key={c.id} style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-          <Avatar color={c.autor?.avatar_color ?? 'var(--fill)'} size={26} fontSize={10.5}>
-            {ini(c.autor?.nome ?? '?')}
-          </Avatar>
+          <AvatarPerfil
+            nome={c.autor?.nome ?? '?'}
+            avatarColor={c.autor?.avatar_color ?? 'var(--fill)'}
+            avatarUrl={c.autor?.avatar_url}
+            size={26}
+            fontSize={10.5}
+          />
           <div
             className="card"
             style={{

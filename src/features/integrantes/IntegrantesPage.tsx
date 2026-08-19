@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
-import { Avatar, Lbl, Progress } from '../../components/ui/bits'
-import { ini } from '../../lib/format'
+import { Lbl, Progress } from '../../components/ui/bits'
+import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
 import { hojeIso } from '../../lib/format'
 import { fetchEmprestimosAtivos } from '../estoque/api'
 import { fetchEncontros, fetchPresencas, frequenciaDe } from '../presenca/api'
@@ -111,9 +111,13 @@ export function IntegrantesPage() {
                     : { borderBottom: '1px solid var(--border)' }),
                 }}
               >
-                <Avatar color={p.avatar_color} size={32} fontSize={12}>
-                  {ini(p.nome)}
-                </Avatar>
+                <AvatarPerfil
+                  nome={p.nome}
+                  avatarColor={p.avatar_color}
+                  avatarUrl={p.avatar_url}
+                  size={32}
+                  fontSize={12}
+                />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 800, fontSize: 14 }}>{p.nome}</div>
                   <div
@@ -143,9 +147,13 @@ export function IntegrantesPage() {
       {sel && (
         <div className="card" style={{ borderRadius: 16, padding: '24px 26px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
-            <Avatar color={sel.avatar_color} size={52} fontSize={18}>
-              {ini(sel.nome)}
-            </Avatar>
+            <AvatarPerfil
+              nome={sel.nome}
+              avatarColor={sel.avatar_color}
+              avatarUrl={sel.avatar_url}
+              size={52}
+              fontSize={18}
+            />
             <div>
               <div className="h" style={{ fontSize: 19 }}>
                 {sel.nome}
