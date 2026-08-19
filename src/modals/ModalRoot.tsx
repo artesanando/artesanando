@@ -7,9 +7,9 @@ import {
   ModalEmprestimo,
   ModalEncontro,
   ModalIntegrante,
-  ModalMaterial,
   ModalReceita,
 } from './forms'
+import { ModalMaterial, ModalMovimentoEstoque } from './ModalEstoque'
 import { ModalGranny } from './ModalGranny'
 import { ModalFaixa } from './ModalFaixa'
 import { ModalLayout } from './ModalLayout'
@@ -34,6 +34,7 @@ export function ModalRoot() {
     projeto: <ModalProjeto />,
     financeiro: <ModalFin />,
     material: <ModalMaterial />,
+    'movimento-estoque': <ModalMovimentoEstoque />,
     receita: <ModalReceita />,
     emprestimo: <ModalEmprestimo />,
     devolucao: <ModalDevolucao />,

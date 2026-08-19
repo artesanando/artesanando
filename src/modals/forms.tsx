@@ -1,14 +1,13 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Lbl, Stepper } from '../components/ui/bits'
-import { ColorPicker, DatePicker, Select, TimePicker } from '../components/ui/controles'
+import { DatePicker, Select, TimePicker } from '../components/ui/controles'
 import { ModalBox, ModalHeader } from './shared'
 import { supabase } from '../lib/supabase'
 import { useStore } from '../state/store'
-import type { EstoqueCategoria, Papel, Preferencia, ReceitaCategoria } from '../types/database'
+import type { Papel, Preferencia, ReceitaCategoria } from '../types/database'
 import {
   criarEmprestimo,
-  criarItemEstoque,
   fetchEmprestimosAtivos,
   fetchEstoque,
   saldoEmprestimo,
@@ -35,123 +34,6 @@ function ErroBox({ children }: { children: ReactNode }) {
     >
       {children}
     </div>
-  )
-}
-
-const CATS: [EstoqueCategoria, string][] = [
-  ['novelos', 'Novelo'],
-  ['agulhas', 'Agulha'],
-  ['olhos', 'Olhos'],
-  ['enchimento', 'Enchimento'],
-  ['feira', 'Feira'],
-]
-
-export function ModalMaterial() {
-  const { close } = useStore()
-  const qc = useQueryClient()
-  const [categoria, setCategoria] = useState<EstoqueCategoria>('novelos')
-  const [nome, setNome] = useState('')
-  const [detalhe, setDetalhe] = useState('')
-  const [cor, setCor] = useState('#DFA2AC')
-  const [quantidade, setQuantidade] = useState(12)
-  const [minimo, setMinimo] = useState(2)
-  const [erro, setErro] = useState<string | null>(null)
-
-  const salvar = useMutation({
-    mutationFn: () =>
-      criarItemEstoque({
-        categoria,
-        nome: nome.trim(),
-        detalhe: detalhe.trim() || null,
-        cor_hex: categoria === 'novelos' ? cor : null,
-        quantidade,
-        minimo,
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['estoque'] })
-      close()
-    },
-    onError: () => setErro('Não foi possível salvar o material.'),
-  })
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    setErro(null)
-    if (!nome.trim()) {
-      setErro('Informe a marca/linha do material.')
-      return
-    }
-    salvar.mutate()
-  }
-
-  return (
-    <ModalBox maxWidth={560}>
-      <ModalHeader title="Novo material" sub="Adicionar ao estoque coletivo" />
-      <form onSubmit={submit}>
-        <Lbl style={{ marginBottom: 7 }}>TIPO</Lbl>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-          {CATS.map(([k, label]) => (
-            <div
-              key={k}
-              className="seg"
-              onClick={() => setCategoria(k)}
-              style={
-                categoria === k
-                  ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }
-                  : undefined
-              }
-            >
-              {label}
-            </div>
-          ))}
-        </div>
-        <div className="grid2" style={{ marginBottom: 18 }}>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>MARCA / LINHA</Lbl>
-            <input
-              className="field"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Círculo Balloon"
-            />
-          </div>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>DETALHE</Lbl>
-            <input
-              className="field"
-              value={detalhe}
-              onChange={(e) => setDetalhe(e.target.value)}
-              placeholder={categoria === 'novelos' ? 'rosé' : '3,0 mm'}
-            />
-          </div>
-          {categoria === 'novelos' && (
-            <div>
-              <Lbl style={{ marginBottom: 7 }}>COR</Lbl>
-              <ColorPicker value={cor} onChange={setCor} ariaLabel="Cor do novelo" />
-            </div>
-          )}
-        </div>
-        <div className="grid2" style={{ marginBottom: 24 }}>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>QUANTIDADE</Lbl>
-            <Stepper value={quantidade} onChange={setQuantidade} min={1} max={999} />
-          </div>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>MÍNIMO (ALERTA ⚠)</Lbl>
-            <Stepper value={minimo} onChange={setMinimo} min={0} max={99} />
-          </div>
-        </div>
-        {erro && <ErroBox>{erro}</ErroBox>}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button type="button" className="pill ghost" onClick={close}>
-            Cancelar
-          </button>
-          <button type="submit" className="pill" disabled={salvar.isPending}>
-            {salvar.isPending ? 'Salvando…' : 'Adicionar ao estoque'}
-          </button>
-        </div>
-      </form>
-    </ModalBox>
   )
 }
 

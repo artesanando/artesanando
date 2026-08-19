@@ -1,5 +1,12 @@
 import { supabase } from '../../lib/supabase'
-import type { Devolucao, Emprestimo, EstoqueCategoria, EstoqueItem } from '../../types/database'
+import type {
+  Devolucao,
+  Emprestimo,
+  EstoqueCategoria,
+  EstoqueItem,
+  EstoqueMovimento,
+  MotivoMovimento,
+} from '../../types/database'
 
 export interface EmprestimoAtivo extends Emprestimo {
   devolucoes: Devolucao[]
@@ -35,6 +42,37 @@ export async function criarItemEstoque(item: {
 }) {
   const { error } = await supabase.from('estoque_itens').insert(item)
   if (error) throw error
+}
+
+export async function atualizarItemEstoque(
+  id: string,
+  patch: Partial<Pick<EstoqueItem, 'nome' | 'detalhe' | 'cor_hex' | 'minimo' | 'categoria'>>,
+) {
+  const { error } = await supabase.from('estoque_itens').update(patch).eq('id', id)
+  if (error) throw error
+}
+
+/* A quantidade nunca é escrita direto: passa por um movimento, e o trigger no
+   banco aplica o delta. É o que deixa auditar sumiço de novelo. */
+export async function lancarMovimento(m: {
+  item_id: string
+  delta: number
+  motivo: MotivoMovimento
+  obs: string | null
+  criado_por: string
+}) {
+  const { error } = await supabase.from('estoque_movimentos').insert(m)
+  if (error) throw error
+}
+
+export async function fetchMovimentosDoItem(itemId: string): Promise<EstoqueMovimento[]> {
+  const { data, error } = await supabase
+    .from('estoque_movimentos')
+    .select('*, autor:profiles!criado_por(nome)')
+    .eq('item_id', itemId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as unknown as EstoqueMovimento[]
 }
 
 export async function criarEmprestimo(e: {

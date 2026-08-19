@@ -159,7 +159,24 @@ describe('estoque (M2)', () => {
     renderAt('/estoque')
     expect(await screen.findByText('Círculo Balloon')).toBeInTheDocument()
     expect(await screen.findByText('Ada Lovelace')).toBeInTheDocument()
-    expect(screen.getByText('Registrar devolução →')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Registrar devolução →' })).toBeInTheDocument()
+  })
+
+  it('a aba de agulhas não fala em ganchos', async () => {
+    __login()
+    renderAt('/estoque')
+    await userEvent.click(await screen.findByRole('button', { name: 'Agulhas' }))
+    expect(screen.getByText(/agulhas em estoque/)).toBeInTheDocument()
+    expect(screen.queryByText(/ganchos/)).not.toBeInTheDocument()
+  })
+
+  it('cada material tem menu de ações com editar e movimentar', async () => {
+    __login()
+    renderAt('/estoque')
+    await userEvent.click(await screen.findByRole('button', { name: 'Ações de Círculo Balloon' }))
+    expect(screen.getByRole('menuitem', { name: 'Editar' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Movimentar estoque' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Arquivar' })).toBeInTheDocument()
   })
 })
 

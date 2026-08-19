@@ -2,6 +2,9 @@ import { useState, type CSSProperties } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
 import { useAuth } from '../../state/auth'
+import { MenuKebab } from '../../components/ui/controles'
+import { useAcoesArquivo } from '../../components/ui/useAcoesItem'
+import { separaArquivados } from '../../lib/arquivo'
 import type { EstoqueCategoria, EstoqueItem } from '../../types/database'
 import {
   disponivel,
@@ -28,36 +31,29 @@ const COLS: Record<EstoqueCategoria, [string, string, string, string]> = {
   feira: ['ITEM', 'DETALHE', 'DISP.', 'VENDIDOS'],
 }
 
+/* Unidade que aparece em "N ... em estoque". Agulha de tricô e gancho de crochê
+   são coisas diferentes, e o projeto só tem agulha — a categoria fala só delas. */
 const UNIT: Record<EstoqueCategoria, string> = {
   novelos: 'novelos',
-  agulhas: 'agulhas e ganchos',
+  agulhas: 'agulhas',
   olhos: 'olhos e itens de segurança',
-  enchimento: 'enchimento',
+  enchimento: 'itens de enchimento',
   feira: 'itens de feira',
 }
 
-const tabStyle = (on: boolean): CSSProperties =>
-  on
-    ? {
-        padding: '7px 15px',
-        borderRadius: 99,
-        background: 'var(--primary)',
-        color: '#fff',
-        fontWeight: 800,
-        fontSize: 12.5,
-        cursor: 'pointer',
-        whiteSpace: 'nowrap',
-      }
-    : {
-        padding: '7px 15px',
-        borderRadius: 99,
-        border: '1px solid var(--field-border)',
-        color: 'var(--ink-soft)',
-        fontWeight: 700,
-        fontSize: 12.5,
-        cursor: 'pointer',
-        whiteSpace: 'nowrap',
-      }
+const tabStyle = (on: boolean): CSSProperties => ({
+  padding: '7px 15px',
+  borderRadius: 99,
+  fontSize: 12.5,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+  fontFamily: 'inherit',
+  border: on ? '1px solid var(--primary)' : '1px solid var(--field-border)',
+  background: on ? 'var(--primary)' : 'transparent',
+  color: on ? '#fff' : 'var(--ink-soft)',
+  fontWeight: on ? 800 : 700,
+  transition: 'background var(--dur-rapida) var(--ease-suave)',
+})
 
 function fmtData(iso: string) {
   const [, m, d] = iso.split('-')
@@ -65,16 +61,25 @@ function fmtData(iso: string) {
 }
 
 export function EstoquePage() {
-  const { isAdmin, open, openDevolucao } = useStore()
+  const { isAdmin, openMaterial, openMovimentoEstoque, open, openDevolucao } = useStore()
   const { can } = useAuth()
+  const acoesArquivo = useAcoesArquivo()
   const [estoTab, setEstoTab] = useState<EstoqueCategoria>('novelos')
+  const [verArquivados, setVerArquivados] = useState(false)
 
-  const { data: itens, isLoading, isError } = useQuery({ queryKey: ['estoque'], queryFn: fetchEstoque })
+  const {
+    data: itens,
+    isLoading,
+    isError,
+  } = useQuery({ queryKey: ['estoque'], queryFn: fetchEstoque })
   const { data: loans } = useQuery({ queryKey: ['emprestimos'], queryFn: fetchEmprestimosAtivos })
 
   const emprestados = emprestadoPorItem(loans ?? [])
-  const rows = (itens ?? []).filter((i) => i.categoria === estoTab)
+  const { ativos, arquivados } = separaArquivados(itens ?? [])
+  const rows = (verArquivados ? arquivados : ativos).filter((i) => i.categoria === estoTab)
   const count = rows.reduce((s, i) => s + disponivel(i, emprestados.get(i.id) ?? 0), 0)
+
+  const podeMexer = can('devolucoes')
 
   const renderRow = (item: EstoqueItem) => {
     const emp = emprestados.get(item.id) ?? 0
@@ -82,17 +87,7 @@ export function EstoquePage() {
     const low = item.categoria !== 'feira' && estoqueBaixo(item, emp)
     const ultima = item.categoria === 'feira' ? item.vendidos : emp
     return (
-      <div
-        key={item.id}
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1.6fr 1.2fr .7fr .9fr',
-          padding: '13px 2px',
-          borderBottom: '1px solid var(--border)',
-          fontSize: 13,
-          alignItems: 'center',
-        }}
-      >
+      <div key={item.id} className="linha-estoque">
         <div style={{ fontWeight: 800 }}>{item.nome}</div>
         <div
           style={{
@@ -138,6 +133,32 @@ export function EstoquePage() {
             </span>
           )}
         </div>
+        <div style={{ textAlign: 'right' }}>
+          {podeMexer && (
+            <MenuKebab
+              ariaLabel={`Ações de ${item.nome}`}
+              acoes={[
+                { label: 'Editar', onSelect: () => openMaterial(item.id) },
+                {
+                  label: 'Movimentar estoque',
+                  onSelect: () => openMovimentoEstoque(item.id),
+                  dica: 'entrada, doação, ajuste, perda ou venda',
+                },
+                ...(isAdmin
+                  ? acoesArquivo({
+                      tabela: 'estoque_itens',
+                      id: item.id,
+                      nome: `o material "${item.nome}"`,
+                      rotulo: 'o material',
+                      motivoHistorico: 'Os empréstimos e as movimentações dele',
+                      arquivado: Boolean(item.arquivado_em),
+                      invalidar: ['estoque'],
+                    })
+                  : []),
+              ]}
+            />
+          )}
+        </div>
       </div>
     )
   }
@@ -150,6 +171,8 @@ export function EstoquePage() {
           alignItems: 'flex-end',
           justifyContent: 'space-between',
           marginBottom: 22,
+          gap: 14,
+          flexWrap: 'wrap',
         }}
       >
         <div>
@@ -160,14 +183,12 @@ export function EstoquePage() {
             Materiais e itens do projeto, organizados por tipo
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          {isAdmin && (
-            <button className="pill ghost" onClick={() => open('material')}>
-              + Material
-            </button>
-          )}
-          {can('devolucoes') && (
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {podeMexer && (
             <>
+              <button className="pill ghost" onClick={() => openMaterial(null)}>
+                + Material
+              </button>
               <button className="pill ghost" onClick={() => openDevolucao(null)}>
                 Devolução
               </button>
@@ -178,31 +199,48 @@ export function EstoquePage() {
           )}
         </div>
       </div>
+
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {ESTO_TABS.map(([k, label]) => (
-          <div key={k} onClick={() => setEstoTab(k)} style={tabStyle(k === estoTab)}>
+          <button key={k} onClick={() => setEstoTab(k)} style={tabStyle(k === estoTab)}>
             {label}
-          </div>
+          </button>
         ))}
       </div>
-      <div className="pgrid" style={{ '--cols': '1.5fr 1fr', '--gap': '40px' } as React.CSSProperties}>
+
+      <div className="pgrid" style={{ '--cols': '1.5fr 1fr', '--gap': '40px' } as CSSProperties}>
         <div>
-          <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12 }}>
-            <b style={{ color: 'var(--ink)' }}>{count}</b> {UNIT[estoTab]} em estoque
-          </div>
           <div
-            className="lbl"
             style={{
-              display: 'grid',
-              gridTemplateColumns: '1.6fr 1.2fr .7fr .9fr',
-              padding: '8px 2px',
-              borderBottom: '1px solid var(--border-strong)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              gap: 12,
+              marginBottom: 12,
             }}
           >
+            <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
+              <b style={{ color: 'var(--ink)' }}>{count}</b> {UNIT[estoTab]}{' '}
+              {verArquivados ? 'em itens arquivados' : 'em estoque'}
+            </div>
+            {arquivados.length > 0 && (
+              <button
+                className="crumb"
+                style={{ border: 'none', background: 'none', fontFamily: 'inherit' }}
+                onClick={() => setVerArquivados((v) => !v)}
+              >
+                {verArquivados ? '‹ Voltar aos ativos' : `Arquivados (${arquivados.length}) ›`}
+              </button>
+            )}
+          </div>
+
+          <div className="lbl linha-estoque cabecalho">
             {COLS[estoTab].map((c) => (
               <div key={c}>{c}</div>
             ))}
+            <div />
           </div>
+
           {isLoading && (
             <div style={{ padding: 18, fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>
           )}
@@ -218,15 +256,14 @@ export function EstoquePage() {
           )}
           {rows.map(renderRow)}
         </div>
+
         <div>
           <div className="h" style={{ fontSize: 16, marginBottom: 12 }}>
             Empréstimos ativos
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {(loans ?? []).length === 0 && (
-              <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-                Nenhum empréstimo em aberto.
-              </div>
+              <div style={{ fontSize: 13, color: 'var(--muted)' }}>Nenhum empréstimo em aberto.</div>
             )}
             {(loans ?? []).map((e) => (
               <div key={e.id} className="card" style={{ padding: '12px 14px' }}>
@@ -240,17 +277,21 @@ export function EstoquePage() {
                   {e.projeto_nome ? ` · ${e.projeto_nome}` : ''}
                 </div>
                 {can('devolucoes') && (
-                  <div
+                  <button
                     style={{
                       fontSize: 11.5,
                       fontWeight: 800,
                       color: 'var(--accent)',
                       cursor: 'pointer',
+                      border: 'none',
+                      background: 'none',
+                      padding: 0,
+                      fontFamily: 'inherit',
                     }}
                     onClick={() => openDevolucao(e.id)}
                   >
                     Registrar devolução →
-                  </div>
+                  </button>
                 )}
               </div>
             ))}
