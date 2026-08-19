@@ -2,6 +2,7 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Lbl, Stepper } from '../components/ui/bits'
 import { DatePicker, Select, TimePicker } from '../components/ui/controles'
+import { Campo, LegendaObrigatorio, useFormulario } from '../components/ui/Campo'
 import { ModalBox, ModalHeader } from './shared'
 import { supabase } from '../lib/supabase'
 import { useStore } from '../state/store'
@@ -14,7 +15,12 @@ import {
 } from '../features/estoque/api'
 import { criarReceita, uploadPdf } from '../features/biblioteca/api'
 import { fetchIntegrantesAtivas } from '../features/projetos/api'
-import { criarEncontro } from '../features/presenca/api'
+import {
+  atualizarEncontro,
+  criarEncontro,
+  fetchEncontros,
+  type Encontro,
+} from '../features/presenca/api'
 import { hojeIso } from '../lib/format'
 import { useAuth } from '../state/auth'
 
@@ -568,71 +574,112 @@ export function ModalIntegrante() {
 }
 
 export function ModalEncontro() {
+  const { encontroId } = useStore()
+  const { data: encontros } = useQuery({ queryKey: ['encontros'], queryFn: fetchEncontros })
+  const encontro = (encontros ?? []).find((e) => e.id === encontroId)
+
+  // criando: monta direto. editando: espera o encontro para o estado nascer cheio
+  if (encontroId && !encontro) return null
+  return <FormEncontro encontro={encontro} />
+}
+
+function FormEncontro({ encontro }: { encontro?: Encontro }) {
   const { close } = useStore()
   const qc = useQueryClient()
-  const [data, setData] = useState(hojeIso())
-  const [hora, setHora] = useState('14:00')
-  const [local, setLocal] = useState('')
-  const [pauta, setPauta] = useState('')
+  const form = useFormulario<'data'>()
+  const editando = Boolean(encontro)
+
+  const [data, setData] = useState(encontro?.data ?? hojeIso())
+  const [hora, setHora] = useState(encontro?.hora?.slice(0, 5) ?? '14:00')
+  const [local, setLocal] = useState(encontro?.local ?? '')
+  const [pauta, setPauta] = useState(encontro?.pauta ?? '')
   const [erro, setErro] = useState<string | null>(null)
 
   const salvar = useMutation({
-    mutationFn: () => criarEncontro({ data, hora, local: local.trim(), pauta: pauta.trim() }),
+    mutationFn: () => {
+      const campos = { data, hora, local: local.trim(), pauta: pauta.trim() }
+      return encontro ? atualizarEncontro(encontro.id, campos) : criarEncontro(campos)
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['encontros'] })
       close()
     },
-    onError: () => setErro('Não foi possível criar o encontro.'),
+    onError: () => setErro('Não foi possível salvar o encontro.'),
   })
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
     setErro(null)
-    if (!data) {
-      setErro('Escolha a data do encontro.')
-      return
-    }
+    if (!form.checar({ data: data ? undefined : 'Escolha a data do encontro.' })) return
     salvar.mutate()
   }
 
   return (
     <ModalBox maxWidth={520}>
-      <ModalHeader title="Novo encontro" sub="Abre a chamada e a pauta do dia" />
+      <ModalHeader
+        title={editando ? 'Editar encontro' : 'Novo encontro'}
+        sub={editando ? 'A chamada já feita continua valendo' : 'Abre a chamada e a pauta do dia'}
+      />
       <form onSubmit={submit}>
         <div className="grid2" style={{ marginBottom: 18 }}>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>DATA</Lbl>
-            <DatePicker value={data} onChange={setData} ariaLabel="Data do encontro" />
-          </div>
-          <div>
-            <Lbl style={{ marginBottom: 7 }}>HORÁRIO</Lbl>
-            <TimePicker value={hora} onChange={setHora} ariaLabel="Horário do encontro" />
-          </div>
+          <Campo label="DATA" obrigatorio erro={form.erros.data}>
+            {() => (
+              <DatePicker
+                value={data}
+                onChange={(d) => {
+                  setData(d)
+                  form.aoMudar('data')
+                }}
+                ariaLabel="Data do encontro"
+              />
+            )}
+          </Campo>
+          <Campo label="HORÁRIO">
+            {() => <TimePicker value={hora} onChange={setHora} ariaLabel="Horário do encontro" />}
+          </Campo>
         </div>
-        <Lbl style={{ marginBottom: 7 }}>SALA</Lbl>
-        <input
-          className="field"
-          style={{ marginBottom: 18 }}
-          value={local}
-          onChange={(e) => setLocal(e.target.value)}
-          placeholder="Sala 203"
-        />
-        <Lbl style={{ marginBottom: 7 }}>PAUTA</Lbl>
-        <textarea
-          className="field"
-          style={{ minHeight: 52, marginBottom: 24, resize: 'vertical' }}
-          value={pauta}
-          onChange={(e) => setPauta(e.target.value)}
-          placeholder="Montagem da Manta Primavera"
-        />
+        <Campo label="SALA (OPCIONAL)" style={{ marginBottom: 18 }}>
+          {(p) => (
+            <input
+              {...p}
+              className="field"
+              value={local}
+              onChange={(e) => setLocal(e.target.value)}
+              placeholder="Sala 203"
+            />
+          )}
+        </Campo>
+        <Campo label="PAUTA (OPCIONAL)" style={{ marginBottom: 24 }}>
+          {(p) => (
+            <textarea
+              {...p}
+              className="field"
+              style={{ minHeight: 52, resize: 'vertical' }}
+              value={pauta}
+              onChange={(e) => setPauta(e.target.value)}
+              placeholder="Montagem da Manta Primavera"
+            />
+          )}
+        </Campo>
         {erro && <ErroBox>{erro}</ErroBox>}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button type="button" className="pill ghost" onClick={close}>
-            Cancelar
-          </button>
-          <button type="submit" className="pill" disabled={salvar.isPending}>
-            {salvar.isPending ? 'Criando…' : 'Criar encontro'}
-          </button>
+        <div
+          style={{
+            display: 'flex',
+            gap: 10,
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
+          <LegendaObrigatorio />
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="button" className="pill ghost" onClick={close}>
+              Cancelar
+            </button>
+            <button type="submit" className="pill" disabled={salvar.isPending}>
+              {salvar.isPending ? 'Salvando…' : editando ? 'Salvar' : 'Criar encontro'}
+            </button>
+          </div>
         </div>
       </form>
     </ModalBox>

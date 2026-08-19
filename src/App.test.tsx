@@ -216,6 +216,37 @@ describe('presença (M4)', () => {
     expect(await screen.findByText('PRÓXIMO ENCONTRO')).toBeInTheDocument()
     expect(await screen.findByLabelText('Marcar presença de Cândida Nunes')).toBeInTheDocument()
   })
+
+  it('busca filtra os encontros anteriores', async () => {
+    __login()
+    renderAt('/presenca')
+    await screen.findByText('07 jul')
+    await userEvent.type(screen.getByLabelText('Buscar encontro'), 'sala 999')
+    expect(screen.getByText(/Nenhum encontro para "sala 999"/)).toBeInTheDocument()
+  })
+
+  it('dá para editar e arquivar um encontro', async () => {
+    __login()
+    renderAt('/presenca')
+    await userEvent.click(await screen.findByRole('button', { name: /Ações do encontro de 07 jul/ }))
+    expect(screen.getByRole('menuitem', { name: 'Editar encontro' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Arquivar' })).toBeInTheDocument()
+  })
+
+  it('quem só entrou na chamada aparece marcada como sem perfil', async () => {
+    __login()
+    renderAt('/presenca')
+    expect(await screen.findByText('Hedy Lamarr')).toBeInTheDocument()
+    expect(screen.getByText('SEM PERFIL')).toBeInTheDocument()
+  })
+
+  it('admin pode anotar alguém que ainda não tem perfil', async () => {
+    __login()
+    renderAt('/presenca')
+    expect(
+      await screen.findByRole('button', { name: '+ Alguém que ainda não tem perfil' }),
+    ).toBeInTheDocument()
+  })
 })
 
 describe('integrantes (M4)', () => {
