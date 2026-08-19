@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
+import { supabase } from '../../lib/supabase'
 import { Lbl, Progress } from '../../components/ui/bits'
 import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
 import { MenuKebab, Select } from '../../components/ui/controles'
@@ -31,6 +32,10 @@ export function IntegrantesPage() {
   const [busca, setBusca] = useState('')
   const [vinculando, setVinculando] = useState<string | null>(null)
   const [destino, setDestino] = useState('')
+  const [linkSenhaPara, setLinkSenhaPara] = useState<string | null>(null)
+  const [linkSenha, setLinkSenha] = useState<string | null>(null)
+  const [gerandoLink, setGerandoLink] = useState(false)
+  const [copiadoSenha, setCopiadoSenha] = useState(false)
   const hoje = hojeIso()
 
   const { data: integrantes, isLoading } = useQuery({
@@ -219,8 +224,8 @@ export function IntegrantesPage() {
             const sub = `${ent} entregas${emprestados > 0 ? ` · ${emprestados} itens em casa` : ''}`
             const freq = freqDe(p.id)
             return (
+              <div key={p.id}>
               <div
-                key={p.id}
                 onClick={() => navigate(`/integrantes/${p.id}`)}
                 style={{
                   display: 'flex',
@@ -281,6 +286,35 @@ export function IntegrantesPage() {
                     <MenuKebab
                       ariaLabel={`Ações de ${p.nome}`}
                       acoes={[
+                        ...(p.user_id
+                          ? [
+                              {
+                                label: 'Gerar link de nova senha',
+                                onSelect: async () => {
+                                  setLinkSenha(null)
+                                  setLinkSenhaPara(p.id)
+                                  setGerandoLink(true)
+                                  const { data, error } = await supabase.functions.invoke(
+                                    'reset-password-link',
+                                    {
+                                      body: {
+                                        profileId: p.id,
+                                        redirectTo: window.location.origin + '/redefinir-senha',
+                                      },
+                                    },
+                                  )
+                                  setGerandoLink(false)
+                                  const corpo = data as { error?: string; link?: string | null } | null
+                                  if (error || corpo?.error) {
+                                    toast(corpo?.error ?? 'Não foi possível gerar o link.', 'erro')
+                                    setLinkSenhaPara(null)
+                                    return
+                                  }
+                                  setLinkSenha(corpo?.link ?? null)
+                                },
+                              },
+                            ]
+                          : []),
                         {
                           label: 'Desativar',
                           perigo: true,
@@ -299,6 +333,55 @@ export function IntegrantesPage() {
                     />
                   </span>
                 )}
+              </div>
+              {linkSenhaPara === p.id && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ padding: '10px 8px 14px', borderBottom: '1px solid var(--border)' }}
+                >
+                  {gerandoLink && (
+                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>Gerando link…</div>
+                  )}
+                  {linkSenha && (
+                    <>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                        <input
+                          className="field"
+                          readOnly
+                          value={linkSenha}
+                          aria-label={`Link de nova senha de ${p.nome}`}
+                          onFocus={(e) => e.currentTarget.select()}
+                          style={{ flex: 1, minWidth: 180, fontSize: 12 }}
+                        />
+                        <button
+                          type="button"
+                          className="pill"
+                          onClick={async () => {
+                            await navigator.clipboard?.writeText(linkSenha)
+                            setCopiadoSenha(true)
+                            setTimeout(() => setCopiadoSenha(false), 2500)
+                          }}
+                        >
+                          {copiadoSenha ? 'Copiado ✓' : 'Copiar'}
+                        </button>
+                        <button
+                          type="button"
+                          className="pill ghost"
+                          onClick={() => {
+                            setLinkSenhaPara(null)
+                            setLinkSenha(null)
+                          }}
+                        >
+                          Fechar
+                        </button>
+                      </div>
+                      <div style={{ fontSize: 11.5, color: 'var(--gold-dark)' }}>
+                        Esse link vale como senha — mande só em conversa privada.
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
               </div>
             )
           })}

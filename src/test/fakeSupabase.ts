@@ -425,7 +425,6 @@ export const supabase = {
       return { error: null }
     },
     updateUser: async () => ({ data: {}, error: null }),
-    resetPasswordForEmail: async () => ({ data: {}, error: null }),
   },
   from: (table: string) => builder(table),
   rpc: async () => ({ data: 'candida@example.com', error: null }),

@@ -14,7 +14,6 @@ interface AuthCtx {
   can: (perm: Perm) => boolean
   login: (usuarioOuEmail: string, senha: string, manter: boolean) => Promise<void>
   logout: () => Promise<void>
-  resetPassword: (email: string) => Promise<void>
   updatePassword: (senha: string) => Promise<void>
   refreshProfile: () => Promise<void>
 }
@@ -100,13 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
-  const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/redefinir-senha`,
-    })
-    if (error) throw new Error('Não foi possível enviar o email. Tente novamente.')
-  }
-
   const updatePassword = async (senha: string) => {
     const { error } = await supabase.auth.updateUser({ password: senha })
     if (error) throw new Error(error.message)
@@ -128,7 +120,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         can: (perm) => isAdmin || Boolean(perms?.[perm]),
         login,
         logout,
-        resetPassword,
         updatePassword,
         refreshProfile,
       }}
