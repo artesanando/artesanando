@@ -13,6 +13,10 @@ export const PALETTE: [string, string][] = [
   ['#C4798A', 'Rosa'],
 ]
 
+/** Nome da cor na paleta de fios; cor livre não tem nome próprio */
+export const nomeDaCor = (hex: string) =>
+  PALETTE.find(([c]) => c.toLowerCase() === hex.toLowerCase())?.[1] ?? 'Cor'
+
 export interface ModelDef {
   nome: string
   border: string

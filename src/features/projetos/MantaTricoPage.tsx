@@ -7,7 +7,7 @@ import { ColorPicker } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
 import { ini } from '../../lib/format'
-import { PALETTE } from '../../lib/paleta'
+import { nomeDaCor, PALETTE } from '../../lib/paleta'
 import { Comentarios, Historico } from './Comentarios'
 import {
   adicionarFaixa,
@@ -19,9 +19,6 @@ import {
   type Faixa,
   type Projeto,
 } from './api'
-
-const nomeDaCor = (hex: string) =>
-  PALETTE.find(([c]) => c.toLowerCase() === hex.toLowerCase())?.[1] ?? 'Cor'
 
 /* Editor da faixa selecionada. O estado das cores é local e só vai para o banco
    no Salvar; status e responsável gravam na hora, porque são o que destrava o

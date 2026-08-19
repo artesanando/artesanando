@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
-import { FAIXA_SEQ_INICIAL, GRANNY_RINGS_INICIAL, PALETTE } from '../lib/paleta'
+import { FAIXA_SEQ_INICIAL, GRANNY_RINGS_INICIAL, nomeDaCor, PALETTE } from '../lib/paleta'
 import { useAuth } from './auth'
 
 /* Estado global de UI portado do protótipo (objeto S de js/app.js).
@@ -85,7 +85,7 @@ export interface Store extends StoreState {
   grannyDec: (i: number) => void
   grannyDel: (i: number) => void
   grannyAdd: () => void
-  grannySetColor: (c: string, name: string) => void
+  grannySetColor: (i: number, c: string) => void
   faixaCycle: (i: number) => void
   faixaAdd: () => void
   faixaDrop: () => void
@@ -145,10 +145,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const pick = PALETTE.find((p) => !used.includes(p[0])) || PALETTE[0]
       set({ grannyRings: [...s.grannyRings, { c: pick[0], name: pick[1], n: 2 }] })
     },
-    grannySetColor: (c, name) => {
-      const last = s.grannyRings.length - 1
-      set({ grannyRings: s.grannyRings.map((x, j) => (j === last ? { ...x, c, name } : x)) })
-    },
+    grannySetColor: (i, c) =>
+      set({
+        grannyRings: s.grannyRings.map((x, j) => (j === i ? { ...x, c, name: nomeDaCor(c) } : x)),
+      }),
     faixaCycle: (i) => {
       const pal = PALETTE.map((p) => p[0])
       const nx = pal[(pal.indexOf(s.faixaSeq[i]) + 1) % pal.length]
