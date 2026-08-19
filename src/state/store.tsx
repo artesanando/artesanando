@@ -13,6 +13,7 @@ export type ModalKind =
   | 'emprestimo'
   | 'devolucao'
   | 'movimento-estoque'
+  | 'ficha-projeto'
   | 'integrante'
   | 'encontro'
   | 'granny'
@@ -70,6 +71,7 @@ export interface Store extends StoreState {
   /** abre o formulário de material; sem id, é cadastro novo */
   openMaterial: (itemId: string | null) => void
   openMovimentoEstoque: (itemId: string) => void
+  openFichaProjeto: (projetoId: string) => void
   setFinKind: (k: 'entrada' | 'saida') => void
   openFin: (k: 'entrada' | 'saida') => void
   setProjCat: (c: 'manta' | 'amig') => void
@@ -112,6 +114,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     openDevolucao: (devolucaoId) => set({ modal: 'devolucao', devolucaoId }),
     openMaterial: (estoqueItemId) => set({ modal: 'material', estoqueItemId }),
     openMovimentoEstoque: (estoqueItemId) => set({ modal: 'movimento-estoque', estoqueItemId }),
+    openFichaProjeto: (projetoId) => set({ modal: 'ficha-projeto', projetoId }),
     setFinKind: (finKind) => set({ finKind }),
     openFin: (finKind) => set({ modal: 'financeiro', finKind }),
     setProjCat: (projCat) => set({ projCat }),

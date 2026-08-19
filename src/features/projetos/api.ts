@@ -553,6 +553,14 @@ export async function criarProjeto(novo: NovoProjeto): Promise<string> {
   return projetoId
 }
 
+export async function atualizarProjeto(
+  id: string,
+  patch: Partial<Pick<Projeto, 'nome' | 'destino' | 'emoji' | 'meta' | 'receita_id' | 'status'>>,
+) {
+  const { error } = await supabase.from('projetos').update(patch).eq('id', id)
+  if (error) throw error
+}
+
 /* ---------- Estrutura da manta (admin) ---------- */
 
 export async function redimensionarManta(projetoId: string, colunas: number, linhas: number) {

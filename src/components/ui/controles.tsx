@@ -466,6 +466,8 @@ export interface AcaoMenu {
 
 export function MenuKebab({ acoes, ariaLabel = 'Ações' }: { acoes: AcaoMenu[]; ariaLabel?: string }) {
   const g = useGatilho()
+  // sem permissão nenhuma a lista chega vazia — aí o botão não deve existir
+  if (acoes.length === 0) return null
   return (
     <>
       <button

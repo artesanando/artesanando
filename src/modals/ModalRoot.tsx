@@ -10,6 +10,7 @@ import {
   ModalReceita,
 } from './forms'
 import { ModalMaterial, ModalMovimentoEstoque } from './ModalEstoque'
+import { ModalFichaProjeto } from './ModalFichaProjeto'
 import { ModalGranny } from './ModalGranny'
 import { ModalFaixa } from './ModalFaixa'
 import { ModalLayout } from './ModalLayout'
@@ -32,6 +33,7 @@ export function ModalRoot() {
 
   const modals = {
     projeto: <ModalProjeto />,
+    'ficha-projeto': <ModalFichaProjeto />,
     financeiro: <ModalFin />,
     material: <ModalMaterial />,
     'movimento-estoque': <ModalMovimentoEstoque />,

@@ -90,6 +90,25 @@ describe('projetos (M3)', () => {
     expect(screen.getByText('Polvo Rosa')).toBeInTheDocument()
   })
 
+  it('cada projeto tem menu com editar, marcar entregue e arquivar', async () => {
+    __login()
+    renderAt('/projetos')
+    await userEvent.click(await screen.findByRole('button', { name: 'Ações de Manta Primavera' }))
+    expect(screen.getByRole('menuitem', { name: 'Editar ficha' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Marcar como entregue' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Arquivar' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Excluir' })).toBeInTheDocument()
+  })
+
+  it('integrante não vê as ações de estrutura do projeto', async () => {
+    __login(INTEGRANTE_PROFILE)
+    renderAt('/projetos')
+    await screen.findByText('Manta Primavera')
+    expect(
+      screen.queryByRole('button', { name: 'Ações de Manta Primavera' }),
+    ).not.toBeInTheDocument()
+  })
+
   it('cada tipo de projeto abre a própria tela', async () => {
     __login()
     renderAt('/projetos/p1')
