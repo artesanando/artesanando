@@ -59,6 +59,7 @@ scripts/       create-admin.mjs (cria a primeira usuária admin via service role
 ## Deploy
 
 Push na `main` → CI (lint, typecheck, testes, build) → deploy automático na Vercel
-(`vercel.json` cuida do rewrite de SPA). As variáveis `VITE_SUPABASE_URL` e
+(`vercel.json` cuida do rewrite de SPA) e, em paralelo, a integração do GitHub no
+Supabase aplica as migrations pendentes no banco. As variáveis `VITE_SUPABASE_URL` e
 `VITE_SUPABASE_ANON_KEY` precisam estar configuradas no projeto da Vercel; a service
 role do Supabase vive apenas nas Edge Functions e nos scripts de seed — nunca no front.
