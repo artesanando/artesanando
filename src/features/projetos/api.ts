@@ -450,6 +450,16 @@ export async function concluirUnidades(ids: string[]) {
   if (error) throw error
 }
 
+export async function editarComentario(id: string, texto: string) {
+  const { error } = await supabase.from('comentarios').update({ texto }).eq('id', id)
+  if (error) throw error
+}
+
+export async function apagarComentario(id: string) {
+  const { error } = await supabase.from('comentarios').delete().eq('id', id)
+  if (error) throw error
+}
+
 export async function comentar(projetoId: string, autorId: string, texto: string) {
   const { error } = await supabase
     .from('comentarios')

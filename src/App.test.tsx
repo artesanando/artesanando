@@ -74,6 +74,24 @@ describe('navegação', () => {
     expect(screen.getByText('Defina o tipo para configurar a produção')).toBeInTheDocument()
   })
 
+  it('a manta de crochê deixa de nascer pronta: dá para escolher tamanho e modelos', async () => {
+    __login()
+    renderAt('/')
+    await userEvent.click(await screen.findByRole('button', { name: '+ Novo projeto' }))
+    expect(screen.getByLabelText('Colunas')).toBeInTheDocument()
+    expect(screen.getByLabelText('Linhas')).toBeInTheDocument()
+    expect(screen.getByLabelText('Nome do modelo A')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Usar um esquema salvo' })).toBeInTheDocument()
+  })
+
+  it('nome vazio no projeto mostra o erro sob o campo', async () => {
+    __login()
+    renderAt('/')
+    await userEvent.click(await screen.findByRole('button', { name: '+ Novo projeto' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Criar projeto' }))
+    expect(await screen.findByText('Dê um nome ao projeto.')).toBeInTheDocument()
+  })
+
   it('rota desconhecida cai no 404', async () => {
     __login()
     renderAt('/nao-existe')
