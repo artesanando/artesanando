@@ -5,6 +5,7 @@ import { StoreProvider } from './state/store'
 import { supabaseConfigured } from './lib/supabase'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ToastProvider } from './components/ui/Toast'
+import { ConfirmProvider } from './components/ui/Confirm'
 import { AppShell } from './components/layout/AppShell'
 import { LoginPage } from './features/auth/LoginPage'
 import { EsqueciPage } from './features/auth/EsqueciPage'
@@ -77,7 +78,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <ToastProvider>
-        <AppRoutes />
+        <ConfirmProvider>
+          <AppRoutes />
+        </ConfirmProvider>
       </ToastProvider>
     </ErrorBoundary>
   )

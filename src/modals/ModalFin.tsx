@@ -2,7 +2,8 @@ import { useState, type CSSProperties, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../state/store'
 import { useAuth } from '../state/auth'
-import { CurrencyField, Lbl, Select } from '../components/ui/bits'
+import { CurrencyField, Lbl } from '../components/ui/bits'
+import { DatePicker, Select } from '../components/ui/controles'
 import { ModalBox, ModalHeader } from './shared'
 import { criarMovimentacao, fetchMovimentacoes, saldo } from '../features/financeiro/api'
 import { fmtCentavos, hojeIso } from '../lib/format'
@@ -134,12 +135,7 @@ export function ModalFin() {
           </div>
           <div>
             <Lbl style={{ marginBottom: 7 }}>DATA</Lbl>
-            <input
-              className="field"
-              type="date"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-            />
+            <DatePicker value={data} onChange={setData} ariaLabel="Data da movimentação" />
           </div>
         </div>
         {erro && (

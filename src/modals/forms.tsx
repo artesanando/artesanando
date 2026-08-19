@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Lbl, Select, Stepper } from '../components/ui/bits'
+import { Lbl, Stepper } from '../components/ui/bits'
+import { ColorPicker, DatePicker, Select, TimePicker } from '../components/ui/controles'
 import { ModalBox, ModalHeader } from './shared'
 import { supabase } from '../lib/supabase'
 import { useStore } from '../state/store'
@@ -115,41 +116,20 @@ export function ModalMaterial() {
             />
           </div>
           <div>
-            <Lbl style={{ marginBottom: 7 }}>{categoria === 'novelos' ? 'COR' : 'DETALHE'}</Lbl>
-            <div className="field" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {categoria === 'novelos' && (
-                <input
-                  type="color"
-                  value={cor}
-                  onChange={(e) => setCor(e.target.value)}
-                  aria-label="Cor do novelo"
-                  style={{
-                    width: 18,
-                    height: 18,
-                    border: 'none',
-                    padding: 0,
-                    background: 'none',
-                    cursor: 'pointer',
-                    flex: 'none',
-                  }}
-                />
-              )}
-              <input
-                value={detalhe}
-                onChange={(e) => setDetalhe(e.target.value)}
-                placeholder={categoria === 'novelos' ? 'rosé' : '3,0 mm'}
-                style={{
-                  border: 'none',
-                  outline: 'none',
-                  background: 'none',
-                  fontFamily: 'inherit',
-                  fontSize: 13,
-                  color: 'var(--ink)',
-                  width: '100%',
-                }}
-              />
-            </div>
+            <Lbl style={{ marginBottom: 7 }}>DETALHE</Lbl>
+            <input
+              className="field"
+              value={detalhe}
+              onChange={(e) => setDetalhe(e.target.value)}
+              placeholder={categoria === 'novelos' ? 'rosé' : '3,0 mm'}
+            />
           </div>
+          {categoria === 'novelos' && (
+            <div>
+              <Lbl style={{ marginBottom: 7 }}>COR</Lbl>
+              <ColorPicker value={cor} onChange={setCor} ariaLabel="Cor do novelo" />
+            </div>
+          )}
         </div>
         <div className="grid2" style={{ marginBottom: 24 }}>
           <div>
@@ -740,21 +720,11 @@ export function ModalEncontro() {
         <div className="grid2" style={{ marginBottom: 18 }}>
           <div>
             <Lbl style={{ marginBottom: 7 }}>DATA</Lbl>
-            <input
-              className="field"
-              type="date"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-            />
+            <DatePicker value={data} onChange={setData} ariaLabel="Data do encontro" />
           </div>
           <div>
             <Lbl style={{ marginBottom: 7 }}>HORÁRIO</Lbl>
-            <input
-              className="field"
-              type="time"
-              value={hora}
-              onChange={(e) => setHora(e.target.value)}
-            />
+            <TimePicker value={hora} onChange={setHora} ariaLabel="Horário do encontro" />
           </div>
         </div>
         <Lbl style={{ marginBottom: 7 }}>SALA</Lbl>

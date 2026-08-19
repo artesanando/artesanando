@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../state/auth'
-import { Select } from '../../components/ui/bits'
+import { Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { Comentarios } from './Comentarios'
 import {
