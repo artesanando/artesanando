@@ -70,13 +70,21 @@ export interface EstoqueItem {
   cor_hex: string | null
   quantidade: number
   vendidos: number
-  minimo: number
   custo_centavos: number | null
   capa_path: string | null
   arquivado_em: string | null
 }
 
-export type MotivoMovimento = 'compra' | 'doacao' | 'ajuste' | 'perda' | 'venda'
+/* O app só grava 'entrada' e 'saida'. Os cinco antigos continuam aqui porque o
+   histórico é imutável e as linhas já gravadas precisam seguir legíveis. */
+export type MotivoMovimento =
+  | 'entrada'
+  | 'saida'
+  | 'compra'
+  | 'doacao'
+  | 'ajuste'
+  | 'perda'
+  | 'venda'
 
 export interface EstoqueMovimento {
   id: string
@@ -91,6 +99,8 @@ export interface EstoqueMovimento {
 }
 
 export const MOTIVO_LABEL: Record<MotivoMovimento, string> = {
+  entrada: 'Entrada',
+  saida: 'Saída',
   compra: 'Compra',
   doacao: 'Doação',
   ajuste: 'Ajuste de contagem',

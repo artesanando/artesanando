@@ -10,7 +10,6 @@ import type { EstoqueCategoria, EstoqueItem } from '../../types/database'
 import {
   disponivel,
   emprestadoPorItem,
-  estoqueBaixo,
   fetchEmprestimosAtivos,
   fetchEstoque,
   saldoEmprestimo,
@@ -91,7 +90,6 @@ export function EstoquePage() {
   const renderRow = (item: EstoqueItem) => {
     const emp = emprestados.get(item.id) ?? 0
     const disp = disponivel(item, emp)
-    const low = item.categoria !== 'feira' && estoqueBaixo(item, emp)
     const ultima = item.categoria === 'feira' ? item.vendidos : emp
     const capa = item.capa_path ? capas?.get(item.capa_path) : null
     return (
@@ -108,13 +106,9 @@ export function EstoquePage() {
         <div>
           <span
             className="tag"
-            style={{
-              background: low ? 'var(--chip-warn)' : 'var(--chip-green)',
-              color: low ? 'var(--gold-dark)' : 'var(--green-dark)',
-            }}
+            style={{ background: 'var(--chip-green)', color: 'var(--green-dark)' }}
           >
             {disp}
-            {low ? ' ⚠' : ''}
           </span>
         </div>
         <div style={{ fontSize: 12 }}>
@@ -135,7 +129,6 @@ export function EstoquePage() {
                 {
                   label: 'Movimentar estoque',
                   onSelect: () => openMovimentoEstoque(item.id),
-                  dica: 'entrada, doação, ajuste, perda ou venda',
                 },
                 ...(isAdmin
                   ? acoesArquivo({

@@ -38,7 +38,7 @@ export async function criarItemEstoque(item: {
   detalhe: string | null
   cor_hex: string | null
   quantidade: number
-  minimo: number
+  capa_path?: string
 }) {
   const { error } = await supabase.from('estoque_itens').insert(item)
   if (error) throw error
@@ -46,7 +46,7 @@ export async function criarItemEstoque(item: {
 
 export async function atualizarItemEstoque(
   id: string,
-  patch: Partial<Pick<EstoqueItem, 'nome' | 'detalhe' | 'cor_hex' | 'minimo' | 'categoria'>>,
+  patch: Partial<Pick<EstoqueItem, 'nome' | 'detalhe' | 'cor_hex' | 'categoria' | 'capa_path'>>,
 ) {
   const { error } = await supabase.from('estoque_itens').update(patch).eq('id', id)
   if (error) throw error
@@ -105,8 +105,4 @@ export function emprestadoPorItem(loans: EmprestimoAtivo[]): Map<string, number>
 /** Disponível = total em posse − emprestado ativo */
 export function disponivel(item: EstoqueItem, emprestado: number): number {
   return Math.max(0, item.quantidade - emprestado)
-}
-
-export function estoqueBaixo(item: EstoqueItem, emprestado: number): boolean {
-  return disponivel(item, emprestado) <= item.minimo
 }

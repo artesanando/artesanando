@@ -11,7 +11,6 @@ const item = (id: string, categoria: EstoqueItem['categoria'], quantidade: numbe
   cor_hex: null,
   quantidade,
   vendidos: 0,
-  minimo: 0,
   custo_centavos: null,
   capa_path: null,
   arquivado_em: null,
