@@ -80,7 +80,7 @@ export function InicioPage() {
         }}
       >
         <div>
-          <div className="h" style={{ fontWeight: 500, fontSize: 28 }}>
+          <div className="h titulo-pagina">
             {saudacao(new Date().getHours())}, {primeiroNome(profile?.nome ?? '')}
           </div>
           <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>

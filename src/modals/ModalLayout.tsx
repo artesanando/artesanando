@@ -6,6 +6,7 @@ import { Lbl } from '../components/ui/bits'
 import { ColorPicker } from '../components/ui/controles'
 import { CampoMedida } from '../components/ui/CampoMedida'
 import { useGradeInterativa, type ModoGrade } from '../components/ui/useGradeInterativa'
+import { useZoomGrade } from '../components/ui/ZoomGrade'
 import { gradePadrao, redimensionaCelulas } from '../lib/grade'
 import { MODELS } from '../lib/paleta'
 import { ModalBox, ModalHeader } from './shared'
@@ -17,7 +18,6 @@ import type { ModeloNovo } from '../features/projetos/api'
 const LETRAS = 'ABCDEFGH'.split('')
 const MIN = 2
 const MAX = 20
-const CELULA = 26
 
 const MODELOS_INICIAIS: ModeloNovo[] = (['A', 'B', 'C'] as const).map((k) => ({
   letra: k,
@@ -62,6 +62,7 @@ export function ModalLayout() {
     gradePadrao(8, 6, MODELOS_INICIAIS.map((m) => m.letra)),
   )
   const [modo, setModo] = useState<ModoGrade>('pintar')
+  const zoom = useZoomGrade(26)
   const [pincel, setPincel] = useState('A')
   const [medida, setMedida] = useState<{ largura: number | null; altura: number | null }>({
     largura: null,
@@ -118,8 +119,8 @@ export function ModalLayout() {
     onPointerMove: (e: React.PointerEvent) => {
       const ini = arrastoTamanho.current
       if (!ini) return
-      const dc = eixo === 'y' ? 0 : Math.round((e.clientX - ini.x) / (CELULA + 3))
-      const dl = eixo === 'x' ? 0 : Math.round((e.clientY - ini.y) / (CELULA + 3))
+      const dc = eixo === 'y' ? 0 : Math.round((e.clientX - ini.x) / (zoom.celula + 3))
+      const dl = eixo === 'x' ? 0 : Math.round((e.clientY - ini.y) / (zoom.celula + 3))
       redimensionar(ini.cols + dc, ini.rows + dl)
     },
     onPointerUp: () => {
@@ -210,6 +211,7 @@ export function ModalLayout() {
             {label}
           </button>
         ))}
+        <span style={{ marginLeft: 'auto' }}>{zoom.controles}</span>
       </div>
       <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>
         {MODOS.find(([m]) => m === modo)?.[2]}
@@ -264,13 +266,13 @@ export function ModalLayout() {
         className="pgrid"
         style={{ '--cols': 'auto 1fr', '--gap': '22px', marginBottom: 18 } as CSSProperties}
       >
-        <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
+        <div className="rolagem-grade">
           <div style={{ display: 'inline-block', position: 'relative', paddingRight: 14, paddingBottom: 14 }}>
             <div
               {...propsGrade}
               style={{
                 display: 'grid',
-                gridTemplateColumns: `repeat(${colunas}, ${CELULA}px)`,
+                gridTemplateColumns: `repeat(${colunas}, ${zoom.celula}px)`,
                 gap: 3,
                 background: 'var(--sand)',
                 padding: 5,
@@ -291,8 +293,8 @@ export function ModalLayout() {
                     aria-pressed={arrastado === pos}
                     onClick={() => aoClicar(pos)}
                     style={{
-                      width: CELULA,
-                      height: CELULA,
+                      width: zoom.celula,
+                      height: zoom.celula,
                       padding: 0,
                       border: 'none',
                       borderRadius: 2,
@@ -309,7 +311,13 @@ export function ModalLayout() {
                       transition: 'transform var(--dur-media) var(--ease-mola)',
                     }}
                   >
-                    <span style={{ width: 12, height: 12, background: m?.cor_miolo ?? '#eee' }} />
+                    <span
+                      style={{
+                        width: Math.round(zoom.celula * 0.46),
+                        height: Math.round(zoom.celula * 0.46),
+                        background: m?.cor_miolo ?? '#eee',
+                      }}
+                    />
                   </button>
                 )
               })}

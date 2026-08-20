@@ -135,7 +135,7 @@ export function FinanceiroPage() {
         }}
       >
         <div>
-          <div className="h" style={{ fontWeight: 500, fontSize: 28 }}>
+          <div className="h titulo-pagina">
             Financeiro
           </div>
           <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>

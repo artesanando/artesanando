@@ -49,7 +49,7 @@ export function ConfigPage() {
   return (
     <div className="pagina pgrid" style={{ '--cols': '180px 1fr', '--gap': '34px' } as CSSProperties}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <div className="h" style={{ fontWeight: 500, fontSize: 26, marginBottom: 12 }}>
+        <div className="h titulo-pagina" style={{ marginBottom: 12 }}>
           Ajustes
         </div>
         <button style={item(secao === 'permissoes')} onClick={() => setSecao('permissoes')}>

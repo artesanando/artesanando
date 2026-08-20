@@ -509,7 +509,7 @@ export function MantaTricoPage({ projeto }: { projeto: Projeto }) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div className="h" style={{ fontWeight: 500, fontSize: 26 }}>
+          <div className="h titulo-pagina">
             {projeto.nome}
           </div>
           <span

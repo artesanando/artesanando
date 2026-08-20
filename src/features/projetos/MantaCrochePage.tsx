@@ -6,6 +6,7 @@ import { Lbl, Progress } from '../../components/ui/bits'
 import { Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { useGradeInterativa, type ModoGrade } from '../../components/ui/useGradeInterativa'
+import { useZoomGrade } from '../../components/ui/ZoomGrade'
 import { coordenada } from '../../lib/grade'
 import { fmtMedida, tamanhoManta } from '../../lib/medida'
 import { Comentarios, Historico } from './Comentarios'
@@ -74,6 +75,7 @@ function Mapa({
   const [modo, setModo] = useState<ModoGrade>('marcar')
   const [pincel, setPincel] = useState<string>(modelos[0]?.id ?? '')
   const [respId, setRespId] = useState('')
+  const zoom = useZoomGrade()
 
   const { data: integrantes } = useQuery({
     queryKey: ['integrantes-min'],
@@ -153,6 +155,7 @@ function Mapa({
             {label}
           </button>
         ))}
+        <span style={{ marginLeft: 'auto' }}>{zoom.controles}</span>
       </div>
       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
         {podeEditar
@@ -206,12 +209,12 @@ function Mapa({
         className="pgrid"
         style={{ '--cols': 'auto 1fr', '--gap': '26px', marginBottom: 26 } as CSSProperties}
       >
-        <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
+        <div className="rolagem-grade">
           <div
             {...propsGrade}
             style={{
               display: 'grid',
-              gridTemplateColumns: `repeat(${colunas}, var(--celula, 30px))`,
+              gridTemplateColumns: `repeat(${colunas}, ${zoom.celula}px)`,
               gap: 3,
               touchAction: 'none',
               width: 'max-content',
@@ -239,8 +242,8 @@ function Mapa({
                   disabled={!podeEditar}
                   onClick={() => aoClicar(pos)}
                   style={{
-                    width: 'var(--celula)',
-                    height: 'var(--celula)',
+                    width: zoom.celula,
+                    height: zoom.celula,
                     padding: 0,
                     border: 'none',
                     background: m?.cor_borda ?? 'var(--sand)',
@@ -465,7 +468,7 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
         ‹ Projetos / <span style={{ color: 'var(--ink)' }}>{projeto.nome}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-        <div className="h" style={{ fontWeight: 500, fontSize: 26 }}>
+        <div className="h titulo-pagina">
           {projeto.nome}
         </div>
         <span

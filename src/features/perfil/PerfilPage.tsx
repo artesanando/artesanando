@@ -121,7 +121,7 @@ export function PerfilPage() {
         <div className="crumb" onClick={() => navigate('/')} style={{ marginBottom: 10 }}>
           ‹ Voltar
         </div>
-        <div className="h" style={{ fontWeight: 500, fontSize: 28, marginBottom: 22 }}>
+        <div className="h titulo-pagina" style={{ marginBottom: 22 }}>
           Meu perfil
         </div>
 

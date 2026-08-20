@@ -142,7 +142,7 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
         ‹ Projetos / <span style={{ color: 'var(--ink)' }}>Amigurumi {projeto.nome}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-        <div className="h" style={{ fontWeight: 500, fontSize: 26 }}>
+        <div className="h titulo-pagina">
           Amigurumi {projeto.nome}
         </div>
         <span

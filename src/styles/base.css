@@ -301,6 +301,13 @@ textarea.field::placeholder {
   animation: fade var(--dur-media) var(--ease-entrada);
 }
 
+/* título de cada página — encolhe junto com a largura da tela */
+.titulo-pagina {
+  font-weight: 500;
+  font-size: clamp(20px, 6vw, 28px);
+  line-height: 1.2;
+}
+
 /* respiro padrão de toda página — substitui os padding: 30px 40px espalhados */
 .pagina {
   padding: var(--pagina-y) var(--pagina-x) calc(var(--pagina-y) + 8px);
@@ -565,6 +572,19 @@ textarea.field::placeholder {
   .linha-estoque > *:nth-child(5) {
     grid-column: 3;
     grid-row: 1 / span 2;
+  }
+}
+
+/* a grade da manta rola nos dois eixos e nunca empurra a página */
+.rolagem-grade {
+  overflow: auto;
+  max-width: 100%;
+  padding-bottom: 4px;
+  overscroll-behavior-x: contain;
+}
+@media (max-width: 640px) {
+  .rolagem-grade {
+    max-height: 62vh;
   }
 }
 
@@ -869,9 +889,6 @@ textarea.field::placeholder {
 
 /* Celular: alvos de toque confortáveis e tabelas viram cartão. */
 @media (max-width: 640px) {
-  :root {
-    --celula: 26px;
-  }
   .pill {
     padding: 11px 18px;
   }
@@ -892,4 +909,38 @@ textarea.field::placeholder {
     display: block !important;
     grid-template-columns: none !important;
   }
+
+  /* Modal vira folha subindo do rodapé: um modal de 560px de largura fixa
+     estourava a tela, e os botões do rodapé ficavam fora do alcance. Agora a
+     folha ocupa o que precisa até quase a altura toda e rola por dentro. */
+  .ov {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal {
+    border-radius: 18px 18px 0 0;
+    padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
+    max-width: 100% !important;
+    max-height: calc(100dvh - 28px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    animation: folha-sobe var(--dur-lenta) var(--ease-entrada);
+  }
+  /* alça visual no topo da folha */
+  .modal::before {
+    content: '';
+    display: block;
+    width: 38px;
+    height: 4px;
+    border-radius: 99px;
+    background: var(--border-strong);
+    margin: -6px auto 14px;
+  }
+  @keyframes folha-sobe {
+    from {
+      transform: translateY(24px);
+      opacity: 0;
+    }
+  }
+
 }

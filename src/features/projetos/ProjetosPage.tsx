@@ -71,7 +71,7 @@ export function ProjetosPage() {
       >
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div className="h" style={{ fontWeight: 500, fontSize: 28 }}>
+            <div className="h titulo-pagina">
               Projetos
             </div>
             <div

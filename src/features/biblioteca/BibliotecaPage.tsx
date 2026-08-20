@@ -68,7 +68,7 @@ export function BibliotecaPage() {
           marginBottom: 20,
         }}
       >
-        <div className="h" style={{ fontWeight: 500, fontSize: 28 }}>
+        <div className="h titulo-pagina">
           Biblioteca
         </div>
         {isAdmin && (

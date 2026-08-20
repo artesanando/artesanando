@@ -101,7 +101,7 @@ export function IntegrantesPage() {
             marginBottom: 16,
           }}
         >
-          <div className="h" style={{ fontWeight: 500, fontSize: 28 }}>
+          <div className="h titulo-pagina">
             Integrantes{' '}
             <span style={{ fontSize: 15, color: 'var(--faint)' }}>
               {(integrantes ?? []).length}
