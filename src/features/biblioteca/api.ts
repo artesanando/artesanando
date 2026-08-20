@@ -31,6 +31,11 @@ export async function criarReceita(r: NovaReceita) {
   if (error) throw error
 }
 
+export async function atualizarReceita(id: string, patch: Partial<NovaReceita>) {
+  const { error } = await supabase.from('receitas').update(patch).eq('id', id)
+  if (error) throw error
+}
+
 export async function uploadPdf(file: File): Promise<string> {
   const path = `${crypto.randomUUID()}.pdf`
   const { error } = await supabase.storage.from('receitas').upload(path, file, {

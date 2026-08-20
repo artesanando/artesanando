@@ -10,7 +10,14 @@ import { useStore } from '../../state/store'
 import { separaArquivados } from '../../lib/arquivo'
 import { fmtDataCurta, hojeIso } from '../../lib/format'
 import { ativarSemestre, atualizarSemestre, criarSemestre, fetchSemestres } from '../../lib/semestre'
-import { encontrosPassados, fetchEncontros, proximoEncontro, type Encontro } from '../presenca/api'
+import {
+  definirCancelado,
+  encontrosPassados,
+  fetchEncontros,
+  proximoEncontro,
+  type Encontro,
+} from '../presenca/api'
+import { TURNO_LABEL } from '../../types/database'
 import { fetchPermissoes, togglePermissao, type PermCol } from './api'
 
 type Secao = 'permissoes' | 'projeto' | 'encontros'
@@ -367,11 +374,19 @@ function SecaoProjeto() {
 function SecaoEncontros() {
   const { open, openEncontro } = useStore()
   const acoesArquivo = useAcoesArquivo()
+  const qc = useQueryClient()
+  const toast = useToast()
   const hoje = hojeIso()
 
   const { data: encontros, isLoading } = useQuery({
     queryKey: ['encontros'],
     queryFn: fetchEncontros,
+  })
+
+  const cancelar = useMutation({
+    mutationFn: ({ id, valor }: { id: string; valor: boolean }) => definirCancelado(id, valor),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['encontros'] }),
+    onError: () => toast('Não foi possível mudar o encontro.', 'erro'),
   })
 
   const { ativos, arquivados } = separaArquivados(encontros ?? [])
@@ -390,7 +405,15 @@ function SecaoEncontros() {
         fontSize: 13,
       }}
     >
-      <b style={{ width: 74, flex: 'none' }}>{fmtDataCurta(e.data)}</b>
+      <b
+        style={{
+          width: 74,
+          flex: 'none',
+          textDecoration: e.cancelado_em ? 'line-through' : undefined,
+        }}
+      >
+        {fmtDataCurta(e.data)}
+      </b>
       <span
         style={{
           color: 'var(--muted)',
@@ -401,14 +424,20 @@ function SecaoEncontros() {
           whiteSpace: 'nowrap',
         }}
       >
-        {e.hora ? `${e.hora.slice(0, 5)}h` : ''}
+        {TURNO_LABEL[e.turno]}
+        {e.hora ? ` · ${e.hora.slice(0, 5)}h` : ''}
         {e.local ? ` · ${e.local}` : ''}
         {e.pauta ? ` · ${e.pauta}` : ''}
+        {e.cancelado_em ? ' · cancelado' : ''}
       </span>
       <MenuKebab
         ariaLabel={`Ações do encontro de ${fmtDataCurta(e.data)}`}
         acoes={[
           { label: 'Editar encontro', onSelect: () => openEncontro(e.id) },
+          {
+            label: e.cancelado_em ? 'Reabrir encontro' : 'Cancelar encontro',
+            onSelect: () => cancelar.mutate({ id: e.id, valor: !e.cancelado_em }),
+          },
           ...acoesArquivo({
             tabela: 'encontros',
             id: e.id,

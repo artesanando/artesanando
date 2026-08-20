@@ -485,3 +485,14 @@ describe('atividade de extensão', () => {
     expect(await screen.findByText(/, Ada$/)).toBeInTheDocument()
   })
 })
+
+describe('biblioteca editável', () => {
+  it('receita manual abre para edição pelo menu', async () => {
+    __login()
+    renderAt('/biblioteca')
+    await userEvent.click(await screen.findByRole('button', { name: 'Ações de Capivara da Lú' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Editar' }))
+    expect(await screen.findByRole('dialog', { name: 'Editar receita' })).toBeInTheDocument()
+    expect(screen.getByLabelText(/NOME/)).toHaveValue('Capivara da Lú')
+  })
+})

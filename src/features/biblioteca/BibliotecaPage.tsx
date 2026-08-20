@@ -22,7 +22,7 @@ const CHIPS: [ReceitaCategoria | 'todos', string][] = [
 ]
 
 export function BibliotecaPage() {
-  const { isAdmin, open, openGranny, openFaixa, openLayout } = useStore()
+  const { isAdmin, open, openGranny, openFaixa, openLayout, openReceita } = useStore()
   const [busca, setBusca] = useState('')
   const [cat, setCat] = useState<ReceitaCategoria | 'todos'>('todos')
   const [verArquivadas, setVerArquivadas] = useState(false)
@@ -224,14 +224,19 @@ export function BibliotecaPage() {
                     </span>
                     <MenuKebab
                       ariaLabel={`Ações de ${r.nome}`}
-                      acoes={acoesArquivo({
+                      acoes={[
+                        ...(r.origem === 'manual'
+                          ? [{ label: 'Editar', onSelect: () => openReceita(r.id) }]
+                          : []),
+                        ...acoesArquivo({
                         tabela: 'receitas',
                         id: r.id,
                         nome: `"${r.nome}"`,
                         motivoHistorico: 'Os projetos que usam esta receita',
                         arquivado: Boolean(r.arquivado_em),
                         invalidar: ['receitas'],
-                      })}
+                        }),
+                      ]}
                     />
                   </span>
                 </div>

@@ -37,6 +37,8 @@ interface StoreState {
   encontroId: string | null
   /** perfil sem conta sendo convidado; null = cadastro do zero */
   integranteId: string | null
+  /** receita sendo editada; null = criação */
+  receitaId: string | null
   finKind: 'entrada' | 'saida'
   projCat: 'manta' | 'amig'
   projTec: 'croche' | 'trico'
@@ -53,6 +55,7 @@ const INITIAL: StoreState = {
   estoqueItemId: null,
   encontroId: null,
   integranteId: null,
+  receitaId: null,
   finKind: 'entrada',
   projCat: 'manta',
   projTec: 'croche',
@@ -73,6 +76,8 @@ export interface Store extends StoreState {
   openEncontro: (encontroId: string | null) => void
   /** com id, convida o perfil sem conta que já existe; sem id, cadastra do zero */
   openIntegrante: (integranteId: string | null) => void
+  /** com id, abre a receita para edição; sem id, cria uma nova */
+  openReceita: (receitaId: string | null) => void
   setFinKind: (k: 'entrada' | 'saida') => void
   openFin: (k: 'entrada' | 'saida') => void
   setProjCat: (c: 'manta' | 'amig') => void
@@ -113,6 +118,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         estoqueItemId: null,
         encontroId: null,
         integranteId: null,
+        receitaId: null,
       }),
     openDevolucao: (devolucaoId) => set({ modal: 'devolucao', devolucaoId }),
     openMaterial: (estoqueItemId) => set({ modal: 'material', estoqueItemId }),
@@ -120,6 +126,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     openFichaProjeto: (projetoId) => set({ modal: 'ficha-projeto', projetoId }),
     openEncontro: (encontroId) => set({ modal: 'encontro', encontroId }),
     openIntegrante: (integranteId) => set({ modal: 'integrante', integranteId }),
+    openReceita: (receitaId) => set({ modal: 'receita', receitaId }),
     setFinKind: (finKind) => set({ finKind }),
     openFin: (finKind) => set({ modal: 'financeiro', finKind }),
     setProjCat: (projCat) => set({ projCat }),

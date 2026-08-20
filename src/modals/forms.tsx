@@ -13,7 +13,9 @@ import {
   fetchEstoque,
   saldoEmprestimo,
 } from '../features/estoque/api'
-import { criarReceita, uploadPdf } from '../features/biblioteca/api'
+import { atualizarReceita, criarReceita, fetchReceitas, uploadPdf } from '../features/biblioteca/api'
+import { CampoMedida } from '../components/ui/CampoMedida'
+import type { Receita } from '../types/database'
 import { CampoCapa } from '../components/ui/CampoCapa'
 import { SeletorCategoria } from './SeletorCategoria'
 import { ehLinkValido, subirCapa } from '../lib/capa'
@@ -50,34 +52,68 @@ function ErroBox({ children }: { children: ReactNode }) {
 }
 
 /* Receita da biblioteca. Vem com PDF ou com link de vídeo — as duas coisas
-   circulam no grupo, e forçar PDF deixava metade do acervo de fora. */
+   circulam no grupo, e forçar PDF deixava metade do acervo de fora.
+   Também é por aqui que uma receita já salva ganha capa, medida ou correção:
+   antes de existir edição, um nome errado ficava errado para sempre. */
 export function ModalReceita() {
+  const { receitaId } = useStore()
+
+  const { data: receitas } = useQuery({
+    queryKey: ['receitas'],
+    queryFn: fetchReceitas,
+    enabled: !!receitaId,
+  })
+  const atual = (receitas ?? []).find((r) => r.id === receitaId)
+  const editando = !!receitaId
+
+  // editando: espera a receita chegar para o estado nascer preenchido
+  if (receitaId && !atual) return null
+  return <FormReceita atual={atual} editando={editando} />
+}
+
+function FormReceita({ atual, editando }: { atual?: Receita; editando: boolean }) {
   const { close } = useStore()
   const { profile } = useAuth()
   const qc = useQueryClient()
   const form = useFormulario<'nome' | 'video'>()
-  const [nome, setNome] = useState('')
-  const [obs, setObs] = useState('')
-  const [fonte, setFonte] = useState<'pdf' | 'video'>('pdf')
+
+  const [nome, setNome] = useState(atual?.nome ?? '')
+  const [obs, setObs] = useState(atual?.resumo ?? '')
+  const [fonte, setFonte] = useState<'pdf' | 'video'>(atual?.video_url ? 'video' : 'pdf')
   const [pdf, setPdf] = useState<File | null>(null)
-  const [video, setVideo] = useState('')
+  const [video, setVideo] = useState(atual?.video_url ?? '')
   const [capa, setCapa] = useState<Blob | null>(null)
+  const [medida, setMedida] = useState<{ largura: number | null; altura: number | null }>({
+    largura: atual?.largura_cm ?? null,
+    altura: atual?.altura_cm ?? null,
+  })
   const [erro, setErro] = useState<string | null>(null)
 
   const salvar = useMutation({
     mutationFn: async () => {
-      const pdf_path = fonte === 'pdf' && pdf ? await uploadPdf(pdf) : null
-      const capa_path = capa ? await subirCapa(capa) : null
-      await criarReceita({
+      const pdf_path = fonte === 'pdf' && pdf ? await uploadPdf(pdf) : undefined
+      const capa_path = capa ? await subirCapa(capa) : undefined
+      const campos = {
         nome: nome.trim(),
+        resumo: obs.trim() || null,
+        video_url: fonte === 'video' ? video.trim() || null : null,
+        largura_cm: medida.largura,
+        altura_cm: medida.altura,
+        ...(pdf_path !== undefined ? { pdf_path } : {}),
+        ...(capa_path !== undefined ? { capa_path } : {}),
+      }
+      if (atual) {
+        await atualizarReceita(atual.id, campos)
+        return
+      }
+      await criarReceita({
+        ...campos,
         categoria: 'amigurumi',
         sub: null,
-        resumo: obs.trim() || null,
         specs: [],
         conteudo: {},
-        pdf_path,
-        video_url: fonte === 'video' ? video.trim() : null,
-        capa_path,
+        pdf_path: pdf_path ?? null,
+        capa_path: capa_path ?? null,
         origem: 'manual',
         criado_por: profile!.id,
       })
@@ -105,9 +141,9 @@ export function ModalReceita() {
 
   return (
     <ModalBox maxWidth={560}>
-      <ModalHeader title="Adicionar à biblioteca" />
+      <ModalHeader title={editando ? 'Editar receita' : 'Adicionar à biblioteca'} />
       <form onSubmit={submit}>
-        <SeletorCategoria atual="amigurumi" />
+        {!editando && <SeletorCategoria atual="amigurumi" />}
 
         <Campo label="NOME" obrigatorio erro={form.erros.nome} style={{ marginBottom: 18 }}>
           {(p) => (
@@ -191,7 +227,17 @@ export function ModalReceita() {
           CAPA
         </div>
         <div style={{ marginBottom: 18 }}>
-          <CampoCapa blob={capa} aoEscolher={setCapa} />
+          <CampoCapa atual={atual?.capa_path} blob={capa} aoEscolher={setCapa} />
+        </div>
+
+        <div style={{ marginBottom: 18 }}>
+          <CampoMedida
+            largura={medida.largura}
+            altura={medida.altura}
+            rotuloLargura="LARGURA DA PEÇA (CM)"
+            rotuloAltura="ALTURA DA PEÇA (CM)"
+            aoMudar={(patch) => setMedida((m) => ({ ...m, ...patch }))}
+          />
         </div>
 
         <Lbl style={{ marginBottom: 7 }}>OBSERVAÇÕES</Lbl>
@@ -219,7 +265,7 @@ export function ModalReceita() {
               Cancelar
             </button>
             <button type="submit" className="pill" disabled={salvar.isPending}>
-              {salvar.isPending ? 'Salvando…' : 'Salvar na biblioteca'}
+              {salvar.isPending ? 'Salvando…' : editando ? 'Salvar' : 'Salvar na biblioteca'}
             </button>
           </div>
         </div>
