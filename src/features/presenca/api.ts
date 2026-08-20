@@ -1,5 +1,11 @@
 import { supabase } from '../../lib/supabase'
-import type { Profile, Turno, TurnoEncontro } from '../../types/database'
+import {
+  turnoDaPessoa,
+  turnoDoEncontro,
+  type Profile,
+  type Turno,
+  type TurnoEncontro,
+} from '../../types/database'
 
 export interface Encontro {
   id: string
@@ -27,7 +33,7 @@ export async function fetchEncontros(): Promise<Encontro[]> {
     .select('*')
     .order('data', { ascending: false })
   if (error) throw error
-  return (data ?? []) as Encontro[]
+  return ((data ?? []) as Encontro[]).map((e) => ({ ...e, turno: turnoDoEncontro(e.turno) }))
 }
 
 export async function fetchPresencas(): Promise<Presenca[]> {
@@ -48,7 +54,10 @@ export async function fetchIntegrantesAtivas(): Promise<IntegranteChamada[]> {
     .eq('ativo', true)
     .order('nome')
   if (error) throw error
-  return (data ?? []) as IntegranteChamada[]
+  return ((data ?? []) as IntegranteChamada[]).map((p) => ({
+    ...p,
+    turno: turnoDaPessoa(p.turno),
+  }))
 }
 
 /** Chamada clicável: upsert na PK (encontro, integrante) */

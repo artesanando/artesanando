@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
-import { INTEGRANTE_PROFILE, __login, __reset } from './test/fakeSupabase'
+import { ADMIN_PROFILE, INTEGRANTE_PROFILE, __login, __reset } from './test/fakeSupabase'
 
 vi.mock('./lib/supabase', () => import('./test/fakeSupabase'))
 
@@ -494,5 +494,23 @@ describe('biblioteca editável', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: 'Editar' }))
     expect(await screen.findByRole('dialog', { name: 'Editar receita' })).toBeInTheDocument()
     expect(screen.getByLabelText(/NOME/)).toHaveValue('Capivara da Lú')
+  })
+})
+
+describe('banco ainda sem a coluna turno', () => {
+  /* `select('*')` devolve a linha sem a coluna enquanto a migration do turno não
+     rodou. O app usa esse valor como chave de objeto, e sem normalizar na
+     fronteira a página de Integrantes ficava em branco. */
+  it('a página de integrantes abre mesmo assim', async () => {
+    const antes = ADMIN_PROFILE.turno
+    delete (ADMIN_PROFILE as unknown as Record<string, unknown>).turno
+    try {
+      __login()
+      renderAt('/integrantes')
+      expect(await screen.findByText('ENTREGAS NO SEMESTRE')).toBeInTheDocument()
+      expect(screen.getByText(/FREQUÊNCIA ·/)).toBeInTheDocument()
+    } finally {
+      ADMIN_PROFILE.turno = antes
+    }
   })
 })

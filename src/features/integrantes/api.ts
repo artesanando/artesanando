@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import type { Profile } from '../../types/database'
+import { turnoDaPessoa, type Profile } from '../../types/database'
 import { saldoEmprestimo, type EmprestimoAtivo } from '../estoque/api'
 
 export async function fetchIntegrantes(): Promise<Profile[]> {
@@ -9,7 +9,12 @@ export async function fetchIntegrantes(): Promise<Profile[]> {
     .eq('ativo', true)
     .order('nome')
   if (error) throw error
-  return (data ?? []) as Profile[]
+  return normalizaPerfis(data)
+}
+
+/** Toda linha de perfil entra no app com um turno válido — ver `turnoDaPessoa` */
+function normalizaPerfis(data: unknown): Profile[] {
+  return ((data ?? []) as Profile[]).map((p) => ({ ...p, turno: turnoDaPessoa(p.turno) }))
 }
 
 export interface EntregasLight {
@@ -41,7 +46,7 @@ export async function fetchSemConta(): Promise<Profile[]> {
     .eq('ativo', true)
     .order('nome')
   if (error) throw error
-  return (data ?? []) as Profile[]
+  return normalizaPerfis(data)
 }
 
 /** Junta a ficha de "só chamada" numa integrante que já tem conta */

@@ -14,6 +14,15 @@ export const TURNO_LABEL: Record<Turno, string> = {
   ambos: 'Os dois turnos',
 }
 
+/* `select('*')` devolve a linha sem a coluna enquanto a migration do turno não
+   rodou, e o app usa esse valor como chave de objeto — sem normalizar aqui, a
+   tela quebrava inteira em vez de só perder a separação por turno. */
+export const turnoDaPessoa = (v: unknown): Turno =>
+  v === 'diurno' || v === 'noturno' ? v : 'ambos'
+
+export const turnoDoEncontro = (v: unknown): TurnoEncontro =>
+  v === 'noturno' ? 'noturno' : 'diurno'
+
 export interface Profile {
   id: string
   /** conta do auth ligada a este perfil — null em integrante que só entra na chamada */
