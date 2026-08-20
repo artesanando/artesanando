@@ -254,27 +254,34 @@ describe('financeiro (M4)', () => {
 })
 
 describe('presença (M4)', () => {
-  it('mostra o próximo encontro e a chamada do último', async () => {
+  it('mostra os próximos encontros e a chamada do último', async () => {
     __login()
     renderAt('/presenca')
-    expect(await screen.findByText('PRÓXIMO ENCONTRO')).toBeInTheDocument()
+    expect(await screen.findByText('Próximos encontros')).toBeInTheDocument()
     expect(await screen.findByLabelText('Marcar presença de Cândida Nunes')).toBeInTheDocument()
   })
 
-  it('busca filtra os encontros anteriores', async () => {
+  it('o encontro futuro traz o turno junto da data', async () => {
     __login()
     renderAt('/presenca')
-    await screen.findByText('07 jul')
-    await userEvent.type(screen.getByLabelText('Buscar encontro'), 'sala 999')
-    expect(screen.getByText(/Nenhum encontro para "sala 999"/)).toBeInTheDocument()
+    expect(await screen.findByText(/Noturno/)).toBeInTheDocument()
   })
 
-  it('dá para editar e arquivar um encontro', async () => {
+  it('dá para editar, cancelar e arquivar um encontro', async () => {
     __login()
     renderAt('/presenca')
     await userEvent.click(await screen.findByRole('button', { name: /Ações do encontro de 07 jul/ }))
     expect(screen.getByRole('menuitem', { name: 'Editar encontro' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Cancelar encontro' })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: 'Arquivar' })).toBeInTheDocument()
+  })
+
+  it('o encontro novo escolhe o turno e pode repetir toda semana', async () => {
+    __login()
+    renderAt('/presenca')
+    await userEvent.click(await screen.findByRole('button', { name: '+ Novo encontro' }))
+    expect(screen.getByRole('button', { name: 'Noturno' })).toBeInTheDocument()
+    expect(screen.getByLabelText(/Repete toda semana/)).toBeInTheDocument()
   })
 
   it('quem só entrou na chamada aparece marcada como sem perfil', async () => {
@@ -301,7 +308,7 @@ describe('integrantes (M4)', () => {
     expect(screen.getByText('Sahudy Montenegro')).toBeInTheDocument()
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument()
     expect(screen.getByText('ENTREGAS NO SEMESTRE')).toBeInTheDocument()
-    expect(screen.getByText('FREQUÊNCIA')).toBeInTheDocument()
+    expect(screen.getByText(/FREQUÊNCIA ·/)).toBeInTheDocument()
   })
 
   it('as entregas passam a contar granny squares', async () => {

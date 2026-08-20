@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Lbl, Stepper } from '../components/ui/bits'
 import { DatePicker, Select, TimePicker } from '../components/ui/controles'
 import { Campo, LegendaObrigatorio, useFormulario } from '../components/ui/Campo'
+import { useToast } from '../components/ui/Toast'
 import { ModalBox, ModalHeader } from './shared'
 import { supabase } from '../lib/supabase'
 import { useStore } from '../state/store'
@@ -20,9 +21,12 @@ import { fetchIntegrantesAtivas } from '../features/projetos/api'
 import {
   atualizarEncontro,
   criarEncontro,
+  datasSemanais,
   fetchEncontros,
   type Encontro,
 } from '../features/presenca/api'
+import { useSemestreAtivo } from '../lib/semestre'
+import { TURNO_LABEL, type TurnoEncontro } from '../types/database'
 import { hojeIso } from '../lib/format'
 import { useAuth } from '../state/auth'
 
@@ -498,6 +502,7 @@ export function ModalEncontro() {
 function FormEncontro({ encontro }: { encontro?: Encontro }) {
   const { close } = useStore()
   const qc = useQueryClient()
+  const toast = useToast()
   const form = useFormulario<'data'>()
   const editando = Boolean(encontro)
 
@@ -505,15 +510,27 @@ function FormEncontro({ encontro }: { encontro?: Encontro }) {
   const [hora, setHora] = useState(encontro?.hora?.slice(0, 5) ?? '14:00')
   const [local, setLocal] = useState(encontro?.local ?? '')
   const [pauta, setPauta] = useState(encontro?.pauta ?? '')
+  const [turno, setTurno] = useState<TurnoEncontro>(encontro?.turno ?? 'diurno')
+  /* O grupo se encontra toda semana; criar 18 encontros na mão é o tipo de
+     trabalho que faz a admin desistir de usar o app. */
+  const [repetir, setRepetir] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
+  const semestre = useSemestreAtivo()
+  const previstas = repetir ? datasSemanais(data, semestre?.fim ?? null).length : 1
+
   const salvar = useMutation({
-    mutationFn: () => {
-      const campos = { data, hora, local: local.trim(), pauta: pauta.trim() }
-      return encontro ? atualizarEncontro(encontro.id, campos) : criarEncontro(campos)
+    mutationFn: async () => {
+      const campos = { data, hora, local: local.trim(), pauta: pauta.trim(), turno }
+      if (encontro) {
+        await atualizarEncontro(encontro.id, campos)
+        return 1
+      }
+      return criarEncontro(campos, repetir)
     },
-    onSuccess: () => {
+    onSuccess: (criados) => {
       qc.invalidateQueries({ queryKey: ['encontros'] })
+      if (criados > 1) toast(`${criados} encontros criados ✓`)
       close()
     },
     onError: () => setErro('Não foi possível salvar o encontro.'),
@@ -528,10 +545,7 @@ function FormEncontro({ encontro }: { encontro?: Encontro }) {
 
   return (
     <ModalBox maxWidth={520}>
-      <ModalHeader
-        title={editando ? 'Editar encontro' : 'Novo encontro'}
-        sub={editando ? 'A chamada já feita continua valendo' : 'Abre a chamada e a pauta do dia'}
-      />
+      <ModalHeader title={editando ? 'Editar encontro' : 'Novo encontro'} />
       <form onSubmit={submit}>
         <div className="grid2" style={{ marginBottom: 18 }}>
           <Campo label="DATA" obrigatorio erro={form.erros.data}>
@@ -550,6 +564,28 @@ function FormEncontro({ encontro }: { encontro?: Encontro }) {
             {() => <TimePicker value={hora} onChange={setHora} ariaLabel="Horário do encontro" />}
           </Campo>
         </div>
+        <div className="lbl" style={{ marginBottom: 7 }}>
+          TURNO
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+          {(['diurno', 'noturno'] as TurnoEncontro[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              className="seg"
+              aria-pressed={turno === t}
+              onClick={() => setTurno(t)}
+              style={
+                turno === t
+                  ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }
+                  : undefined
+              }
+            >
+              {TURNO_LABEL[t]}
+            </button>
+          ))}
+        </div>
+
         <Campo label="SALA" style={{ marginBottom: 18 }}>
           {(p) => (
             <input
@@ -573,6 +609,35 @@ function FormEncontro({ encontro }: { encontro?: Encontro }) {
             />
           )}
         </Campo>
+        {!editando && (
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 9,
+              marginBottom: 20,
+              fontSize: 13,
+              cursor: 'pointer',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={repetir}
+              onChange={(e) => setRepetir(e.target.checked)}
+              style={{ accentColor: 'var(--primary)', width: 17, height: 17 }}
+            />
+            <span>
+              Repete toda semana
+              {repetir && (
+                <b style={{ color: 'var(--accent)' }}>
+                  {' '}
+                  — {previstas}{' '}
+                  {previstas === 1 ? 'encontro até o fim do semestre' : 'encontros até o fim do semestre'}
+                </b>
+              )}
+            </span>
+          </label>
+        )}
         {erro && <ErroBox>{erro}</ErroBox>}
         <div
           style={{

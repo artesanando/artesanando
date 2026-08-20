@@ -19,6 +19,7 @@ export const ADMIN_PROFILE: Profile = {
   avatar_url: null,
   papel: 'admin',
   ativo: true,
+  turno: 'ambos',
   desde: '2024.1',
 }
 
@@ -35,6 +36,7 @@ export const ADMIN2_PROFILE: Profile = {
   avatar_url: null,
   papel: 'admin',
   ativo: true,
+  turno: 'ambos',
   desde: '2024.1',
 }
 
@@ -52,6 +54,7 @@ export const INTEGRANTE_PROFILE: Profile = {
   avatar_url: null,
   papel: 'integrante',
   ativo: true,
+  turno: 'ambos',
   desde: '2025.1',
 }
 
@@ -68,6 +71,7 @@ export const SEM_CONTA_PROFILE: Profile = {
   avatar_url: null,
   papel: 'integrante',
   ativo: true,
+  turno: 'ambos',
   desde: '2026.2',
 }
 
@@ -296,6 +300,9 @@ const ENCONTROS_FAKE = [
     hora: '14:00',
     local: 'Sala 203',
     pauta: 'Bordas do Modelo A',
+    turno: 'diurno',
+    cancelado_em: null,
+    serie_id: null,
     arquivado_em: null,
   },
   {
@@ -304,7 +311,10 @@ const ENCONTROS_FAKE = [
     data: '2099-07-14',
     hora: '14:00',
     local: 'Sala 203',
-    pauta: 'Montagem da Manta Primavera',
+    pauta: 'Montagem da Manta Ada',
+    turno: 'noturno',
+    cancelado_em: null,
+    serie_id: null,
     arquivado_em: null,
   },
 ]

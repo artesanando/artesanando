@@ -20,7 +20,7 @@ import {
   filtraIntegrantes,
   vincularPerfil,
 } from './api'
-import { PREFERENCIA_LABEL } from '../../types/database'
+import { PREFERENCIA_LABEL, TURNO_LABEL, type Profile } from '../../types/database'
 
 export function IntegrantesPage() {
   const { isAdmin, openIntegrante } = useStore()
@@ -50,9 +50,10 @@ export function IntegrantesPage() {
   const lista = filtraIntegrantes(integrantes ?? [], busca)
   const sel = (integrantes ?? []).find((p) => p.id === id) ?? lista[0]
 
-  const freqDe = (pid: string) => frequenciaDe(pid, encontros ?? [], presencas ?? [], hoje)
+  const freqDe = (p: Profile) =>
+    frequenciaDe(p.id, encontros ?? [], presencas ?? [], hoje, p.turno)
 
-  const selFreq = sel ? freqDe(sel.id) : { presentes: 0, total: 0, pct: 0 }
+  const selFreq = sel ? freqDe(sel) : null
   const selEntregas =
     sel && entregas
       ? entregasDe(sel.id, entregas)
@@ -222,7 +223,7 @@ export function IntegrantesPage() {
             const emprestados = emprestadosDe(p.id, loans ?? [])
             const ent = entregas ? entregasDe(p.id, entregas).total : 0
             const sub = `${ent} entregas${emprestados > 0 ? ` · ${emprestados} itens em casa` : ''}`
-            const freq = freqDe(p.id)
+            const freq = freqDe(p)
             return (
               <div key={p.id}>
               <div
@@ -279,7 +280,7 @@ export function IntegrantesPage() {
                     color: selected ? 'var(--accent)' : 'var(--muted)',
                   }}
                 >
-                  {freq.pct}%
+                  {freq.total.pct}%
                 </div>
                 {isAdmin && (
                   <span onClick={(e) => e.stopPropagation()}>
@@ -467,12 +468,27 @@ export function IntegrantesPage() {
               em casa — veja no Estoque.
             </div>
           )}
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-            <div style={{ flex: 1 }}>
-              <Lbl style={{ marginBottom: 6 }}>FREQUÊNCIA</Lbl>
-              <Progress pct={`${selFreq.pct}%`} />
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 190 }}>
+              <Lbl style={{ marginBottom: 6 }}>
+                FREQUÊNCIA · {TURNO_LABEL[sel.turno].toUpperCase()}
+              </Lbl>
+              <Progress pct={`${selFreq?.total.pct ?? 0}%`} />
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                {selFreq.presentes}/{selFreq.total} encontros · {selFreq.pct}%
+                {selFreq?.total.presentes ?? 0}/{selFreq?.total.total ?? 0} encontros ·{' '}
+                {selFreq?.total.pct ?? 0}%
+              </div>
+              {/* diurno e noturno contados separados: é o que a coordenação do
+                  projeto de extensão precisa relatar */}
+              <div style={{ display: 'flex', gap: 14, marginTop: 8 }}>
+                {(['diurno', 'noturno'] as const).map((t) => (
+                  <span key={t} style={{ fontSize: 11, color: 'var(--muted)' }}>
+                    {TURNO_LABEL[t]}{' '}
+                    <b style={{ color: 'var(--ink-soft)' }}>
+                      {selFreq?.[t].presentes ?? 0}/{selFreq?.[t].total ?? 0}
+                    </b>
+                  </span>
+                ))}
               </div>
             </div>
             <div

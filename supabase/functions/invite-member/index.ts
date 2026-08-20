@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
       return json({ error: 'apenas administradoras convidam integrantes' }, 403)
     }
 
-    const { email, nome, usuario, telefone, preferencia, papel, redirectTo, profileId } =
+    const { email, nome, usuario, telefone, preferencia, turno, papel, redirectTo, profileId } =
       await req.json()
     if (!email || !nome || !usuario) {
       return json({ error: 'email, nome e usuario são obrigatórios' }, 400)
@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
       usuario,
       telefone: telefone ?? null,
       preferencia: preferencia ?? 'ambos',
+      turno: turno ?? 'ambos',
       papel: papel === 'admin' ? 'admin' : 'integrante',
       perfil_id: profileId ?? null,
     }

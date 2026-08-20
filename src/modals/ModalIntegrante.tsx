@@ -6,7 +6,12 @@ import { ModalBox, ModalHeader } from './shared'
 import { supabase } from '../lib/supabase'
 import { useStore } from '../state/store'
 import { fetchIntegrantes } from '../features/integrantes/api'
-import type { Papel, Preferencia } from '../types/database'
+import { TURNO_LABEL, type Papel, type Preferencia, type Turno } from '../types/database'
+
+const TURNOS: [Turno, string][] = (['diurno', 'noturno', 'ambos'] as Turno[]).map((t) => [
+  t,
+  TURNO_LABEL[t],
+])
 
 const PREFS: [Preferencia, string][] = [
   ['croche', 'Crochê'],
@@ -34,6 +39,7 @@ export function ModalIntegrante() {
   const [email, setEmail] = useState('')
   const [telefone, setTelefone] = useState('')
   const [preferencia, setPreferencia] = useState<Preferencia>('croche')
+  const [turno, setTurno] = useState<Turno>('ambos')
   const [papel, setPapel] = useState<Papel>('integrante')
   const [erro, setErro] = useState<string | null>(null)
   const [link, setLink] = useState<string | null>(null)
@@ -60,6 +66,7 @@ export function ModalIntegrante() {
         email: email.trim(),
         telefone: (convidando ? (alvo!.telefone ?? '') : telefone).trim() || null,
         preferencia: convidando ? alvo!.preferencia : preferencia,
+        turno: convidando ? alvo!.turno : turno,
         papel: convidando ? alvo!.papel : papel,
         redirectTo: window.location.origin + '/definir-senha',
       },
@@ -223,6 +230,15 @@ export function ModalIntegrante() {
                       onChange={setPreferencia}
                       options={PREFS}
                     />
+                  )}
+                </Campo>
+              </div>
+
+              {/* o turno define de quais encontros ela é cobrada na frequência */}
+              <div className="grid2" style={{ marginBottom: 18 }}>
+                <Campo label="TURNO">
+                  {() => (
+                    <Select ariaLabel="Turno" value={turno} onChange={setTurno} options={TURNOS} />
                   )}
                 </Campo>
               </div>

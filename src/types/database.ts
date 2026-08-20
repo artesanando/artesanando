@@ -4,6 +4,16 @@
 export type Preferencia = 'croche' | 'trico' | 'ambos'
 export type Papel = 'admin' | 'integrante'
 
+/** Turno de um encontro; a integrante pode ser dos dois */
+export type TurnoEncontro = 'diurno' | 'noturno'
+export type Turno = TurnoEncontro | 'ambos'
+
+export const TURNO_LABEL: Record<Turno, string> = {
+  diurno: 'Diurno',
+  noturno: 'Noturno',
+  ambos: 'Os dois turnos',
+}
+
 export interface Profile {
   id: string
   /** conta do auth ligada a este perfil — null em integrante que só entra na chamada */
@@ -18,6 +28,8 @@ export interface Profile {
   papel: Papel
   ativo: boolean
   desde: string | null
+  /** em qual turno ela vem — define o denominador da frequência total dela */
+  turno: Turno
 }
 
 /** Integrante anotada na chamada que ainda não tem acesso ao app */

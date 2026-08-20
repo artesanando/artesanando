@@ -6,7 +6,7 @@ import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
 import { Campo, LegendaObrigatorio, useFormulario } from '../../components/ui/Campo'
 import { ColorPicker, Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
-import { PAPEL_LABEL, type Preferencia } from '../../types/database'
+import { PAPEL_LABEL, TURNO_LABEL, type Preferencia, type Turno } from '../../types/database'
 import { atualizarPerfil, subirAvatar } from './api'
 import { RecorteImagem } from '../../components/ui/RecorteImagem'
 
@@ -15,6 +15,11 @@ const PREFS: [Preferencia, string][] = [
   ['trico', 'Tricô'],
   ['ambos', 'Crochê e tricô'],
 ]
+
+const TURNOS: [Turno, string][] = (['diurno', 'noturno', 'ambos'] as Turno[]).map((t) => [
+  t,
+  TURNO_LABEL[t],
+])
 
 const campoTravado = {
   background: '#F1EAE4',
@@ -37,6 +42,7 @@ export function PerfilPage() {
   const [telefone, setTelefone] = useState(profile?.telefone ?? '')
   const [preferencia, setPreferencia] = useState<Preferencia>(profile?.preferencia ?? 'ambos')
   const [cor, setCor] = useState(profile?.avatar_color ?? '#C4798A')
+  const [turno, setTurno] = useState<Turno>(profile?.turno ?? 'ambos')
   const [salvando, setSalvando] = useState(false)
 
   const [aRecortar, setARecortar] = useState<File | null>(null)
@@ -66,6 +72,7 @@ export function PerfilPage() {
         usuario: usuario.trim().toLowerCase(),
         telefone: telefone.trim() || null,
         preferencia,
+        turno,
         avatar_color: cor,
       })
       await refreshProfile()
@@ -267,6 +274,12 @@ export function PerfilPage() {
                 placeholder="(11) 9 0000-0000"
               />
             )}
+          </Campo>
+        </div>
+
+        <div className="grid2" style={{ marginBottom: 18 }}>
+          <Campo label="TURNO">
+            {() => <Select value={turno} onChange={setTurno} options={TURNOS} ariaLabel="Turno" />}
           </Campo>
         </div>
 

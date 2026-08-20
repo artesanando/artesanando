@@ -129,20 +129,29 @@ export function diasDoMes(ano: number, mes: number): (string | null)[] {
   ]
 }
 
+/** Marcador de um dia no calendário: a bolinha embaixo do número */
+export interface MarcaDia {
+  cor: string
+  /** dia riscado — encontro cancelado continua visível, mas sem chamada */
+  riscado?: boolean
+}
+
 export function Calendario({
   valor,
   onChange,
-  /** datas que ganham marcador — ex.: dias com encontro */
-  marcados = [],
+  /** dias que ganham marcador, por data ISO */
+  marcas = {},
+  /** ocupa a largura disponível em vez dos 250px do popover */
+  fluido = false,
 }: {
   valor: string
   onChange: (iso: string) => void
-  marcados?: string[]
+  marcas?: Record<string, MarcaDia>
+  fluido?: boolean
 }) {
   const base = valor ? dataLocal(valor) : new Date()
   const [ano, setAno] = useState(base.getFullYear())
   const [mes, setMes] = useState(base.getMonth())
-  const marcadosSet = useMemo(() => new Set(marcados), [marcados])
   const hoje = iso(new Date())
 
   const mover = (delta: number) => {
@@ -152,7 +161,7 @@ export function Calendario({
   }
 
   return (
-    <div style={{ width: 250, padding: 4 }}>
+    <div style={{ width: fluido ? '100%' : 250, maxWidth: '100%', padding: 4 }}>
       <div
         style={{
           display: 'flex',
@@ -185,6 +194,7 @@ export function Calendario({
           if (!dia) return <span key={`v${i}`} />
           const nun = Number(dia.slice(8))
           const ativo = dia === valor
+          const marca = marcas[dia]
           return (
             <button
               key={dia}
@@ -203,11 +213,13 @@ export function Calendario({
                 borderRadius: 8,
                 padding: '7px 0',
                 cursor: 'pointer',
+                textDecoration: marca?.riscado ? 'line-through' : undefined,
+                opacity: marca?.riscado ? 0.55 : 1,
                 transition: 'background var(--dur-rapida) var(--ease-suave)',
               }}
             >
               {nun}
-              {marcadosSet.has(dia) && (
+              {marca && (
                 <span
                   style={{
                     position: 'absolute',
@@ -217,7 +229,7 @@ export function Calendario({
                     width: 4,
                     height: 4,
                     borderRadius: '50%',
-                    background: ativo ? '#fff' : 'var(--primary)',
+                    background: ativo ? '#fff' : marca.cor,
                   }}
                 />
               )}
@@ -233,13 +245,11 @@ export function DatePicker({
   value,
   onChange,
   ariaLabel,
-  marcados,
   disabled,
 }: {
   value: string
   onChange: (iso: string) => void
   ariaLabel?: string
-  marcados?: string[]
   disabled?: boolean
 }) {
   const g = useGatilho()
@@ -269,7 +279,6 @@ export function DatePicker({
       >
         <Calendario
           valor={value}
-          marcados={marcados}
           onChange={(d) => {
             onChange(d)
             g.fechar()

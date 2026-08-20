@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import type { Preferencia } from '../../types/database'
+import type { Preferencia, Turno } from '../../types/database'
 
 export async function atualizarPerfil(
   id: string,
@@ -8,6 +8,7 @@ export async function atualizarPerfil(
     usuario?: string
     telefone?: string | null
     preferencia?: Preferencia
+    turno?: Turno
     avatar_color?: string
     avatar_url?: string | null
   },

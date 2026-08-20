@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  datasSemanais,
   encontrosPassados,
-  filtraEncontros,
   frequenciaDe,
   mediaPresentes,
   presentesDe,
   proximoEncontro,
+  proximosEncontros,
   type Encontro,
   type Presenca,
 } from './api'
@@ -18,6 +19,9 @@ const enc = (id: string, data: string, over: Partial<Encontro> = {}): Encontro =
   hora: null,
   local: null,
   pauta: null,
+  turno: 'diurno',
+  cancelado_em: null,
+  serie_id: null,
   arquivado_em: null,
   ...over,
 })
@@ -41,8 +45,9 @@ const PRESENCAS = [
 ]
 
 describe('encontros', () => {
-  it('separa passados (mais recente primeiro) e o próximo', () => {
+  it('separa passados (mais recente primeiro) e os próximos', () => {
     expect(encontrosPassados(ENCONTROS, HOJE).map((e) => e.id)).toEqual(['e2', 'e1'])
+    expect(proximosEncontros(ENCONTROS, HOJE).map((e) => e.id)).toEqual(['e3'])
     expect(proximoEncontro(ENCONTROS, HOJE)?.id).toBe('e3')
   })
   it('conta presentes por encontro e a média', () => {
@@ -50,31 +55,74 @@ describe('encontros', () => {
     expect(presentesDe(PRESENCAS, 'e2')).toBe(3)
     expect(mediaPresentes(ENCONTROS, PRESENCAS, HOJE)).toBe(2)
   })
+  it('encontro cancelado sai da média', () => {
+    const comCancelado = [enc('e1', '2026-06-23', { cancelado_em: '2026-06-20' }), ENCONTROS[1]]
+    expect(mediaPresentes(comCancelado, PRESENCAS, HOJE)).toBe(3)
+  })
 })
 
-describe('busca de encontro', () => {
-  it('acha por data, sala ou pauta', () => {
-    expect(filtraEncontros(ENCONTROS, '2026-07').map((e) => e.id)).toEqual(['e2', 'e3'])
-    expect(filtraEncontros(ENCONTROS, 'ateliê').map((e) => e.id)).toEqual(['e2'])
-    expect(filtraEncontros(ENCONTROS, 'bordas').map((e) => e.id)).toEqual(['e1'])
+describe('datasSemanais', () => {
+  it('gera de sete em sete até o fim do semestre', () => {
+    expect(datasSemanais('2026-08-03', '2026-08-25')).toEqual([
+      '2026-08-03',
+      '2026-08-10',
+      '2026-08-17',
+      '2026-08-24',
+    ])
   })
-  it('busca vazia devolve tudo e busca sem match devolve nada', () => {
-    expect(filtraEncontros(ENCONTROS, '  ')).toHaveLength(3)
-    expect(filtraEncontros(ENCONTROS, 'zzz')).toEqual([])
+  it('sem data de fim, cria só o encontro pedido', () => {
+    expect(datasSemanais('2026-08-03', null)).toEqual(['2026-08-03'])
+  })
+  it('fim antes do início não gera série', () => {
+    expect(datasSemanais('2026-08-03', '2026-07-01')).toEqual(['2026-08-03'])
+  })
+  it('respeita o limite para não criar centenas de linhas', () => {
+    expect(datasSemanais('2026-01-01', '2030-01-01', 5)).toHaveLength(5)
   })
 })
 
 describe('frequência da integrante', () => {
-  it('divide presenças pelos encontros passados', () => {
-    expect(frequenciaDe('a', ENCONTROS, PRESENCAS, HOJE)).toEqual({
-      presentes: 2,
-      total: 2,
-      pct: 100,
-    })
-    expect(frequenciaDe('b', ENCONTROS, PRESENCAS, HOJE)).toEqual({
-      presentes: 1,
-      total: 2,
-      pct: 50,
-    })
+  const MISTO: Encontro[] = [
+    enc('d1', '2026-06-23', { turno: 'diurno' }),
+    enc('d2', '2026-07-07', { turno: 'diurno' }),
+    enc('n1', '2026-06-24', { turno: 'noturno' }),
+    enc('n2', '2026-07-08', { turno: 'noturno' }),
+  ]
+  const PRES = [
+    P('d1', 'dia', true),
+    P('d2', 'dia', true),
+    P('n1', 'noite', true),
+    P('n2', 'noite', false),
+    P('d1', 'ambas', true),
+    P('n1', 'ambas', true),
+  ]
+
+  it('separa os dois turnos', () => {
+    const f = frequenciaDe('dia', MISTO, PRES, HOJE, 'diurno')
+    expect(f.diurno).toEqual({ presentes: 2, total: 2, pct: 100 })
+    expect(f.noturno).toEqual({ presentes: 0, total: 2, pct: 0 })
+  })
+
+  it('quem é do noturno não leva falta por encontro diurno', () => {
+    const f = frequenciaDe('noite', MISTO, PRES, HOJE, 'noturno')
+    expect(f.total).toEqual({ presentes: 1, total: 2, pct: 50 })
+  })
+
+  it('quem é dos dois turnos conta os quatro encontros', () => {
+    const f = frequenciaDe('ambas', MISTO, PRES, HOJE, 'ambos')
+    expect(f.total).toEqual({ presentes: 2, total: 4, pct: 50 })
+  })
+
+  it('encontro cancelado não entra em nenhum denominador', () => {
+    const comCancelado = MISTO.map((e) =>
+      e.id === 'd2' ? { ...e, cancelado_em: '2026-07-01' } : e,
+    )
+    const f = frequenciaDe('dia', comCancelado, PRES, HOJE, 'diurno')
+    expect(f.diurno).toEqual({ presentes: 1, total: 1, pct: 100 })
+    expect(f.total).toEqual({ presentes: 1, total: 1, pct: 100 })
+  })
+
+  it('sem encontro nenhum a porcentagem é zero, não NaN', () => {
+    expect(frequenciaDe('x', [], [], HOJE).total).toEqual({ presentes: 0, total: 0, pct: 0 })
   })
 })
