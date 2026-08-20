@@ -215,7 +215,7 @@ function Mapa({
             style={{
               display: 'grid',
               gridTemplateColumns: `repeat(${colunas}, ${zoom.celula}px)`,
-              gap: 3,
+              gap: 1,
               touchAction: 'none',
               width: 'max-content',
             }}

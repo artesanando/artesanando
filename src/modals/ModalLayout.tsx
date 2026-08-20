@@ -273,7 +273,7 @@ export function ModalLayout() {
               style={{
                 display: 'grid',
                 gridTemplateColumns: `repeat(${colunas}, ${zoom.celula}px)`,
-                gap: 3,
+                gap: 1,
                 background: 'var(--sand)',
                 padding: 5,
                 borderRadius: 8,

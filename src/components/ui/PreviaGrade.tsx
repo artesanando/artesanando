@@ -18,7 +18,7 @@ export function PreviaGrade({
         style={{
           display: 'inline-grid',
           gridTemplateColumns: `repeat(${colunas}, ${celula}px)`,
-          gap: 2,
+          gap: 1,
           background: 'var(--sand)',
           padding: 5,
           borderRadius: 6,

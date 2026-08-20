@@ -19,7 +19,7 @@ export function PreviaFaixas({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 2,
+        gap: 1,
         background: 'var(--sand)',
         padding: 6,
         borderRadius: 8,
