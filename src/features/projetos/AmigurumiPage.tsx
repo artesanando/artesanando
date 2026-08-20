@@ -177,7 +177,10 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
             )}
             {grupos.map((g, i) => {
               const chave = g.ids.join(',')
-              const rotulo = g.ini === g.fim ? `#${g.ini}` : `#${g.ini}–${g.fim}`
+              /* A numeração continua no banco — é ela que ordena e que os textos
+                 de histórico citam. Na tela, quem trabalha quer saber quantas
+                 peças são, não qual é o número de cada uma. */
+              const rotulo = `${g.ids.length} ${g.ids.length === 1 ? 'unidade' : 'unidades'}`
               return (
                 <div key={chave} style={{ borderTop: i > 0 ? '1px solid var(--border)' : undefined }}>
                   <div className="linha-grupo-und">
@@ -230,7 +233,7 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
                                 const ok = await confirmar({
                                   titulo:
                                     g.ids.length === 1
-                                      ? `Remover a unidade ${rotulo} de ${g.nome}?`
+                                      ? `Remover a unidade #${g.ini} de ${g.nome}?`
                                       : `Remover ${g.ids.length} unidades de ${g.nome}?`,
                                   okLabel: 'Remover',
                                   perigo: true,

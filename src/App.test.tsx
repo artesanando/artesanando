@@ -138,9 +138,10 @@ describe('projetos (M3)', () => {
     __login()
     renderAt('/projetos/p3')
     expect((await screen.findAllByText('Amigurumi Polvo Rosa')).length).toBeGreaterThan(0)
-    // o que já foi entregue aparece separado do que ainda está em produção
-    expect(await screen.findByText(/#1 · Grace Hopper/)).toBeInTheDocument()
-    expect(await screen.findByText(/#2–3 · Grace Hopper/)).toBeInTheDocument()
+    // o que já foi entregue aparece separado do que ainda está em produção,
+    // contado em peças — a numeração das unidades não vai mais para a tela
+    expect(await screen.findByText(/1 unidade · Grace Hopper/)).toBeInTheDocument()
+    expect(await screen.findByText(/2 unidades · Grace Hopper/)).toBeInTheDocument()
   })
 
   it('unidade de amigurumi pode ser reatribuída ou removida', async () => {
