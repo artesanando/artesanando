@@ -19,6 +19,7 @@ import { PresencaPage } from './features/presenca/PresencaPage'
 import { FinanceiroPage } from './features/financeiro/FinanceiroPage'
 import { PerfilPage } from './features/perfil/PerfilPage'
 import { ConfigPage } from './features/config/ConfigPage'
+import { ExtensaoPage } from './features/extensao/ExtensaoPage'
 import { NotFoundPage } from './features/NotFoundPage'
 
 function Splash() {
@@ -131,6 +132,14 @@ function AppRoutes() {
               element={
                 <RequireAdmin>
                   <ConfigPage />
+                </RequireAdmin>
+              }
+            />
+            <Route
+              path="/extensao"
+              element={
+                <RequireAdmin>
+                  <ExtensaoPage />
                 </RequireAdmin>
               }
             />

@@ -454,3 +454,34 @@ describe('financeiro é restrito', () => {
     expect(await screen.findByRole('button', { name: '↑ Entrada' })).toBeInTheDocument()
   })
 })
+
+describe('atividade de extensão', () => {
+  it('reúne frequência, entregas, chamadas e arquivos num lugar só', async () => {
+    __login()
+    renderAt('/extensao')
+    expect(await screen.findByText('Frequência por integrante')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Entregas' }))
+    expect(screen.getByText('Entregas do semestre')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Chamadas' }))
+    expect(screen.getByText('Chamadas do semestre')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Arquivos' }))
+    expect(screen.getByText('Arquivos do semestre')).toBeInTheDocument()
+  })
+
+  it('a chamada de um dia abre com quem esteve presente', async () => {
+    __login()
+    renderAt('/extensao')
+    await userEvent.click(await screen.findByRole('button', { name: 'Chamadas' }))
+    const linha = await screen.findByRole('button', { name: /07 jul/ })
+    await userEvent.click(linha)
+    expect(linha).toHaveAttribute('aria-expanded', 'true')
+    // a ata do dia lista os nomes de quem esteve presente
+    expect(screen.getAllByText(/Cândida Nunes/).length).toBeGreaterThan(1)
+  })
+
+  it('integrante não entra na área de extensão', async () => {
+    __login(INTEGRANTE_PROFILE)
+    renderAt('/extensao')
+    expect(await screen.findByText(/, Ada$/)).toBeInTheDocument()
+  })
+})

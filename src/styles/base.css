@@ -529,6 +529,51 @@ textarea.field::placeholder {
   }
 }
 
+/* tabelas da Atividade de extensão — viram ficha por integrante no celular */
+.linha-extensao {
+  display: grid;
+  grid-template-columns: 1.7fr repeat(4, 0.7fr);
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border-top: 1px solid var(--divider);
+}
+.linha-extensao.cabecalho {
+  border-top: none;
+  background: var(--sand-head);
+  padding: 9px 18px;
+}
+.cel-extensao {
+  text-align: center;
+}
+.rotulo-extensao {
+  display: none;
+}
+@media (max-width: 900px) {
+  .linha-extensao {
+    grid-template-columns: 1fr;
+    gap: 5px;
+    padding: 14px 16px;
+  }
+  .linha-extensao.cabecalho {
+    display: none;
+  }
+  .cel-extensao {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 38px;
+    text-align: right;
+  }
+  .rotulo-extensao {
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    color: var(--muted);
+  }
+}
+
 /* linha da tabela do estoque — vira cartão no celular */
 .linha-estoque {
   display: grid;

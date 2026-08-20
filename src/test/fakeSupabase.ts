@@ -370,6 +370,7 @@ const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
   encontros: { single: ENCONTROS_FAKE[0], list: ENCONTROS_FAKE },
   presencas: { single: PRESENCAS_FAKE[0], list: PRESENCAS_FAKE },
   movimentacoes: { single: MOVIMENTACOES_FAKE[0], list: MOVIMENTACOES_FAKE },
+  arquivos_extensao: { single: null, list: [] },
 }
 
 export function __login(profile: Profile = ADMIN_PROFILE) {

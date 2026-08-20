@@ -127,7 +127,10 @@ export function Sidebar({
           acoes={[
             { label: 'Meu perfil', onSelect: () => go('/perfil') },
             ...(isAdmin
-              ? [{ label: 'Configurações', onSelect: () => go('/configuracoes') }]
+              ? [
+                  { label: 'Atividade de extensão', onSelect: () => go('/extensao') },
+                  { label: 'Configurações', onSelect: () => go('/configuracoes') },
+                ]
               : []),
             { label: 'Sair', onSelect: () => void logout(), perigo: true },
           ]}
