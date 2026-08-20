@@ -29,10 +29,11 @@ export function PerfilPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const toast = useToast()
-  const form = useFormulario<'nome'>()
+  const form = useFormulario<'nome' | 'usuario'>()
   const inputFoto = useRef<HTMLInputElement>(null)
 
   const [nome, setNome] = useState(profile?.nome ?? '')
+  const [usuario, setUsuario] = useState(profile?.usuario ?? '')
   const [telefone, setTelefone] = useState(profile?.telefone ?? '')
   const [preferencia, setPreferencia] = useState<Preferencia>(profile?.preferencia ?? 'ambos')
   const [cor, setCor] = useState(profile?.avatar_color ?? '#C4798A')
@@ -53,19 +54,30 @@ export function PerfilPage() {
 
   const salvar = async (e: FormEvent) => {
     e.preventDefault()
-    if (!form.checar({ nome: nome.trim() ? undefined : 'O nome não pode ficar vazio.' })) return
+    const ok = form.checar({
+      nome: nome.trim() ? undefined : 'O nome não pode ficar vazio.',
+      usuario: usuario.trim() ? undefined : 'O usuário não pode ficar vazio.',
+    })
+    if (!ok) return
     setSalvando(true)
     try {
       await atualizarPerfil(profile.id, {
         nome: nome.trim(),
+        usuario: usuario.trim().toLowerCase(),
         telefone: telefone.trim() || null,
         preferencia,
         avatar_color: cor,
       })
       await refreshProfile()
       toast('Alterações salvas ✓')
-    } catch {
-      toast('Não foi possível salvar. Tente novamente.', 'erro')
+    } catch (e) {
+      // 23505 = unique violation: o usuário escolhido já é de outra integrante
+      const codigo = (e as { code?: string } | null)?.code
+      if (codigo === '23505') {
+        form.checar({ usuario: 'Esse usuário já é de outra integrante.' })
+      } else {
+        toast('Não foi possível salvar. Tente novamente.', 'erro')
+      }
     } finally {
       setSalvando(false)
     }
@@ -200,14 +212,37 @@ export function PerfilPage() {
               />
             )}
           </Campo>
-          <Campo label="USUÁRIO">
+          <Campo label="USUÁRIO" obrigatorio erro={form.erros.usuario}>
             {(p) => (
-              <div {...p} className="field" style={campoTravado}>
-                {profile.usuario} <span style={{ fontSize: 11 }}>🔒</span>
-              </div>
+              <input
+                {...p}
+                className="field"
+                value={usuario}
+                onChange={(e) => {
+                  setUsuario(e.target.value)
+                  form.aoMudar('usuario')
+                }}
+              />
             )}
           </Campo>
         </div>
+
+        {usuario.trim().toLowerCase() !== profile.usuario && (
+          <div
+            role="status"
+            style={{
+              background: 'var(--chip-warn)',
+              border: '1px solid #E7D6B8',
+              borderRadius: 10,
+              padding: '9px 13px',
+              fontSize: 12.5,
+              color: 'var(--gold-dark)',
+              marginBottom: 18,
+            }}
+          >
+            Você vai passar a entrar no app com <b>{usuario.trim().toLowerCase()}</b>.
+          </div>
+        )}
 
         <div className="grid2" style={{ marginBottom: 18 }}>
           <Campo label="EMAIL">

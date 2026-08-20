@@ -5,6 +5,7 @@ export async function atualizarPerfil(
   id: string,
   dados: {
     nome?: string
+    usuario?: string
     telefone?: string | null
     preferencia?: Preferencia
     avatar_color?: string
