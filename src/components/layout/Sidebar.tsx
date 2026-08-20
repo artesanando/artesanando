@@ -5,6 +5,7 @@ import { AvatarPerfil } from '../ui/AvatarPerfil'
 import { Dica, MenuKebab } from '../ui/controles'
 import { PAPEL_LABEL } from '../../types/database'
 import {
+  IconSeta,
   IconBib,
   IconDash,
   IconEst,
@@ -131,6 +132,8 @@ export function Sidebar({
         />
       </div>
 
+      {/* discreto de propósito: é um ajuste de vez em quando, não uma ação
+          do dia a dia — só a seta, sem palavra nenhuma */}
       <button
         type="button"
         className="sidebar-encolher"
@@ -138,7 +141,7 @@ export function Sidebar({
         aria-label={encolhido ? 'Expandir menu' : 'Encolher menu'}
         aria-pressed={encolhido}
       >
-        {encolhido ? '›' : '‹ Encolher'}
+        <IconSeta virada={encolhido} />
       </button>
     </nav>
   )

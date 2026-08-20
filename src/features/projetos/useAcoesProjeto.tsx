@@ -39,7 +39,6 @@ export function useAcoesProjeto() {
         tabela: 'projetos',
         id: projeto.id,
         nome: `o projeto "${projeto.nome}"`,
-        rotulo: 'o projeto',
         motivoHistorico: 'A produção registrada e os comentários',
         arquivado: Boolean(projeto.arquivado_em),
         invalidar: ['projetos', 'progresso-geral'],

@@ -142,7 +142,6 @@ export function EstoquePage() {
                       tabela: 'estoque_itens',
                       id: item.id,
                       nome: `o material "${item.nome}"`,
-                      rotulo: 'o material',
                       motivoHistorico: 'Os empréstimos e as movimentações dele',
                       arquivado: Boolean(item.arquivado_em),
                       invalidar: ['estoque'],
@@ -171,9 +170,6 @@ export function EstoquePage() {
         <div>
           <div className="h" style={{ fontWeight: 500, fontSize: 28 }}>
             Estoque
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
-            Materiais e itens do projeto, organizados por tipo
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>

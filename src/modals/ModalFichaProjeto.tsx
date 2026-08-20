@@ -90,7 +90,7 @@ function Form({ projeto }: { projeto: Projeto }) {
         </Campo>
 
         <div className="grid2" style={{ marginBottom: 18 }}>
-          <Campo label="DESTINO (OPCIONAL)">
+          <Campo label="DESTINO">
             {(p) => (
               <input
                 {...p}
@@ -121,7 +121,7 @@ function Form({ projeto }: { projeto: Projeto }) {
                 <Stepper value={meta} onChange={setMeta} min={1} max={999} ariaLabel="Meta" />
               )}
             </Campo>
-            <Campo label="RECEITA (OPCIONAL)">
+            <Campo label="RECEITA">
               {() => (
                 <Select
                   ariaLabel="Receita"

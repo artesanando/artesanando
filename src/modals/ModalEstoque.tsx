@@ -115,7 +115,7 @@ export function ModalMaterial() {
               />
             )}
           </Campo>
-          <Campo label="DETALHE (OPCIONAL)">
+          <Campo label="DETALHE">
             {(p) => (
               <input
                 {...p}
@@ -317,7 +317,7 @@ export function ModalMovimentoEstoque() {
           </Campo>
         </div>
 
-        <Campo label="OBSERVAÇÃO (OPCIONAL)" style={{ marginBottom: 20 }}>
+        <Campo label="OBSERVAÇÃO" style={{ marginBottom: 20 }}>
           {(p) => (
             <input
               {...p}

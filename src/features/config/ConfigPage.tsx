@@ -308,8 +308,6 @@ function SecaoProjeto() {
                 onClick={async () => {
                   const ok = await confirmar({
                     titulo: `Tornar ${s.label} o semestre ativo?`,
-                    descricao:
-                      'Os projetos e encontros novos passam a entrar neste semestre. O que já existe não muda.',
                     okLabel: 'Ativar',
                   })
                   if (ok) ativar.mutate(s.id)
@@ -413,7 +411,6 @@ function SecaoEncontros() {
             tabela: 'encontros',
             id: e.id,
             nome: `o encontro de ${fmtDataCurta(e.data)}`,
-            rotulo: 'o encontro',
             motivoHistorico: 'A chamada já feita',
             arquivado,
             invalidar: ['encontros', 'presencas'],

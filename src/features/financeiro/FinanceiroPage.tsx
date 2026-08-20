@@ -111,7 +111,6 @@ export function FinanceiroPage() {
                 tabela: 'movimentacoes',
                 id: m.id,
                 nome: `a movimentação "${m.descricao}"`,
-                rotulo: 'o lançamento',
                 motivoHistorico: 'O caixa',
                 arquivado: Boolean(m.arquivado_em),
                 invalidar: ['movimentacoes'],

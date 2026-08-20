@@ -321,8 +321,6 @@ export function IntegrantesPage() {
                           onSelect: async () => {
                             const ok = await confirmar({
                               titulo: `Desativar ${p.nome}?`,
-                              descricao:
-                                'Ela sai das listas e da chamada, mas o histórico dela continua inteiro.',
                               okLabel: 'Desativar',
                               perigo: true,
                             })

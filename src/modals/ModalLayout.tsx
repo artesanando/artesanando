@@ -201,7 +201,7 @@ export function ModalLayout() {
         value={nome}
         aria-label="Nome do esquema"
         onChange={(e) => setNome(e.target.value)}
-        placeholder="Manta Primavera"
+        placeholder="Manta Ada"
       />
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>

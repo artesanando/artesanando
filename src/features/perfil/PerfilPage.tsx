@@ -200,7 +200,7 @@ export function PerfilPage() {
               />
             )}
           </Campo>
-          <Campo label="USUÁRIO" dica="só a administradora muda o usuário">
+          <Campo label="USUÁRIO">
             {(p) => (
               <div {...p} className="field" style={campoTravado}>
                 {profile.usuario} <span style={{ fontSize: 11 }}>🔒</span>
@@ -210,7 +210,7 @@ export function PerfilPage() {
         </div>
 
         <div className="grid2" style={{ marginBottom: 18 }}>
-          <Campo label="EMAIL" dica="é por ele que chega a recuperação de senha">
+          <Campo label="EMAIL">
             {(p) => (
               <div {...p} className="field" style={campoTravado}>
                 <span
@@ -222,7 +222,7 @@ export function PerfilPage() {
               </div>
             )}
           </Campo>
-          <Campo label="TELEFONE / WHATSAPP (OPCIONAL)">
+          <Campo label="TELEFONE / WHATSAPP">
             {(p) => (
               <input
                 {...p}
@@ -246,7 +246,7 @@ export function PerfilPage() {
               />
             )}
           </Campo>
-          <Campo label="COR DO AVATAR" dica="aparece quando não há foto">
+          <Campo label="COR DO AVATAR">
             {() => <ColorPicker value={cor} onChange={setCor} ariaLabel="Cor do avatar" />}
           </Campo>
         </div>

@@ -252,19 +252,22 @@ textarea.field::placeholder {
   gap: 6px;
 }
 .sidebar-encolher {
-  margin-top: 12px;
+  margin-top: 10px;
+  align-self: flex-end;
   border: none;
   background: none;
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--faint);
+  color: var(--faint-3);
   cursor: pointer;
   padding: 6px;
   border-radius: 8px;
+  display: flex;
   transition: color var(--dur-rapida) var(--ease-suave);
 }
-.sidebar-encolher:hover {
+.sidebar.encolhida .sidebar-encolher {
+  align-self: center;
+}
+.sidebar-encolher:hover,
+.sidebar-encolher:focus-visible {
   color: var(--accent);
 }
 

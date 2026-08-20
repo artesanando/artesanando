@@ -244,7 +244,6 @@ export function PresencaPage() {
                           tabela: 'encontros',
                           id: e.id,
                           nome: `o encontro de ${fmtDataCurta(e.data)}`,
-                          rotulo: 'o encontro',
                           motivoHistorico: 'A chamada já feita',
                           arquivado: Boolean(e.arquivado_em),
                           invalidar: ['encontros', 'presencas'],
@@ -404,10 +403,6 @@ export function PresencaPage() {
                       </button>
                     </div>
                   )}
-                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>
-                    Ela entra na chamada agora e, quando for convidada para o app, a frequência de
-                    hoje continua sendo dela.
-                  </div>
                 </div>
               )}
             </>

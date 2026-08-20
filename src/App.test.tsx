@@ -71,7 +71,7 @@ describe('navegação', () => {
     __login()
     renderAt('/')
     await userEvent.click(await screen.findByRole('button', { name: '+ Novo projeto' }))
-    expect(screen.getByText('Defina o tipo para configurar a produção')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Novo projeto' })).toBeInTheDocument()
   })
 
   it('a manta de crochê deixa de nascer pronta: dá para escolher tamanho e modelos', async () => {

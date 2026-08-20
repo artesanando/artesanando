@@ -254,7 +254,7 @@ export function ModalProjeto() {
 
   return (
     <ModalBox maxWidth={600}>
-      <ModalHeader title="Novo projeto" sub="Defina o tipo para configurar a produção" />
+      <ModalHeader title="Novo projeto" />
       <form onSubmit={submit}>
         <div className="grid2" style={{ gap: 10, marginBottom: 20 }}>
           <button type="button" onClick={() => setProjCat('manta')} style={manta ? cardOn : cardOff}>
@@ -286,7 +286,7 @@ export function ModalProjeto() {
                 setNome(e.target.value)
                 form.aoMudar('nome')
               }}
-              placeholder={manta ? 'Manta Primavera' : 'Capivara'}
+              placeholder={manta ? 'Manta Ada' : 'Capivara'}
             />
           )}
         </Campo>
@@ -314,7 +314,7 @@ export function ModalProjeto() {
               )}
             </Campo>
           ) : (
-            <Campo label="RECEITA (OPCIONAL)">
+            <Campo label="RECEITA">
               {() => (
                 <Select
                   ariaLabel="Receita"
@@ -328,7 +328,7 @@ export function ModalProjeto() {
               )}
             </Campo>
           )}
-          <Campo label="DESTINO (OPCIONAL)">
+          <Campo label="DESTINO">
             {(p) => (
               <input
                 {...p}

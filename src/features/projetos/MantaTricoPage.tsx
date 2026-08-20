@@ -141,9 +141,6 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
         <div className="h" style={{ fontSize: 16, marginBottom: 4 }}>
           Prévia da manta
         </div>
-        <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>
-          toque numa faixa para abrir a ordem de cores dela
-        </div>
         <div
           style={{
             border: '1.5px solid #D8C7BF',
@@ -227,7 +224,6 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
                   ultima.status !== 'afazer' &&
                   !(await confirmar({
                     titulo: `Remover a faixa ${ultima.ordem}?`,
-                    descricao: 'Ela já tem trabalho registrado — isso se perde.',
                     okLabel: 'Remover',
                     perigo: true,
                   }))

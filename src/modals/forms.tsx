@@ -272,7 +272,6 @@ export function ModalEmprestimo() {
     <ModalBox maxWidth={520}>
       <ModalHeader
         title="Registrar empréstimo"
-        sub="Saída de material para uma integrante levar para casa"
       />
       <form onSubmit={submit}>
         <Campo label="INTEGRANTE" obrigatorio erro={form.erros.integrante} style={{ marginBottom: 18 }}>
@@ -315,14 +314,14 @@ export function ModalEmprestimo() {
               <Stepper value={quantidade} onChange={setQuantidade} min={1} max={99} ariaLabel="Quantidade" />
             )}
           </Campo>
-          <Campo label="PROJETO (OPCIONAL)">
+          <Campo label="PROJETO">
             {(p) => (
               <input
                 {...p}
                 className="field"
                 value={projeto}
                 onChange={(e) => setProjeto(e.target.value)}
-                placeholder="Manta Primavera"
+                placeholder="Manta Ada"
               />
             )}
           </Campo>
@@ -389,7 +388,7 @@ export function ModalDevolucao() {
 
   return (
     <ModalBox maxWidth={520}>
-      <ModalHeader title="Registrar devolução" sub="Selecione o empréstimo a encerrar" />
+      <ModalHeader title="Registrar devolução" />
       {ativos.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>
           Nenhum empréstimo em aberto.
@@ -551,7 +550,7 @@ function FormEncontro({ encontro }: { encontro?: Encontro }) {
             {() => <TimePicker value={hora} onChange={setHora} ariaLabel="Horário do encontro" />}
           </Campo>
         </div>
-        <Campo label="SALA (OPCIONAL)" style={{ marginBottom: 18 }}>
+        <Campo label="SALA" style={{ marginBottom: 18 }}>
           {(p) => (
             <input
               {...p}
@@ -562,7 +561,7 @@ function FormEncontro({ encontro }: { encontro?: Encontro }) {
             />
           )}
         </Campo>
-        <Campo label="PAUTA (OPCIONAL)" style={{ marginBottom: 24 }}>
+        <Campo label="PAUTA" style={{ marginBottom: 24 }}>
           {(p) => (
             <textarea
               {...p}
@@ -570,7 +569,7 @@ function FormEncontro({ encontro }: { encontro?: Encontro }) {
               style={{ minHeight: 52, resize: 'vertical' }}
               value={pauta}
               onChange={(e) => setPauta(e.target.value)}
-              placeholder="Montagem da Manta Primavera"
+              placeholder="Montagem da Manta Ada"
             />
           )}
         </Campo>

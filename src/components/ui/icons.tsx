@@ -69,3 +69,11 @@ export const IconVideo = () => (
     <path d="m15 11 6-3v8l-6-3z" />
   </svg>
 )
+
+/* seta dupla do encolher/expandir do menu */
+export const IconSeta = ({ virada = false }: { virada?: boolean }) => (
+  <svg {...base} width={15} height={15} style={virada ? { transform: 'scaleX(-1)' } : undefined}>
+    <path d="m14 7-5 5 5 5" />
+    <path d="m8 7-5 5 5 5" />
+  </svg>
+)

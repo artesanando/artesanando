@@ -110,7 +110,6 @@ export function Comentarios({ projetoId }: { projetoId: string }) {
                         onSelect: async () => {
                           const ok = await confirmar({
                             titulo: 'Apagar este comentário?',
-                            descricao: 'Não tem volta.',
                             okLabel: 'Apagar',
                             perigo: true,
                           })

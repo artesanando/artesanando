@@ -129,9 +129,6 @@ export function ModalFaixa() {
             +
           </span>
         </div>
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-          uma faixa = uma linha inteira, feita por uma integrante
-        </span>
       </div>
       <div style={{ marginBottom: 20 }}>
         <CampoMedida

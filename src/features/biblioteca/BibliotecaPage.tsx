@@ -228,7 +228,6 @@ export function BibliotecaPage() {
                         tabela: 'receitas',
                         id: r.id,
                         nome: `"${r.nome}"`,
-                        rotulo: 'a receita',
                         motivoHistorico: 'Os projetos que usam esta receita',
                         arquivado: Boolean(r.arquivado_em),
                         invalidar: ['receitas'],

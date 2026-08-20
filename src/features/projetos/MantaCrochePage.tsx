@@ -67,7 +67,7 @@ function Mapa({
   modelos: MantaModelo[]
   colunas: number
 }) {
-  const { profile, can, isAdmin } = useAuth()
+  const { profile, can } = useAuth()
   const qc = useQueryClient()
   const toast = useToast()
 
@@ -385,11 +385,6 @@ function Mapa({
         </div>
       )}
 
-      {!isAdmin && (
-        <div style={{ fontSize: 11.5, color: 'var(--faint)', marginBottom: 20 }}>
-          Mudar o tamanho da manta e editar os modelos é coisa de administradora.
-        </div>
-      )}
     </>
   )
 }
@@ -400,10 +395,6 @@ function PorEtapa({ squares, modelos }: { squares: Square[]; modelos: MantaModel
   const resumo = resumoPorEtapa(squares, modelos)
   return (
     <>
-      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
-        a fazer → miolo → aguardando borda → borda → pronto · a contagem vem dos próprios
-        squares do mapa
-      </div>
       <div
         className="pgrid"
         style={{ '--cols': 'repeat(auto-fit,minmax(150px,1fr))', '--gap': '12px', marginBottom: 26 } as CSSProperties}

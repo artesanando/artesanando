@@ -14,8 +14,6 @@ interface Opts {
   id: string
   /** aparece no diálogo: "Arquivar a manta Primavera?" */
   nome: string
-  /** o que é, em minúsculas: "o projeto", "o encontro", "a receita" */
-  rotulo: string
   /** o que fica preso quando não dá para excluir: "a chamada já feita" */
   motivoHistorico: string
   arquivado?: boolean
@@ -28,7 +26,7 @@ export function useAcoesArquivo() {
   const toast = useToast()
   const qc = useQueryClient()
 
-  return ({ tabela, id, nome, rotulo, motivoHistorico, arquivado, invalidar }: Opts): AcaoMenu[] => {
+  return ({ tabela, id, nome, motivoHistorico, arquivado, invalidar }: Opts): AcaoMenu[] => {
     const revalidar = () => invalidar.forEach((k) => qc.invalidateQueries({ queryKey: [k] }))
 
     const acaoArquivar: AcaoMenu = arquivado
@@ -49,7 +47,6 @@ export function useAcoesArquivo() {
           onSelect: async () => {
             const ok = await confirmar({
               titulo: `Arquivar ${nome}?`,
-              descricao: `Some das listas mas continua no banco — dá para restaurar depois na aba de arquivados.`,
               okLabel: 'Arquivar',
             })
             if (!ok) return
@@ -70,7 +67,7 @@ export function useAcoesArquivo() {
         if (!(await podeExcluir(tabela, id))) {
           await confirmar({
             titulo: `Não dá para excluir ${nome}`,
-            descricao: `${motivoHistorico} ficaria sem referência. Arquive no lugar — some das listas e o histórico continua inteiro.`,
+            descricao: `${motivoHistorico} ficaria sem referência. Arquive no lugar.`,
             okLabel: 'Entendi',
             cancelarLabel: 'Fechar',
           })
@@ -78,7 +75,6 @@ export function useAcoesArquivo() {
         }
         const ok = await confirmar({
           titulo: `Excluir ${nome}?`,
-          descricao: `Apaga ${rotulo} de vez. Não tem volta.`,
           okLabel: 'Excluir',
           perigo: true,
         })
