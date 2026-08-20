@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import { corSorteada } from '../../lib/paleta'
 import {
   turnoDaPessoa,
   turnoDoEncontro,
@@ -137,7 +138,12 @@ export async function criarIntegranteSemConta(nome: string, turno: Turno = 'ambo
     .replace(/^\.|\.$/g, '')
   const { data, error } = await supabase
     .from('profiles')
-    .insert({ nome: nome.trim(), usuario: `${base}.${Date.now().toString(36).slice(-4)}`, turno })
+    .insert({
+      nome: nome.trim(),
+      usuario: `${base}.${Date.now().toString(36).slice(-4)}`,
+      turno,
+      avatar_color: corSorteada(),
+    })
     .select('id')
     .single()
   if (error) throw error

@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../state/auth'
 import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
 import { Campo, LegendaObrigatorio, useFormulario } from '../../components/ui/Campo'
-import { ColorPicker, Select } from '../../components/ui/controles'
+import { Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { PAPEL_LABEL, TURNO_LABEL, type Preferencia, type Turno } from '../../types/database'
 import { atualizarPerfil, subirAvatar } from './api'
@@ -41,7 +41,6 @@ export function PerfilPage() {
   const [usuario, setUsuario] = useState(profile?.usuario ?? '')
   const [telefone, setTelefone] = useState(profile?.telefone ?? '')
   const [preferencia, setPreferencia] = useState<Preferencia>(profile?.preferencia ?? 'ambos')
-  const [cor, setCor] = useState(profile?.avatar_color ?? '#C4798A')
   const [turno, setTurno] = useState<Turno>(profile?.turno ?? 'ambos')
   const [salvando, setSalvando] = useState(false)
 
@@ -73,7 +72,6 @@ export function PerfilPage() {
         telefone: telefone.trim() || null,
         preferencia,
         turno,
-        avatar_color: cor,
       })
       await refreshProfile()
       toast('Alterações salvas ✓')
@@ -277,13 +275,10 @@ export function PerfilPage() {
           </Campo>
         </div>
 
-        <div className="grid2" style={{ marginBottom: 18 }}>
+        <div className="grid2" style={{ marginBottom: 24 }}>
           <Campo label="TURNO">
             {() => <Select value={turno} onChange={setTurno} options={TURNOS} ariaLabel="Turno" />}
           </Campo>
-        </div>
-
-        <div className="grid2" style={{ marginBottom: 24 }}>
           <Campo label="PREFERÊNCIA">
             {() => (
               <Select
@@ -293,9 +288,6 @@ export function PerfilPage() {
                 ariaLabel="Preferência"
               />
             )}
-          </Campo>
-          <Campo label="COR DO AVATAR">
-            {() => <ColorPicker value={cor} onChange={setCor} ariaLabel="Cor do avatar" />}
           </Campo>
         </div>
 

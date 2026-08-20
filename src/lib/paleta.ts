@@ -17,6 +17,11 @@ export const PALETTE: [string, string][] = [
 export const nomeDaCor = (hex: string) =>
   PALETTE.find(([c]) => c.toLowerCase() === hex.toLowerCase())?.[1] ?? 'Cor'
 
+/* A cor do avatar deixou de ser escolhida: quem cria perfil pela chamada não vai
+   parar para decidir isso, e antes todo mundo saía com a mesma cor. O banco
+   sorteia igual no `handle_new_user` — aqui é para o perfil sem conta. */
+export const corSorteada = () => PALETTE[Math.floor(Math.random() * PALETTE.length)][0]
+
 export interface ModelDef {
   nome: string
   border: string
