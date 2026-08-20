@@ -16,8 +16,9 @@ Nada de rodar SQL na mão no painel.
    production branch `main`. O `config.toml` deste diretório é o que a integração usa.
 
 3. **Push na `main`** — a integração aplica as migrations e registra as versões em
-   `supabase_migrations.schema_migrations`. Confira em *Table Editor* que as 18 tabelas
-   apareceram e em *Storage* que existe o bucket `receitas`.
+   `supabase_migrations.schema_migrations`. Confira em *Table Editor* que as tabelas
+   apareceram e em *Storage* que existem os buckets `receitas`, `avatares`, `capas` e
+   `extensao`.
 
 4. **Seed** — [`seed.sql`](seed.sql) **não** roda em produção (a integração só aplica
    migrations; seed vale para branches de preview e para o ambiente local). Ajuste as
@@ -43,15 +44,18 @@ Nada de rodar SQL na mão no painel.
    As demais integrantes são convidadas depois, já logada, pela tela de Integrantes
    (usa a Edge Function do passo 7).
 
-7. **Edge Function de convite**:
+7. **Edge Functions**:
 
    ```powershell
    npx supabase login
    npx supabase link --project-ref <ref>
    npx supabase functions deploy invite-member
+   npx supabase functions deploy reset-password-link
    ```
 
-   A service role fica disponível para a function automaticamente.
+   A service role fica disponível para as functions automaticamente. **Redeploy as duas
+   sempre que mudarem** — elas identificam a chamadora por `profiles.user_id`, e uma
+   versão antiga no servidor continua procurando por `profiles.id`.
 
 8. **URLs de autenticação** — *Authentication → URL Configuration*: Site URL = URL da
    Vercel; adicione `/redefinir-senha` e `/definir-senha` às Redirect URLs. O `site_url`
@@ -68,7 +72,8 @@ encontros, chamada, estoque, empréstimos, biblioteca, caixa e feed) e **preserv
 `profiles`, `permissoes` e `semestres` — você continua logada, com as mesmas integrantes.
 
 Não é uma migration: cole no *SQL Editor* e rode quando quiser recomeçar. Os arquivos nos
-buckets `receitas` e `avatares` não saem no truncate — apague-os pelo *Storage*.
+buckets `receitas`, `avatares`, `capas` e `extensao` não saem no truncate — apague-os pelo
+*Storage*.
 
 ## Nova migration
 
