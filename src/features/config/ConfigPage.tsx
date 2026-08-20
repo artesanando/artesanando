@@ -56,7 +56,7 @@ export function ConfigPage() {
           Permissões
         </button>
         <button style={item(secao === 'projeto')} onClick={() => setSecao('projeto')}>
-          Projeto
+          Semestre
         </button>
         <button style={item(secao === 'encontros')} onClick={() => setSecao('encontros')}>
           Encontros
@@ -95,9 +95,7 @@ function Permissoes() {
       <div className="h" style={{ fontSize: 18, marginBottom: 4 }}>
         Permissões das integrantes
       </div>
-      <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 8 }}>
-        Defina o que cada integrante pode editar. O perfil de administradora é fixo.
-      </div>
+
       <div
         style={{
           display: 'flex',
@@ -145,7 +143,9 @@ function Permissoes() {
             Nenhuma integrante cadastrada ainda.
           </div>
         )}
-        {rows?.map((p) => (
+        {rows?.map((p) => {
+          const admin = p.papel === 'admin'
+          return (
           <div key={p.id} className="linha-perm">
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
               <AvatarPerfil
@@ -166,12 +166,12 @@ function Permissoes() {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {p.email ?? 'ainda sem conta'}
+                  {admin ? 'administradora — acesso total' : (p.email ?? 'ainda sem conta')}
                 </div>
               </div>
             </div>
             {COLS.map(([col, label]) => {
-              const value = p.permissoes?.[col] ?? false
+              const value = admin || (p.permissoes?.[col] ?? false)
               return (
                 <div key={col} className="cel-perm">
                   <span className="rotulo-perm">{label}</span>
@@ -181,13 +181,14 @@ function Permissoes() {
                     role="switch"
                     aria-checked={value}
                     aria-label={`${label} de ${p.nome}`}
+                    disabled={admin}
                     onClick={() => toggle.mutate({ id: p.id, col, value: !value })}
                     style={{
                       background: value ? 'var(--primary)' : '#E7DCCF',
-                      cursor: 'pointer',
+                      cursor: admin ? 'default' : 'pointer',
                       border: 'none',
                       padding: 0,
-                      opacity: toggle.isPending ? 0.6 : 1,
+                      opacity: admin ? 0.45 : toggle.isPending ? 0.6 : 1,
                       transition: 'background var(--dur-rapida) var(--ease-suave)',
                     }}
                   >
@@ -197,7 +198,8 @@ function Permissoes() {
               )
             })}
           </div>
-        ))}
+          )
+        })}
       </div>
     </>
   )

@@ -326,13 +326,21 @@ describe('integrantes (M4)', () => {
 })
 
 describe('configurações', () => {
-  it('as abas Projeto e Encontros deixaram de ser placeholder', async () => {
+  it('as abas Semestre e Encontros deixaram de ser placeholder', async () => {
     __login()
     renderAt('/configuracoes')
-    await userEvent.click(await screen.findByRole('button', { name: 'Projeto' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Semestre' }))
     expect(screen.getByText('Semestre do projeto')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Encontros' }))
     expect(screen.getByText('Encontros do semestre')).toBeInTheDocument()
+  })
+
+  it('administradora aparece na tabela de permissões, mas travada', async () => {
+    __login()
+    renderAt('/configuracoes')
+    const chave = await screen.findByRole('switch', { name: 'FINANCEIRO de Cândida Nunes' })
+    expect(chave).toBeDisabled()
+    expect(chave).toBeChecked()
   })
 
   it('integrante comum não chega em configurações', async () => {
@@ -428,5 +436,21 @@ describe('financeiro — modal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Registrar entrada' }))
     expect(await screen.findByText('Informe um valor maior que zero.')).toBeInTheDocument()
     expect(screen.getByText('Descreva a movimentação.')).toBeInTheDocument()
+  })
+})
+
+describe('financeiro é restrito', () => {
+  it('sem a permissão, o item some do menu e a rota redireciona', async () => {
+    __login(INTEGRANTE_PROFILE)
+    renderAt('/financeiro')
+    // cai na inicial em vez de abrir o caixa
+    expect(await screen.findByText(/, Ada$/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Financeiro' })).not.toBeInTheDocument()
+  })
+
+  it('admin continua vendo o financeiro', async () => {
+    __login()
+    renderAt('/financeiro')
+    expect(await screen.findByRole('button', { name: '↑ Entrada' })).toBeInTheDocument()
   })
 })
