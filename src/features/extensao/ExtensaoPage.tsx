@@ -968,7 +968,7 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
                     : { background: 'var(--chip-warn)', color: 'var(--gold-dark)' }
                 }
               >
-                {av.cumpriu ? (av.manual ? 'CUMPRIU · MANUAL' : 'CUMPRIU') : 'FALTA'}
+                {av.cumpriu ? (av.manual ? 'CUMPRIU · MANUAL' : 'CUMPRIU') : 'EM ANDAMENTO'}
               </span>
               <MenuKebab
                 ariaLabel={`Marcas de ${p.nome}`}
