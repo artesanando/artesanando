@@ -20,6 +20,7 @@ export const ADMIN_PROFILE: Profile = {
   papel: 'admin',
   ativo: true,
   turno: 'ambos',
+  nivel: 'iniciante',
   desde: '2024.1',
 }
 
@@ -37,6 +38,7 @@ export const ADMIN2_PROFILE: Profile = {
   papel: 'admin',
   ativo: true,
   turno: 'ambos',
+  nivel: 'iniciante',
   desde: '2024.1',
 }
 
@@ -55,6 +57,7 @@ export const INTEGRANTE_PROFILE: Profile = {
   papel: 'integrante',
   ativo: true,
   turno: 'ambos',
+  nivel: 'iniciante',
   desde: '2025.1',
 }
 
@@ -72,6 +75,7 @@ export const SEM_CONTA_PROFILE: Profile = {
   papel: 'integrante',
   ativo: true,
   turno: 'ambos',
+  nivel: 'iniciante',
   desde: '2026.2',
 }
 

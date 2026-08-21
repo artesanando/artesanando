@@ -1,13 +1,22 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../state/auth'
 import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
 import { Campo, LegendaObrigatorio, useFormulario } from '../../components/ui/Campo'
 import { Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
-import { PAPEL_LABEL, TURNO_LABEL, type Preferencia, type Turno } from '../../types/database'
-import { atualizarPerfil, subirAvatar } from './api'
+import {
+  NIVEL_LABEL,
+  PAPEL_LABEL,
+  RA_VALIDO,
+  TURNO_LABEL,
+  nivelDaPessoa,
+  type Nivel,
+  type Preferencia,
+  type Turno,
+} from '../../types/database'
+import { atualizarPerfil, fetchMeuRa, salvarRa, subirAvatar } from './api'
 import { RecorteImagem } from '../../components/ui/RecorteImagem'
 
 const PREFS: [Preferencia, string][] = [
@@ -19,6 +28,11 @@ const PREFS: [Preferencia, string][] = [
 const TURNOS: [Turno, string][] = (['diurno', 'noturno', 'ambos'] as Turno[]).map((t) => [
   t,
   TURNO_LABEL[t],
+])
+
+const NIVEIS: [Nivel, string][] = (['iniciante', 'experiente'] as Nivel[]).map((n) => [
+  n,
+  NIVEL_LABEL[n],
 ])
 
 const campoTravado = {
@@ -34,7 +48,7 @@ export function PerfilPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const toast = useToast()
-  const form = useFormulario<'nome' | 'usuario'>()
+  const form = useFormulario<'nome' | 'usuario' | 'ra'>()
   const inputFoto = useRef<HTMLInputElement>(null)
 
   const [nome, setNome] = useState(profile?.nome ?? '')
@@ -42,7 +56,17 @@ export function PerfilPage() {
   const [telefone, setTelefone] = useState(profile?.telefone ?? '')
   const [preferencia, setPreferencia] = useState<Preferencia>(profile?.preferencia ?? 'ambos')
   const [turno, setTurno] = useState<Turno>(profile?.turno ?? 'ambos')
+  const [nivel, setNivel] = useState<Nivel>(nivelDaPessoa(profile?.nivel))
+  const [ra, setRa] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
+
+  /* O RA vem de outra tabela e não acompanha o perfil no auth. Enquanto não
+     chega, o campo fica no que o banco tem — daí o `ra ?? raSalvo`. */
+  const { data: raSalvo } = useQuery({
+    queryKey: ['meu-ra', profile?.id],
+    queryFn: () => fetchMeuRa(profile!.id),
+    enabled: Boolean(profile?.id),
+  })
 
   const [aRecortar, setARecortar] = useState<File | null>(null)
   const [subindoFoto, setSubindoFoto] = useState(false)
@@ -59,9 +83,11 @@ export function PerfilPage() {
 
   const salvar = async (e: FormEvent) => {
     e.preventDefault()
+    const raAtual = (ra ?? raSalvo ?? '').trim()
     const ok = form.checar({
       nome: nome.trim() ? undefined : 'O nome não pode ficar vazio.',
       usuario: usuario.trim() ? undefined : 'O usuário não pode ficar vazio.',
+      ra: !raAtual || RA_VALIDO.test(raAtual) ? undefined : 'O RA tem seis números.',
     })
     if (!ok) return
     setSalvando(true)
@@ -72,7 +98,12 @@ export function PerfilPage() {
         telefone: telefone.trim() || null,
         preferencia,
         turno,
+        nivel,
       })
+      if (raAtual !== (raSalvo ?? '')) {
+        await salvarRa(profile.id, raAtual)
+        qc.invalidateQueries({ queryKey: ['meu-ra', profile.id] })
+      }
       await refreshProfile()
       toast('Alterações salvas ✓')
     } catch (e) {
@@ -288,6 +319,28 @@ export function PerfilPage() {
                 ariaLabel="Preferência"
               />
             )}
+          </Campo>
+        </div>
+
+        <div className="grid2" style={{ marginBottom: 24 }}>
+          <Campo label="RA" erro={form.erros.ra}>
+            {(p) => (
+              <input
+                {...p}
+                className="field"
+                inputMode="numeric"
+                maxLength={6}
+                value={ra ?? raSalvo ?? ''}
+                onChange={(e) => {
+                  setRa(e.target.value.replace(/[^0-9]/g, ''))
+                  form.aoMudar('ra')
+                }}
+                placeholder="815162"
+              />
+            )}
+          </Campo>
+          <Campo label="NÍVEL">
+            {() => <Select value={nivel} onChange={setNivel} options={NIVEIS} ariaLabel="Nível" />}
           </Campo>
         </div>
 

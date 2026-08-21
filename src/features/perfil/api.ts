@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import type { Preferencia, Turno } from '../../types/database'
+import type { Nivel, Preferencia, Turno } from '../../types/database'
 
 export async function atualizarPerfil(
   id: string,
@@ -9,11 +9,32 @@ export async function atualizarPerfil(
     telefone?: string | null
     preferencia?: Preferencia
     turno?: Turno
+    nivel?: Nivel
     avatar_color?: string
     avatar_url?: string | null
   },
 ) {
   const { error } = await supabase.from('profiles').update(dados).eq('id', id)
+  if (error) throw error
+}
+
+/* O RA mora em `perfis_academico`, não em `profiles`: a policy de lá só devolve
+   a linha para a própria dona ou para administradora, e o PostgREST não sabe
+   esconder coluna. Assim nenhum `select('*')` de outra tela vaza RA de ninguém. */
+export async function fetchMeuRa(perfilId: string): Promise<string> {
+  const { data, error } = await supabase
+    .from('perfis_academico')
+    .select('ra')
+    .eq('profile_id', perfilId)
+    .maybeSingle()
+  if (error) throw error
+  return (data as { ra: string | null } | null)?.ra ?? ''
+}
+
+export async function salvarRa(perfilId: string, ra: string) {
+  const { error } = await supabase
+    .from('perfis_academico')
+    .upsert({ profile_id: perfilId, ra: ra.trim() || null })
   if (error) throw error
 }
 

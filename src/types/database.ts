@@ -4,6 +4,21 @@
 export type Preferencia = 'croche' | 'trico' | 'ambos'
 export type Papel = 'admin' | 'integrante'
 
+/** Define qual regra de crédito do semestre vale para ela */
+export type Nivel = 'iniciante' | 'experiente'
+
+export const NIVEL_LABEL: Record<Nivel, string> = {
+  iniciante: 'Iniciante',
+  experiente: 'Experiente',
+}
+
+/* Mesmo caso do turno: enquanto a migration do nível não roda, `select('*')`
+   devolve a linha sem a coluna, e o app usa isso como chave de objeto. */
+export const nivelDaPessoa = (v: unknown): Nivel => (v === 'experiente' ? 'experiente' : 'iniciante')
+
+/** RA: seis dígitos, e só isso — cada instituição tem o seu formato, este é o daqui */
+export const RA_VALIDO = /^[0-9]{6}$/
+
 /** Turno de um encontro; a integrante pode ser dos dois */
 export type TurnoEncontro = 'diurno' | 'noturno'
 export type Turno = TurnoEncontro | 'ambos'
@@ -39,6 +54,7 @@ export interface Profile {
   desde: string | null
   /** em qual turno ela vem — define o denominador da frequência total dela */
   turno: Turno
+  nivel: Nivel
 }
 
 /** Integrante anotada na chamada que ainda não tem acesso ao app */

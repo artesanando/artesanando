@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { setKeepConnected, supabase } from '../lib/supabase'
-import { turnoDaPessoa, type Permissoes, type Profile } from '../types/database'
+import { nivelDaPessoa, turnoDaPessoa, type Permissoes, type Profile } from '../types/database'
 
 export type Perm = 'progresso' | 'devolucoes' | 'comentarios' | 'financeiro'
 
@@ -31,8 +31,14 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
     .maybeSingle()
   if (error) return null
   const perfil = (data as Profile | null) ?? null
-  // o perfil circula pelo app inteiro: entra sempre com um turno válido
-  return perfil && { ...perfil, turno: turnoDaPessoa(perfil.turno) }
+  // o perfil circula pelo app inteiro: entra sempre com turno e nível válidos
+  return (
+    perfil && {
+      ...perfil,
+      turno: turnoDaPessoa(perfil.turno),
+      nivel: nivelDaPessoa(perfil.nivel),
+    }
+  )
 }
 
 async function fetchPermissoes(profileId: string): Promise<Permissoes | null> {

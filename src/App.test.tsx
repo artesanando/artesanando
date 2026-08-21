@@ -309,7 +309,9 @@ describe('integrantes (M4)', () => {
     expect(screen.getByText('Sahudy Montenegro')).toBeInTheDocument()
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument()
     expect(screen.getByText('ENTREGAS NO SEMESTRE')).toBeInTheDocument()
-    expect(screen.getByText(/FREQUÊNCIA ·/)).toBeInTheDocument()
+    expect(screen.getByText('FREQUÊNCIA')).toBeInTheDocument()
+    // o turno vira um seletor: a barra mostra um recorte por vez, não os três
+    expect(screen.getByLabelText('Turno da frequência')).toBeInTheDocument()
   })
 
   it('as entregas passam a contar granny squares', async () => {
@@ -498,20 +500,22 @@ describe('biblioteca editável', () => {
   })
 })
 
-describe('banco ainda sem a coluna turno', () => {
-  /* `select('*')` devolve a linha sem a coluna enquanto a migration do turno não
-     rodou. O app usa esse valor como chave de objeto, e sem normalizar na
-     fronteira a página de Integrantes ficava em branco. */
+describe('banco ainda sem as colunas novas', () => {
+  /* `select('*')` devolve a linha sem a coluna enquanto a migration não rodou.
+     O app usa esses valores como chave de objeto, e sem normalizar na fronteira
+     a página de Integrantes ficava em branco. Vale para turno e para nível. */
   it('a página de integrantes abre mesmo assim', async () => {
-    const antes = ADMIN_PROFILE.turno
-    delete (ADMIN_PROFILE as unknown as Record<string, unknown>).turno
+    const perfil = ADMIN_PROFILE as unknown as Record<string, unknown>
+    const antes = { turno: perfil.turno, nivel: perfil.nivel }
+    delete perfil.turno
+    delete perfil.nivel
     try {
       __login()
       renderAt('/integrantes')
       expect(await screen.findByText('ENTREGAS NO SEMESTRE')).toBeInTheDocument()
-      expect(screen.getByText(/FREQUÊNCIA ·/)).toBeInTheDocument()
+      expect(screen.getByText('FREQUÊNCIA')).toBeInTheDocument()
     } finally {
-      ADMIN_PROFILE.turno = antes
+      Object.assign(perfil, antes)
     }
   })
 })

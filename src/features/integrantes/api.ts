@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import { turnoDaPessoa, type Profile } from '../../types/database'
+import { nivelDaPessoa, turnoDaPessoa, type Nivel, type Profile } from '../../types/database'
 import { saldoEmprestimo, type EmprestimoAtivo } from '../estoque/api'
 
 export async function fetchIntegrantes(): Promise<Profile[]> {
@@ -12,9 +12,13 @@ export async function fetchIntegrantes(): Promise<Profile[]> {
   return normalizaPerfis(data)
 }
 
-/** Toda linha de perfil entra no app com um turno válido — ver `turnoDaPessoa` */
+/** Toda linha de perfil entra no app com turno e nível válidos */
 function normalizaPerfis(data: unknown): Profile[] {
-  return ((data ?? []) as Profile[]).map((p) => ({ ...p, turno: turnoDaPessoa(p.turno) }))
+  return ((data ?? []) as Profile[]).map((p) => ({
+    ...p,
+    turno: turnoDaPessoa(p.turno),
+    nivel: nivelDaPessoa(p.nivel),
+  }))
 }
 
 export interface EntregasLight {
@@ -61,6 +65,24 @@ export async function vincularPerfil(origem: string, destino: string) {
 export async function definirAtivo(id: string, ativo: boolean) {
   const { error } = await supabase.from('profiles').update({ ativo }).eq('id', id)
   if (error) throw error
+}
+
+/* Administradora corrige o nível de quem se classificou errado. A troca fica
+   registrada na auditoria pelo gatilho do banco, com quem fez e quando — é ela
+   que decide de qual regra do semestre a pessoa é cobrada. */
+export async function definirNivel(id: string, nivel: Nivel) {
+  const { error } = await supabase.from('profiles').update({ nivel }).eq('id', id)
+  if (error) throw error
+}
+
+/* A policy de `perfis_academico` só devolve o que a chamadora pode ver: para
+   administradora vem tudo, para as demais vem só a própria linha. Não há
+   `if (isAdmin)` aqui porque a decisão é do banco, não da tela. */
+export async function fetchRas(): Promise<Map<string, string>> {
+  const { data, error } = await supabase.from('perfis_academico').select('profile_id, ra')
+  if (error) throw error
+  const linhas = (data ?? []) as { profile_id: string; ra: string | null }[]
+  return new Map(linhas.filter((l) => l.ra).map((l) => [l.profile_id, l.ra!]))
 }
 
 /* ---------- Derivados (unit-testados) ---------- */
