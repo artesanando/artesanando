@@ -607,6 +607,8 @@ describe('atividade de extensão', () => {
     __login()
     renderAt('/extensao')
     // créditos abre primeiro: é o que trava a validação do projeto de extensão
+    expect(await screen.findByText('Quem cumpriu')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Regras' }))
     expect(await screen.findByText('Regras do semestre')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Frequência' }))
     expect(screen.getByText('Frequência por integrante')).toBeInTheDocument()
@@ -632,14 +634,39 @@ describe('atividade de extensão', () => {
     expect(await screen.findByText('100100')).toBeInTheDocument()
   })
 
-  it('a regra do semestre se monta por blocos de alternativas', async () => {
+  it('a regra do semestre se monta por exigências, cada uma com suas formas de cumprir', async () => {
     __login()
     renderAt('/extensao')
+    await userEvent.click(await screen.findByRole('button', { name: 'Regras' }))
     await screen.findByText('Regras do semestre')
-    // dois níveis, cada um com o seu botão de novo bloco
-    expect(screen.getAllByRole('button', { name: '+ Bloco' })).toHaveLength(2)
+    // dois níveis, cada um com o seu botão de nova exigência
+    expect(screen.getAllByRole('button', { name: '+ Exigência' })).toHaveLength(2)
     expect(screen.getByText('INICIANTE')).toBeInTheDocument()
     expect(screen.getByText('EXPERIENTE')).toBeInTheDocument()
+  })
+
+  it('o formulário de forma de cumprir nasce fechado, um por exigência', async () => {
+    __login()
+    renderAt('/extensao')
+    await userEvent.click(await screen.findByRole('button', { name: 'Regras' }))
+    await screen.findByText('Regras do semestre')
+    // nada de quatro formulários abertos ao mesmo tempo
+    expect(screen.queryByRole('button', { name: 'Adicionar' })).not.toBeInTheDocument()
+
+    const abrir = screen.getAllByRole('button', { name: '+ outra forma de cumprir' })
+    await userEvent.click(abrir[0])
+    expect(screen.getAllByRole('button', { name: 'Adicionar' })).toHaveLength(1)
+  })
+
+  it('remover uma exigência passa pela confirmação', async () => {
+    __login()
+    renderAt('/extensao')
+    await userEvent.click(await screen.findByRole('button', { name: 'Regras' }))
+    await screen.findByText('Regras do semestre')
+    const kebabs = screen.getAllByRole('button', { name: /Ações da exigência/ })
+    await userEvent.click(kebabs[0])
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remover' }))
+    expect(await screen.findByText(/Remover a exigência 1/)).toBeInTheDocument()
   })
 
   it('a chamada de um dia abre com quem esteve presente', async () => {

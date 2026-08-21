@@ -2,35 +2,29 @@ import { useState, type CSSProperties, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../state/auth'
 import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
-import { Lbl, Stepper } from '../../components/ui/bits'
 import { Campo, useFormulario } from '../../components/ui/Campo'
 import { DatePicker, MenuKebab, Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
 import { fmtDataCurta, fmtDataLonga, fmtEntrega, hojeIso } from '../../lib/format'
 import { fetchSemestres, useSemestreAtivo } from '../../lib/semestre'
-import { NIVEL_LABEL, TURNO_LABEL, type Nivel } from '../../types/database'
+import { NIVEL_LABEL, TURNO_LABEL } from '../../types/database'
 import { entregasDe, fetchEntregasLight, fetchIntegrantes } from '../integrantes/api'
-import { avaliaRegra, textoDaLinha, textoDoAlvo, TIPO_LABEL, type TipoLinha } from './creditos'
-import { IconX } from '../../components/ui/icons'
+import { textoDaLinha } from './creditos'
 import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 import { AjudaCabecalho } from '../../components/ui/AjudaCabecalho'
 import { fetchRas, raOuTraco } from './api'
 import { soDoSemestre, useParticipantes } from './useParticipantes'
+import { doSemestre, useLinhasDeCredito } from './useCredito'
+import { RegrasDoSemestre } from './RegrasSecao'
 import { CampoBusca, filtraLinhas } from './CampoBusca'
 import { ColunaOrdenavel } from '../../components/ui/CabecalhoOrdenavel'
 import { useOrdenacao } from '../../components/ui/useOrdenacao'
 import {
   ACAO_LABEL,
-  criarBloco,
-  criarLinha,
   fetchAuditoria,
-  fetchMarcas,
-  fetchRegras,
   filtraAuditoria,
   marcarCredito,
-  removerBloco,
-  removerLinha,
   resumoDaLinha,
   type AcaoAuditoria,
 } from './creditosApi'
@@ -53,18 +47,17 @@ import {
   type TipoArquivo,
 } from './api'
 
-type Secao = 'creditos' | 'frequencia' | 'entregas' | 'chamadas' | 'arquivos' | 'auditoria'
+type Secao = 'creditos' | 'regras' | 'frequencia' | 'entregas' | 'chamadas' | 'arquivos' | 'auditoria'
 
 const SECOES: [Secao, string][] = [
   ['creditos', 'Créditos'],
+  ['regras', 'Regras'],
   ['frequencia', 'Frequência'],
   ['entregas', 'Entregas'],
   ['chamadas', 'Chamadas'],
   ['arquivos', 'Arquivos'],
   ['auditoria', 'Auditoria'],
 ]
-
-const NIVEIS: Nivel[] = ['iniciante', 'experiente']
 
 /* O que entra em cada coluna. O total não é a soma dos dois turnos, e entrega
    virou número quebrado quando o square passou a contar por metade — as duas
@@ -75,10 +68,6 @@ const AJUDA_ENTREGAS =
   'Peças entregues no semestre: cada amigurumi concluído e cada faixa feita valem 1; no granny square, o miolo vale 0,5 e a borda 0,5.'
 const AJUDA_SQUARES =
   'O square costuma ser dividido: quem faz o miolo leva 0,5 e quem faz a borda leva 0,5. Quem fez as duas metades leva 1.'
-
-const TIPOS: [TipoLinha, string][] = (
-  ['amigurumi', 'granny', 'faixa', 'frequencia', 'mentoria'] as TipoLinha[]
-).map((t) => [t, TIPO_LABEL[t]])
 
 const item = (on: boolean): CSSProperties => ({
   padding: '9px 12px',
@@ -139,6 +128,7 @@ export function ExtensaoPage() {
 
       <div>
         {secao === 'creditos' && <Creditos semestreId={semestreId} />}
+        {secao === 'regras' && <RegrasDoSemestre semestreId={semestreId} />}
         {secao === 'frequencia' && <Frequencia semestreId={semestreId} />}
         {secao === 'entregas' && <Entregas semestreId={semestreId} />}
         {secao === 'chamadas' && <Chamadas semestreId={semestreId} />}
@@ -151,11 +141,6 @@ export function ExtensaoPage() {
 }
 
 /* ---------- Frequência ---------- */
-
-/* Encontros do semestre escolhido. Antes as três primeiras seções somavam tudo
-   desde o começo do app, apesar de o título dizer "do semestre". */
-const doSemestre = <T extends { semestre_id: string | null }>(linhas: T[], id: string | null) =>
-  id ? linhas.filter((l) => l.semestre_id === id) : linhas
 
 function Frequencia({ semestreId }: { semestreId: string | null }) {
   const toast = useToast()
@@ -790,42 +775,16 @@ function Arquivos({ semestreId }: { semestreId: string | null }) {
 
 /* ---------- Créditos ---------- */
 
-/* Duas metades: a regra do semestre por nível, e quem cumpriu.
-   A regra é blocos (E) de alternativas (OU) — ver `creditos.ts`. */
+/* Quem cumpriu a regra do semestre. A regra em si tem seção própria — ver
+   `RegrasSecao.tsx`; aqui só se lê o resultado dela. */
 function Creditos({ semestreId }: { semestreId: string | null }) {
   const { profile } = useAuth()
   const [busca, setBusca] = useState('')
-  const participantes = useParticipantes(semestreId)
   const qc = useQueryClient()
   const toast = useToast()
-  const hoje = hojeIso()
 
-  const { data: regras } = useQuery({
-    queryKey: ['regras-credito', semestreId],
-    queryFn: () => fetchRegras(semestreId!),
-    enabled: Boolean(semestreId),
-  })
-  const { data: marcas } = useQuery({
-    queryKey: ['credito-marcas', semestreId],
-    queryFn: () => fetchMarcas(semestreId!),
-    enabled: Boolean(semestreId),
-  })
-  const { data: integrantes } = useQuery({ queryKey: ['integrantes'], queryFn: fetchIntegrantes })
-  const { data: encontros } = useQuery({ queryKey: ['encontros'], queryFn: fetchEncontros })
-  const { data: presencas } = useQuery({ queryKey: ['presencas'], queryFn: fetchPresencas })
-  const { data: entregas } = useQuery({ queryKey: ['entregas-light'], queryFn: fetchEntregasLight })
   const { data: ras } = useQuery({ queryKey: ['ras'], queryFn: fetchRas })
-
-  const invalidar = () => {
-    qc.invalidateQueries({ queryKey: ['regras-credito', semestreId] })
-    qc.invalidateQueries({ queryKey: ['credito-marcas', semestreId] })
-  }
-
-  const mudar = useMutation({
-    mutationFn: (acao: () => Promise<void>) => acao(),
-    onSuccess: invalidar,
-    onError: () => toast('Não foi possível salvar a regra.', 'erro'),
-  })
+  const linhas = useLinhasDeCredito(semestreId)
 
   const marcar = useMutation({
     mutationFn: (m: {
@@ -835,7 +794,7 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
       motivo: string | null
     }) => marcarCredito({ ...m, semestreId: semestreId!, por: profile!.id }),
     onSuccess: () => {
-      invalidar()
+      qc.invalidateQueries({ queryKey: ['credito-marcas', semestreId] })
       toast('Marca registrada')
     },
     onError: () => toast('Não foi possível marcar.', 'erro'),
@@ -845,103 +804,8 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
     return <div style={{ fontSize: 13, color: 'var(--muted)' }}>Crie um semestre em Ajustes.</div>
   }
 
-  const doSem = doSemestre(encontros ?? [], semestreId)
-
-  const linhas = soDoSemestre(integrantes ?? [], participantes, semestreId).map((p) => {
-    const freq = frequenciaDe(p.id, doSem, presencas ?? [], hoje, p.turno)
-    const dela = entregas
-      ? entregasDe(p.id, entregas, semestreId)
-      : { amigurumis: 0, faixas: 0, grannies: 0, total: 0 }
-    const marca = marcas?.get(p.id) ?? null
-    return { p, marca, av: avaliaRegra(regras?.[p.nivel] ?? [], dela, freq.total.pct, marca) }
-  })
-
   return (
     <>
-      <div className="h" style={{ fontSize: 17, marginBottom: 4 }}>
-        Regras do semestre
-      </div>
-      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
-        Cada bloco é obrigatório; dentro dele, basta cumprir uma linha.
-      </div>
-
-      <div
-        className="pgrid"
-        style={{ '--cols': '1fr 1fr', '--gap': '18px', marginBottom: 30 } as CSSProperties}
-      >
-        {NIVEIS.map((nivel) => (
-          <div key={nivel}>
-            <Lbl style={{ marginBottom: 8 }}>{NIVEL_LABEL[nivel].toUpperCase()}</Lbl>
-            {(regras?.[nivel] ?? []).map((b, i) => (
-              <div
-                key={b.id}
-                style={{
-                  border: '1px solid var(--field-border)',
-                  borderRadius: 12,
-                  padding: '10px 12px',
-                  marginBottom: 8,
-                  background: 'var(--card)',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: 8,
-                  }}
-                >
-                  <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--muted)' }}>
-                    BLOCO {i + 1} · BASTA UMA
-                  </span>
-                  <button
-                    type="button"
-                    className="kebab"
-                    aria-label={`Remover o bloco ${i + 1} de ${NIVEL_LABEL[nivel]}`}
-                    onClick={() => mudar.mutate(() => removerBloco(b.id))}
-                  >
-                    <IconX />
-                  </button>
-                </div>
-                {b.linhas.map((l) => (
-                  <div
-                    key={l.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      fontSize: 12.5,
-                      marginBottom: 5,
-                    }}
-                  >
-                    <span style={{ flex: 1 }}>{textoDoAlvo(l.tipo, l.quantidade)}</span>
-                    <button
-                      type="button"
-                      className="kebab"
-                      aria-label={`Remover ${TIPO_LABEL[l.tipo]} do bloco ${i + 1}`}
-                      onClick={() => mudar.mutate(() => removerLinha(l.id))}
-                    >
-                      <IconX />
-                    </button>
-                  </div>
-                ))}
-                <NovaLinha aoAdicionar={(t, q) => mudar.mutate(() => criarLinha(b.id, t, q))} />
-              </div>
-            ))}
-            <button
-              type="button"
-              className="pill ghost"
-              style={{ padding: '6px 14px', fontSize: 12 }}
-              onClick={() =>
-                mudar.mutate(() => criarBloco(semestreId, nivel, (regras?.[nivel] ?? []).length))
-              }
-            >
-              + Bloco
-            </button>
-          </div>
-        ))}
-      </div>
-
       <div className="h" style={{ fontSize: 17, marginBottom: 12 }}>
         Quem cumpriu
       </div>
@@ -1031,44 +895,6 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
         ))}
       </div>
     </>
-  )
-}
-
-function NovaLinha({
-  aoAdicionar,
-}: {
-  aoAdicionar: (tipo: TipoLinha, quantidade: number) => void
-}) {
-  const [tipo, setTipo] = useState<TipoLinha>('granny')
-  const [qtd, setQtd] = useState(5)
-  // mentoria é marcada à mão pela coordenação, então não tem quantidade
-  const semQuantidade = tipo === 'mentoria'
-
-  return (
-    <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
-      <span style={{ flex: 1, minWidth: 120 }}>
-        <Select value={tipo} onChange={setTipo} options={TIPOS} ariaLabel="Tipo da alternativa" />
-      </span>
-      {!semQuantidade && (
-        <span style={{ width: 104 }}>
-          <Stepper
-            value={qtd}
-            onChange={setQtd}
-            min={1}
-            max={tipo === 'frequencia' ? 100 : 99}
-            ariaLabel="Quantidade da alternativa"
-          />
-        </span>
-      )}
-      <button
-        type="button"
-        className="pill ghost"
-        style={{ padding: '6px 12px', fontSize: 12 }}
-        onClick={() => aoAdicionar(tipo, semQuantidade ? 1 : qtd)}
-      >
-        + Alternativa
-      </button>
-    </div>
   )
 }
 

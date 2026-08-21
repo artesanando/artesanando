@@ -27,11 +27,19 @@ export async function fetchRegras(semestreId: string): Promise<Record<Nivel, Blo
   return vazio
 }
 
-export async function criarBloco(semestreId: string, nivel: Nivel, ordem: number) {
-  const { error } = await supabase
+/** Devolve o id da exigência criada — copiar um semestre precisa dele */
+export async function criarBloco(
+  semestreId: string,
+  nivel: Nivel,
+  ordem: number,
+): Promise<string> {
+  const { data, error } = await supabase
     .from('credito_blocos')
     .insert({ semestre_id: semestreId, nivel, ordem })
+    .select('id')
+    .single()
   if (error) throw error
+  return (data as { id: string }).id
 }
 
 export async function removerBloco(id: string) {
@@ -49,6 +57,19 @@ export async function criarLinha(blocoId: string, tipo: TipoLinha, quantidade: n
 export async function removerLinha(id: string) {
   const { error } = await supabase.from('credito_linhas').delete().eq('id', id)
   if (error) throw error
+}
+
+/* Virada de semestre: a regra costuma ser a mesma do semestre passado, e
+   remontá-la clique a clique era o caminho obrigatório. Copia exigência por
+   exigência para o semestre novo, mantendo a ordem. */
+export async function copiarRegras(deSemestreId: string, paraSemestreId: string, nivel: Nivel) {
+  const origem = await fetchRegras(deSemestreId)
+  for (const bloco of origem[nivel]) {
+    const novoId = await criarBloco(paraSemestreId, nivel, bloco.ordem)
+    for (const linha of bloco.linhas) {
+      await criarLinha(novoId, linha.tipo, linha.quantidade)
+    }
+  }
 }
 
 /* ---------- Marcas ---------- */

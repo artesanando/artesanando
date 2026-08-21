@@ -461,6 +461,35 @@ const MOVIMENTACOES_FAKE = [
   },
 ]
 
+/* A regra real da iniciante: "5 squares OU 1 faixa" E "75% de frequência".
+   O `select` de regras traz as formas de cumprir embutidas, como o PostgREST. */
+const REGRAS_FAKE = [
+  {
+    id: 'b1',
+    semestre_id: 'sem1',
+    nivel: 'iniciante',
+    ordem: 0,
+    credito_linhas: [
+      { id: 'l1', tipo: 'granny', quantidade: 5 },
+      { id: 'l2', tipo: 'faixa', quantidade: 1 },
+    ],
+  },
+  {
+    id: 'b2',
+    semestre_id: 'sem1',
+    nivel: 'iniciante',
+    ordem: 1,
+    credito_linhas: [{ id: 'l3', tipo: 'frequencia', quantidade: 75 }],
+  },
+  {
+    id: 'b3',
+    semestre_id: 'sem1',
+    nivel: 'experiente',
+    ordem: 0,
+    credito_linhas: [{ id: 'l4', tipo: 'amigurumi', quantidade: 3 }],
+  },
+]
+
 const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
   profiles: {
     single: ADMIN_PROFILE,
@@ -488,6 +517,9 @@ const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
   presencas: { single: PRESENCAS_FAKE[0], list: PRESENCAS_FAKE },
   movimentacoes: { single: MOVIMENTACOES_FAKE[0], list: MOVIMENTACOES_FAKE },
   arquivos_extensao: { single: null, list: [] },
+  credito_blocos: { single: REGRAS_FAKE[0], list: REGRAS_FAKE },
+  credito_marcas: { single: null, list: [] },
+  auditoria: { single: null, list: [] },
 }
 
 export function __login(profile: Profile = ADMIN_PROFILE) {
