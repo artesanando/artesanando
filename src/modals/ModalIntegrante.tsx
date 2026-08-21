@@ -1,10 +1,17 @@
 import { useState, type FormEvent } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Campo, LegendaObrigatorio, useFormulario } from '../components/ui/Campo'
 import { Select } from '../components/ui/controles'
 import { ModalBox, ModalHeader } from './shared'
 import { supabase } from '../lib/supabase'
 import { useStore } from '../state/store'
-import type { Papel, Preferencia } from '../types/database'
+import { fetchIntegrantes } from '../features/integrantes/api'
+import { TURNO_LABEL, type Papel, type Preferencia, type Turno } from '../types/database'
+
+const TURNOS: [Turno, string][] = (['diurno', 'noturno', 'ambos'] as Turno[]).map((t) => [
+  t,
+  TURNO_LABEL[t],
+])
 
 const PREFS: [Preferencia, string][] = [
   ['croche', 'Crochê'],
@@ -13,14 +20,26 @@ const PREFS: [Preferencia, string][] = [
 ]
 
 export function ModalIntegrante() {
-  const { close } = useStore()
+  const { close, integranteId } = useStore()
   const form = useFormulario<'nome' | 'usuario' | 'email'>()
+
+  /* Convite de quem já entrou pela chamada: o perfil existe e só falta a conta.
+     O id vai junto para o banco ligar a conta a ESTE perfil — sem ele nascia
+     uma segunda ficha e as presenças antigas ficavam órfãs. */
+  const { data: integrantes } = useQuery({
+    queryKey: ['integrantes'],
+    queryFn: fetchIntegrantes,
+    enabled: !!integranteId,
+  })
+  const alvo = (integrantes ?? []).find((p) => p.id === integranteId)
+  const convidando = !!integranteId
 
   const [nome, setNome] = useState('')
   const [usuario, setUsuario] = useState('')
   const [email, setEmail] = useState('')
   const [telefone, setTelefone] = useState('')
   const [preferencia, setPreferencia] = useState<Preferencia>('croche')
+  const [turno, setTurno] = useState<Turno>('ambos')
   const [papel, setPapel] = useState<Papel>('integrante')
   const [erro, setErro] = useState<string | null>(null)
   const [link, setLink] = useState<string | null>(null)
@@ -32,8 +51,8 @@ export function ModalIntegrante() {
     e.preventDefault()
     setErro(null)
     const valido = form.checar({
-      nome: nome.trim() ? undefined : 'Informe o nome completo.',
-      usuario: usuario.trim() ? undefined : 'Escolha um nome de usuário.',
+      nome: convidando || nome.trim() ? undefined : 'Informe o nome completo.',
+      usuario: convidando || usuario.trim() ? undefined : 'Escolha um nome de usuário.',
       email: email.includes('@') ? undefined : 'Informe um email válido.',
     })
     if (!valido) return
@@ -41,12 +60,14 @@ export function ModalIntegrante() {
     setEnviando(true)
     const { data, error } = await supabase.functions.invoke('invite-member', {
       body: {
-        nome: nome.trim(),
-        usuario: usuario.trim().toLowerCase(),
+        profileId: integranteId,
+        nome: convidando ? alvo!.nome : nome.trim(),
+        usuario: (convidando ? alvo!.usuario : usuario).trim().toLowerCase(),
         email: email.trim(),
-        telefone: telefone.trim() || null,
-        preferencia,
-        papel,
+        telefone: (convidando ? (alvo!.telefone ?? '') : telefone).trim() || null,
+        preferencia: convidando ? alvo!.preferencia : preferencia,
+        turno: convidando ? alvo!.turno : turno,
+        papel: convidando ? alvo!.papel : papel,
         redirectTo: window.location.origin + '/definir-senha',
       },
     })
@@ -73,10 +94,7 @@ export function ModalIntegrante() {
 
   return (
     <ModalBox maxWidth={520}>
-      <ModalHeader
-        title="Cadastrar integrante"
-        sub="Ela recebe um convite para criar a própria senha"
-      />
+      <ModalHeader title={convidando ? `Convidar ${alvo?.nome ?? ''}` : 'Cadastrar integrante'} />
       {ok ? (
         <>
           <div
@@ -90,7 +108,7 @@ export function ModalIntegrante() {
               marginBottom: 16,
             }}
           >
-            ✓ Convite criado para <b>{email}</b>.
+            Convite criado para <b>{email}</b>.
           </div>
 
           {/* O email só sai se o SMTP estiver configurado no Supabase. Com o link
@@ -98,7 +116,7 @@ export function ModalIntegrante() {
           {link && (
             <>
               <div className="lbl" style={{ marginBottom: 7 }}>
-                OU MANDE ESTE LINK DIRETO
+                LINK DE ACESSO
               </div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
                 <input
@@ -110,11 +128,11 @@ export function ModalIntegrante() {
                   style={{ flex: 1, minWidth: 180, fontSize: 12 }}
                 />
                 <button type="button" className="pill" onClick={copiar}>
-                  {copiado ? 'Copiado ✓' : 'Copiar'}
+                  {copiado ? 'Copiado' : 'Copiar'}
                 </button>
               </div>
-              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 20 }}>
-                O link vale uma vez e expira — se demorar, mande outro convite.
+              <div style={{ fontSize: 11.5, color: 'var(--gold-dark)', marginBottom: 20 }}>
+                Vale uma vez e expira — mande só em conversa privada.
               </div>
             </>
           )}
@@ -127,44 +145,54 @@ export function ModalIntegrante() {
         </>
       ) : (
         <form onSubmit={cadastrar}>
-          <div className="grid2" style={{ marginBottom: 18 }}>
-            <Campo label="NOME COMPLETO" obrigatorio erro={form.erros.nome}>
-              {(p) => (
-                <input
-                  {...p}
-                  className="field"
-                  value={nome}
-                  onChange={(e) => {
-                    setNome(e.target.value)
-                    form.aoMudar('nome')
-                  }}
-                  placeholder="Giulia Santos"
-                />
-              )}
-            </Campo>
-            <Campo label="USUÁRIO" obrigatorio erro={form.erros.usuario}>
-              {(p) => (
-                <input
-                  {...p}
-                  className="field"
-                  value={usuario}
-                  onChange={(e) => {
-                    setUsuario(e.target.value)
-                    form.aoMudar('usuario')
-                  }}
-                  placeholder="giulia.santos"
-                />
-              )}
-            </Campo>
-          </div>
+          {convidando ? (
+            <div
+              style={{
+                background: 'var(--sand-soft)',
+                border: '1px solid var(--border)',
+                borderRadius: 12,
+                padding: '12px 14px',
+                marginBottom: 18,
+                fontSize: 13,
+              }}
+            >
+              <b>{alvo?.nome ?? '—'}</b>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>@{alvo?.usuario ?? ''}</div>
+            </div>
+          ) : (
+            <div className="grid2" style={{ marginBottom: 18 }}>
+              <Campo label="NOME COMPLETO" obrigatorio erro={form.erros.nome}>
+                {(p) => (
+                  <input
+                    {...p}
+                    className="field"
+                    value={nome}
+                    onChange={(e) => {
+                      setNome(e.target.value)
+                      form.aoMudar('nome')
+                    }}
+                    placeholder="Ada Lovelace"
+                  />
+                )}
+              </Campo>
+              <Campo label="USUÁRIO" obrigatorio erro={form.erros.usuario}>
+                {(p) => (
+                  <input
+                    {...p}
+                    className="field"
+                    value={usuario}
+                    onChange={(e) => {
+                      setUsuario(e.target.value)
+                      form.aoMudar('usuario')
+                    }}
+                    placeholder="ada.lovelace"
+                  />
+                )}
+              </Campo>
+            </div>
+          )}
 
-          <Campo
-            label="EMAIL"
-            obrigatorio
-            erro={form.erros.email}
-            dica="é para lá que vai o convite"
-            style={{ marginBottom: 18 }}
-          >
+          <Campo label="EMAIL" obrigatorio erro={form.erros.email} style={{ marginBottom: 18 }}>
             {(p) => (
               <input
                 {...p}
@@ -175,58 +203,71 @@ export function ModalIntegrante() {
                   setEmail(e.target.value)
                   form.aoMudar('email')
                 }}
-                placeholder="giulia@email.com"
+                placeholder="ada@email.com"
               />
             )}
           </Campo>
 
-          <div className="grid2" style={{ marginBottom: 18 }}>
-            <Campo label="TELEFONE / WHATSAPP (OPCIONAL)">
-              {(p) => (
-                <input
-                  {...p}
-                  className="field"
-                  value={telefone}
-                  onChange={(e) => setTelefone(e.target.value)}
-                  placeholder="(11) 9 8888-0000"
-                />
-              )}
-            </Campo>
-            <Campo label="PREFERÊNCIA">
-              {() => (
-                <Select
-                  ariaLabel="Preferência"
-                  value={preferencia}
-                  onChange={setPreferencia}
-                  options={PREFS}
-                />
-              )}
-            </Campo>
-          </div>
+          {!convidando && (
+            <>
+              <div className="grid2" style={{ marginBottom: 18 }}>
+                <Campo label="TELEFONE / WHATSAPP">
+                  {(p) => (
+                    <input
+                      {...p}
+                      className="field"
+                      value={telefone}
+                      onChange={(e) => setTelefone(e.target.value)}
+                      placeholder="(11) 9 8888-0000"
+                    />
+                  )}
+                </Campo>
+                <Campo label="PREFERÊNCIA">
+                  {() => (
+                    <Select
+                      ariaLabel="Preferência"
+                      value={preferencia}
+                      onChange={setPreferencia}
+                      options={PREFS}
+                    />
+                  )}
+                </Campo>
+              </div>
 
-          <div className="lbl" style={{ marginBottom: 7 }}>
-            PERFIL
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-            <button
-              type="button"
-              className="seg"
-              aria-pressed={papel === 'integrante'}
-              onClick={() => setPapel('integrante')}
-              style={segStyle(papel === 'integrante')}
-            >
-              Integrante
-            </button>
-            <button
-              type="button"
-              className="seg"
-              aria-pressed={papel === 'admin'}
-              onClick={() => setPapel('admin')}
-              style={segStyle(papel === 'admin')}
-            >
-              Administradora
-            </button>
-          </div>
+              {/* o turno define de quais encontros ela é cobrada na frequência */}
+              <div className="grid2" style={{ marginBottom: 18 }}>
+                <Campo label="TURNO">
+                  {() => (
+                    <Select ariaLabel="Turno" value={turno} onChange={setTurno} options={TURNOS} />
+                  )}
+                </Campo>
+              </div>
+
+              <div className="lbl" style={{ marginBottom: 7 }}>
+                PERFIL
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+                <button
+                  type="button"
+                  className="seg"
+                  aria-pressed={papel === 'integrante'}
+                  onClick={() => setPapel('integrante')}
+                  style={segStyle(papel === 'integrante')}
+                >
+                  Integrante
+                </button>
+                <button
+                  type="button"
+                  className="seg"
+                  aria-pressed={papel === 'admin'}
+                  onClick={() => setPapel('admin')}
+                  style={segStyle(papel === 'admin')}
+                >
+                  Administradora
+                </button>
+              </div>
+            </>
+          )}
 
           {erro && (
             <div
@@ -259,8 +300,12 @@ export function ModalIntegrante() {
               <button type="button" className="pill ghost" onClick={close}>
                 Cancelar
               </button>
-              <button type="submit" className="pill" disabled={enviando}>
-                {enviando ? 'Enviando…' : 'Enviar convite'}
+              <button
+                type="submit"
+                className="pill"
+                disabled={enviando || (convidando && !alvo)}
+              >
+                {enviando ? 'Gerando…' : 'Gerar convite'}
               </button>
             </div>
           </div>

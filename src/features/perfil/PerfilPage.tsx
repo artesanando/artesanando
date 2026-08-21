@@ -1,20 +1,41 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../state/auth'
 import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
 import { Campo, LegendaObrigatorio, useFormulario } from '../../components/ui/Campo'
-import { ColorPicker, Select } from '../../components/ui/controles'
+import { Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
-import { PAPEL_LABEL, type Preferencia } from '../../types/database'
-import { atualizarPerfil, subirAvatar } from './api'
-import { RecorteFoto } from './RecorteFoto'
+import {
+  NIVEL_LABEL,
+  PAPEL_LABEL,
+  RA_VALIDO,
+  TURNO_LABEL,
+  nivelDaPessoa,
+  type Nivel,
+  type Preferencia,
+  type Turno,
+} from '../../types/database'
+import { atualizarPerfil, fetchMeuRa, salvarRa, subirAvatar } from './api'
+import { RecorteImagem } from '../../components/ui/RecorteImagem'
+import { MinhaMeta } from './MinhaMeta'
+import { IconCadeado, IconChevron } from '../../components/ui/icons'
 
 const PREFS: [Preferencia, string][] = [
   ['croche', 'Crochê'],
   ['trico', 'Tricô'],
   ['ambos', 'Crochê e tricô'],
 ]
+
+const TURNOS: [Turno, string][] = (['diurno', 'noturno', 'ambos'] as Turno[]).map((t) => [
+  t,
+  TURNO_LABEL[t],
+])
+
+const NIVEIS: [Nivel, string][] = (['iniciante', 'experiente'] as Nivel[]).map((n) => [
+  n,
+  NIVEL_LABEL[n],
+])
 
 const campoTravado = {
   background: '#F1EAE4',
@@ -29,14 +50,25 @@ export function PerfilPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const toast = useToast()
-  const form = useFormulario<'nome'>()
+  const form = useFormulario<'nome' | 'usuario' | 'ra'>()
   const inputFoto = useRef<HTMLInputElement>(null)
 
   const [nome, setNome] = useState(profile?.nome ?? '')
+  const [usuario, setUsuario] = useState(profile?.usuario ?? '')
   const [telefone, setTelefone] = useState(profile?.telefone ?? '')
   const [preferencia, setPreferencia] = useState<Preferencia>(profile?.preferencia ?? 'ambos')
-  const [cor, setCor] = useState(profile?.avatar_color ?? '#C4798A')
+  const [turno, setTurno] = useState<Turno>(profile?.turno ?? 'ambos')
+  const [nivel, setNivel] = useState<Nivel>(nivelDaPessoa(profile?.nivel))
+  const [ra, setRa] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
+
+  /* O RA vem de outra tabela e não acompanha o perfil no auth. Enquanto não
+     chega, o campo fica no que o banco tem — daí o `ra ?? raSalvo`. */
+  const { data: raSalvo } = useQuery({
+    queryKey: ['meu-ra', profile?.id],
+    queryFn: () => fetchMeuRa(profile!.id),
+    enabled: Boolean(profile?.id),
+  })
 
   const [aRecortar, setARecortar] = useState<File | null>(null)
   const [subindoFoto, setSubindoFoto] = useState(false)
@@ -53,19 +85,37 @@ export function PerfilPage() {
 
   const salvar = async (e: FormEvent) => {
     e.preventDefault()
-    if (!form.checar({ nome: nome.trim() ? undefined : 'O nome não pode ficar vazio.' })) return
+    const raAtual = (ra ?? raSalvo ?? '').trim()
+    const ok = form.checar({
+      nome: nome.trim() ? undefined : 'O nome não pode ficar vazio.',
+      usuario: usuario.trim() ? undefined : 'O usuário não pode ficar vazio.',
+      ra: RA_VALIDO.test(raAtual) ? undefined : 'O RA tem seis números.',
+    })
+    if (!ok) return
     setSalvando(true)
     try {
       await atualizarPerfil(profile.id, {
         nome: nome.trim(),
+        usuario: usuario.trim().toLowerCase(),
         telefone: telefone.trim() || null,
         preferencia,
-        avatar_color: cor,
+        turno,
+        nivel,
       })
+      if (raAtual !== (raSalvo ?? '')) {
+        await salvarRa(profile.id, raAtual)
+        qc.invalidateQueries({ queryKey: ['meu-ra', profile.id] })
+      }
       await refreshProfile()
-      toast('Alterações salvas ✓')
-    } catch {
-      toast('Não foi possível salvar. Tente novamente.', 'erro')
+      toast('Alterações salvas')
+    } catch (e) {
+      // 23505 = unique violation: o usuário escolhido já é de outra integrante
+      const codigo = (e as { code?: string } | null)?.code
+      if (codigo === '23505') {
+        form.checar({ usuario: 'Esse usuário já é de outra integrante.' })
+      } else {
+        toast('Não foi possível salvar. Tente novamente.', 'erro')
+      }
     } finally {
       setSalvando(false)
     }
@@ -80,7 +130,7 @@ export function PerfilPage() {
       await refreshProfile()
       qc.invalidateQueries({ queryKey: ['avatar'] })
       qc.invalidateQueries({ queryKey: ['integrantes'] })
-      toast('Foto atualizada ✓')
+      toast('Foto atualizada')
     } catch {
       toast('Não foi possível enviar a foto.', 'erro')
     } finally {
@@ -93,7 +143,7 @@ export function PerfilPage() {
       await atualizarPerfil(profile.id, { avatar_url: null })
       await refreshProfile()
       qc.invalidateQueries({ queryKey: ['avatar'] })
-      toast('Foto removida ✓')
+      toast('Foto removida')
     } catch {
       toast('Não foi possível remover a foto.', 'erro')
     }
@@ -109,7 +159,7 @@ export function PerfilPage() {
       await updatePassword(novaSenha)
       setNovaSenha('')
       setSenhaAberta(false)
-      toast('Senha alterada ✓')
+      toast('Senha alterada')
     } catch {
       setSenhaMsg('Não foi possível alterar a senha.')
     }
@@ -119,9 +169,9 @@ export function PerfilPage() {
     <>
       <form onSubmit={salvar} className="pagina" style={{ maxWidth: 760 }}>
         <div className="crumb" onClick={() => navigate('/')} style={{ marginBottom: 10 }}>
-          ‹ Voltar
+          <IconChevron size={12} para="esquerda" /> Voltar
         </div>
-        <div className="h" style={{ fontWeight: 500, fontSize: 28, marginBottom: 22 }}>
+        <div className="h titulo-pagina" style={{ marginBottom: 22 }}>
           Meu perfil
         </div>
 
@@ -200,17 +250,40 @@ export function PerfilPage() {
               />
             )}
           </Campo>
-          <Campo label="USUÁRIO" dica="só a administradora muda o usuário">
+          <Campo label="USUÁRIO" obrigatorio erro={form.erros.usuario}>
             {(p) => (
-              <div {...p} className="field" style={campoTravado}>
-                {profile.usuario} <span style={{ fontSize: 11 }}>🔒</span>
-              </div>
+              <input
+                {...p}
+                className="field"
+                value={usuario}
+                onChange={(e) => {
+                  setUsuario(e.target.value)
+                  form.aoMudar('usuario')
+                }}
+              />
             )}
           </Campo>
         </div>
 
+        {usuario.trim().toLowerCase() !== profile.usuario && (
+          <div
+            role="status"
+            style={{
+              background: 'var(--chip-warn)',
+              border: '1px solid #E7D6B8',
+              borderRadius: 10,
+              padding: '9px 13px',
+              fontSize: 12.5,
+              color: 'var(--gold-dark)',
+              marginBottom: 18,
+            }}
+          >
+            Você vai passar a entrar no app com <b>{usuario.trim().toLowerCase()}</b>.
+          </div>
+        )}
+
         <div className="grid2" style={{ marginBottom: 18 }}>
-          <Campo label="EMAIL" dica="é por ele que chega a recuperação de senha">
+          <Campo label="EMAIL">
             {(p) => (
               <div {...p} className="field" style={campoTravado}>
                 <span
@@ -218,11 +291,11 @@ export function PerfilPage() {
                 >
                   {email}
                 </span>
-                <span style={{ fontSize: 11 }}>🔒</span>
+                <IconCadeado size={12} />
               </div>
             )}
           </Campo>
-          <Campo label="TELEFONE / WHATSAPP (OPCIONAL)">
+          <Campo label="TELEFONE / WHATSAPP">
             {(p) => (
               <input
                 {...p}
@@ -236,6 +309,9 @@ export function PerfilPage() {
         </div>
 
         <div className="grid2" style={{ marginBottom: 24 }}>
+          <Campo label="TURNO">
+            {() => <Select value={turno} onChange={setTurno} options={TURNOS} ariaLabel="Turno" />}
+          </Campo>
           <Campo label="PREFERÊNCIA">
             {() => (
               <Select
@@ -246,10 +322,31 @@ export function PerfilPage() {
               />
             )}
           </Campo>
-          <Campo label="COR DO AVATAR" dica="aparece quando não há foto">
-            {() => <ColorPicker value={cor} onChange={setCor} ariaLabel="Cor do avatar" />}
+        </div>
+
+        <div className="grid2" style={{ marginBottom: 24 }}>
+          <Campo label="RA" obrigatorio erro={form.erros.ra}>
+            {(p) => (
+              <input
+                {...p}
+                className="field"
+                inputMode="numeric"
+                maxLength={6}
+                value={ra ?? raSalvo ?? ''}
+                onChange={(e) => {
+                  setRa(e.target.value.replace(/[^0-9]/g, ''))
+                  form.aoMudar('ra')
+                }}
+                placeholder="815162"
+              />
+            )}
+          </Campo>
+          <Campo label="NÍVEL">
+            {() => <Select value={nivel} onChange={setNivel} options={NIVEIS} ariaLabel="Nível" />}
           </Campo>
         </div>
+
+        <MinhaMeta />
 
         <div className="h" style={{ fontSize: 16, marginBottom: 10 }}>
           Segurança
@@ -326,8 +423,10 @@ export function PerfilPage() {
       </form>
 
       {aRecortar && (
-        <RecorteFoto
+        <RecorteImagem
           arquivo={aRecortar}
+          redondo
+          saida={{ largura: 256, altura: 256 }}
           aoConfirmar={trocarFoto}
           aoCancelar={() => setARecortar(null)}
         />

@@ -5,11 +5,14 @@ import { useAuth } from '../../state/auth'
 import { MenuKebab } from '../../components/ui/controles'
 import { useAcoesArquivo } from '../../components/ui/useAcoesItem'
 import { separaArquivados } from '../../lib/arquivo'
+import { urlsDasCapas } from '../../lib/capa'
 import type { EstoqueCategoria, EstoqueItem } from '../../types/database'
+import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
+import { useOrdenacao } from '../../components/ui/useOrdenacao'
+import { ColunaOrdenavel } from '../../components/ui/CabecalhoOrdenavel'
 import {
   disponivel,
   emprestadoPorItem,
-  estoqueBaixo,
   fetchEmprestimosAtivos,
   fetchEstoque,
   saldoEmprestimo,
@@ -18,26 +21,29 @@ import {
 export const ESTO_TABS: [EstoqueCategoria, string][] = [
   ['novelos', 'Novelos'],
   ['agulhas', 'Agulhas'],
-  ['olhos', 'Olhos & segurança'],
-  ['enchimento', 'Enchimento'],
+  ['outros', 'Outros'],
   ['feira', 'Itens de feira'],
 ]
+
+/* As quatro colunas mudam de rótulo por aba, mas ordenam sempre o mesmo dado */
+type ChaveEstoque = 'nome' | 'detalhe' | 'disponivel' | 'ultima'
+const CHAVES: ChaveEstoque[] = ['nome', 'detalhe', 'disponivel', 'ultima']
 
 const COLS: Record<EstoqueCategoria, [string, string, string, string]> = {
   novelos: ['MARCA / LINHA', 'COR', 'DISP.', 'EMPR.'],
   agulhas: ['TIPO', 'MEDIDA', 'DISP.', 'EMPR.'],
-  olhos: ['ITEM', 'TAMANHO', 'DISP.', 'EMPR.'],
-  enchimento: ['ITEM', 'ESPECIFICAÇÃO', 'DISP.', 'EMPR.'],
+  outros: ['ITEM', 'DETALHE', 'DISP.', 'EMPR.'],
   feira: ['ITEM', 'DETALHE', 'DISP.', 'VENDIDOS'],
 }
 
 /* Unidade que aparece em "N ... em estoque". Agulha de tricô e gancho de crochê
-   são coisas diferentes, e o projeto só tem agulha — a categoria fala só delas. */
+   são coisas diferentes, e o projeto só tem agulha — a categoria fala só delas.
+   Olhos e enchimento moravam em abas próprias quase vazias e agora dividem
+   "Outros" com todo o resto; o que separa um do outro é o detalhe. */
 const UNIT: Record<EstoqueCategoria, string> = {
   novelos: 'novelos',
   agulhas: 'agulhas',
-  olhos: 'olhos e itens de segurança',
-  enchimento: 'itens de enchimento',
+  outros: 'itens',
   feira: 'itens de feira',
 }
 
@@ -65,6 +71,7 @@ export function EstoquePage() {
   const { can } = useAuth()
   const acoesArquivo = useAcoesArquivo()
   const [estoTab, setEstoTab] = useState<EstoqueCategoria>('novelos')
+  const ord = useOrdenacao<ChaveEstoque>('nome')
   const [verArquivados, setVerArquivados] = useState(false)
 
   const {
@@ -74,54 +81,54 @@ export function EstoquePage() {
   } = useQuery({ queryKey: ['estoque'], queryFn: fetchEstoque })
   const { data: loans } = useQuery({ queryKey: ['emprestimos'], queryFn: fetchEmprestimosAtivos })
 
+  const comCapa = (itens ?? []).filter((i) => i.capa_path).map((i) => i.capa_path!)
+  const { data: capas } = useQuery({
+    queryKey: ['capas-estoque', comCapa.join(',')],
+    queryFn: () => urlsDasCapas(comCapa),
+    enabled: comCapa.length > 0,
+  })
+
   const emprestados = emprestadoPorItem(loans ?? [])
   const { ativos, arquivados } = separaArquivados(itens ?? [])
   const rows = (verArquivados ? arquivados : ativos).filter((i) => i.categoria === estoTab)
   const count = rows.reduce((s, i) => s + disponivel(i, emprestados.get(i.id) ?? 0), 0)
+
+  const ordenados = ord.ordenar(rows, (i, k) =>
+    k === 'nome'
+      ? i.nome
+      : k === 'detalhe'
+        ? (i.detalhe ?? '')
+        : k === 'disponivel'
+          ? disponivel(i, emprestados.get(i.id) ?? 0)
+          : i.categoria === 'feira'
+            ? i.vendidos
+            : (emprestados.get(i.id) ?? 0),
+  )
 
   const podeMexer = can('devolucoes')
 
   const renderRow = (item: EstoqueItem) => {
     const emp = emprestados.get(item.id) ?? 0
     const disp = disponivel(item, emp)
-    const low = item.categoria !== 'feira' && estoqueBaixo(item, emp)
     const ultima = item.categoria === 'feira' ? item.vendidos : emp
+    const capa = item.capa_path ? capas?.get(item.capa_path) : null
     return (
       <div key={item.id} className="linha-estoque">
-        <div style={{ fontWeight: 800 }}>{item.nome}</div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            fontWeight: 600,
-            color: 'var(--ink-soft)',
-          }}
-        >
-          {item.cor_hex && (
-            <span
-              style={{
-                width: 14,
-                height: 14,
-                borderRadius: '50%',
-                background: item.cor_hex,
-                border: '1px solid rgba(0,0,0,.08)',
-                flex: 'none',
-              }}
-            />
-          )}
-          {item.detalhe}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+          {/* sem foto, a cor do item (ou a da categoria) já identifica a linha */}
+          <span className="miniatura-item" style={{ background: item.cor_hex ?? 'var(--sand)' }}>
+            {capa && <img src={capa} alt="" />}
+          </span>
+          <span style={{ fontWeight: 800, minWidth: 0 }}>{item.nome}</span>
         </div>
+        {/* a cor do fio já está na miniatura; aqui fica só o texto */}
+        <div style={{ fontWeight: 600, color: 'var(--ink-soft)' }}>{item.detalhe}</div>
         <div>
           <span
             className="tag"
-            style={{
-              background: low ? 'var(--chip-warn)' : 'var(--chip-green)',
-              color: low ? 'var(--gold-dark)' : 'var(--green-dark)',
-            }}
+            style={{ background: 'var(--chip-green)', color: 'var(--green-dark)' }}
           >
             {disp}
-            {low ? ' ⚠' : ''}
           </span>
         </div>
         <div style={{ fontSize: 12 }}>
@@ -142,14 +149,12 @@ export function EstoquePage() {
                 {
                   label: 'Movimentar estoque',
                   onSelect: () => openMovimentoEstoque(item.id),
-                  dica: 'entrada, doação, ajuste, perda ou venda',
                 },
                 ...(isAdmin
                   ? acoesArquivo({
                       tabela: 'estoque_itens',
                       id: item.id,
                       nome: `o material "${item.nome}"`,
-                      rotulo: 'o material',
                       motivoHistorico: 'Os empréstimos e as movimentações dele',
                       arquivado: Boolean(item.arquivado_em),
                       invalidar: ['estoque'],
@@ -165,26 +170,11 @@ export function EstoquePage() {
 
   return (
     <div className="pagina">
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          marginBottom: 22,
-          gap: 14,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div>
-          <div className="h" style={{ fontWeight: 500, fontSize: 28 }}>
-            Estoque
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
-            Materiais e itens do projeto, organizados por tipo
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {podeMexer && (
+      <CabecalhoPagina
+        titulo="Estoque"
+        sub={`${ativos.length} materiais cadastrados`}
+        acoes={
+          podeMexer && (
             <>
               <button className="pill ghost" onClick={() => openMaterial(null)}>
                 + Material
@@ -196,9 +186,9 @@ export function EstoquePage() {
                 + Empréstimo
               </button>
             </>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {ESTO_TABS.map(([k, label]) => (
@@ -229,15 +219,24 @@ export function EstoquePage() {
                 style={{ border: 'none', background: 'none', fontFamily: 'inherit' }}
                 onClick={() => setVerArquivados((v) => !v)}
               >
-                {verArquivados ? '‹ Voltar aos ativos' : `Arquivados (${arquivados.length}) ›`}
+                {verArquivados ? 'Voltar aos ativos' : `Arquivados (${arquivados.length})`}
               </button>
             )}
           </div>
 
-          <div className="lbl linha-estoque cabecalho">
-            {COLS[estoTab].map((c) => (
-              <div key={c}>{c}</div>
-            ))}
+          <div className="lbl linha-estoque cabecalho" role="row">
+            {COLS[estoTab].map((c, i) => {
+              const k = CHAVES[i]
+              return (
+                <ColunaOrdenavel
+                  key={c}
+                  rotulo={c}
+                  ativa={ord.coluna === k}
+                  direcao={ord.direcao}
+                  aoClicar={() => ord.alternar(k, k === 'nome' || k === 'detalhe' ? 'asc' : 'desc')}
+                />
+              )
+            })}
             <div />
           </div>
 
@@ -254,7 +253,7 @@ export function EstoquePage() {
               Nada cadastrado nesta categoria ainda.
             </div>
           )}
-          {rows.map(renderRow)}
+          {ordenados.map(renderRow)}
         </div>
 
         <div>

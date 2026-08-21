@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { setKeepConnected, supabase } from '../lib/supabase'
-import type { Permissoes, Profile } from '../types/database'
+import { nivelDaPessoa, turnoDaPessoa, type Permissoes, type Profile } from '../types/database'
 
-export type Perm = 'progresso' | 'devolucoes' | 'comentarios' | 'financeiro'
+export type Perm = 'progresso' | 'devolucoes' | 'financeiro' | 'presenca'
 
 interface AuthCtx {
   session: Session | null
@@ -30,7 +30,15 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
     .eq('user_id', userId)
     .maybeSingle()
   if (error) return null
-  return (data as Profile | null) ?? null
+  const perfil = (data as Profile | null) ?? null
+  // o perfil circula pelo app inteiro: entra sempre com turno e nível válidos
+  return (
+    perfil && {
+      ...perfil,
+      turno: turnoDaPessoa(perfil.turno),
+      nivel: nivelDaPessoa(perfil.nivel),
+    }
+  )
 }
 
 async function fetchPermissoes(profileId: string): Promise<Permissoes | null> {

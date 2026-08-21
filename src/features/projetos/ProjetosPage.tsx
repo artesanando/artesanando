@@ -7,6 +7,8 @@ import { MenuKebab } from '../../components/ui/controles'
 import { useAcoesProjeto } from './useAcoesProjeto'
 import { separaArquivados } from '../../lib/arquivo'
 import { useLabelSemestre } from '../../lib/semestre'
+import { IconAmigurumi, IconCroche, IconTrico } from '../../components/ui/icons'
+import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 import {
   fetchProgressoGeral,
   fetchProjetos,
@@ -14,6 +16,7 @@ import {
   progressoSquares,
   progressoUnidades,
   type Projeto,
+  type ProjetoTipo,
 } from './api'
 
 type Aba = 'todos' | 'mantas' | 'amigurumis' | 'arquivados'
@@ -61,44 +64,17 @@ export function ProjetosPage() {
 
   return (
     <div className="pagina">
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          marginBottom: 20,
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div className="h" style={{ fontWeight: 500, fontSize: 28 }}>
-              Projetos
-            </div>
-            <div
-              className="field"
-              style={{
-                borderRadius: 99,
-                padding: '6px 14px',
-                fontWeight: 800,
-                fontSize: 12.5,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              {semestre}
-            </div>
-          </div>
-          <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
-            {mantas.length} mantas · {amigurumis.length} tipos de amigurumi
-          </div>
-        </div>
-        {isAdmin && (
-          <button className="pill" onClick={() => open('projeto')}>
-            + Novo projeto
-          </button>
-        )}
-      </div>
+      <CabecalhoPagina
+        titulo="Projetos"
+        sub={`${semestre} · ${mantas.length} mantas · ${amigurumis.length} tipos de amigurumi`}
+        acoes={
+          isAdmin && (
+            <button className="pill" onClick={() => open('projeto')}>
+              + Novo projeto
+            </button>
+          )
+        }
+      />
       <div
         style={{
           display: 'flex',
@@ -229,10 +205,10 @@ export function ProjetosPage() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: 17,
+                        color: 'var(--accent)',
                       }}
                     >
-                      {p.emoji ?? '🧶'}
+                      {iconeDoTipo(p.tipo)}
                     </div>
                     <div>
                       <div style={{ fontWeight: 800, fontSize: 15 }}>{p.nome}</div>
@@ -279,3 +255,6 @@ export function ProjetosPage() {
     </div>
   )
 }
+
+const iconeDoTipo = (tipo: ProjetoTipo) =>
+  tipo === 'manta_croche' ? <IconCroche /> : tipo === 'manta_trico' ? <IconTrico /> : <IconAmigurumi />

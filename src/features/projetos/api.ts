@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import { gradePadrao, sequenciaDaFaixa } from '../../lib/grade'
 import type { Receita } from '../../types/database'
 
 /* ---------- Tipos ---------- */
@@ -23,11 +24,13 @@ export interface Projeto {
   nome: string
   tipo: ProjetoTipo
   destino: string | null
-  emoji: string | null
   receita_id: string | null
   meta: number | null
   colunas: number | null
   linhas: number | null
+  /** tamanho de um square (crochê) ou de uma faixa (tricô), em cm */
+  peca_largura_cm: number | null
+  peca_altura_cm: number | null
   status: 'ativo' | 'entregue' | 'arquivado'
   created_by: string | null
   arquivado_em: string | null
@@ -40,6 +43,8 @@ export interface MantaModelo {
   nome: string
   cor_borda: string
   cor_miolo: string
+  /** todas as carreiras, do miolo para fora; nulo no que foi criado com duas cores */
+  cores: string[] | null
   responsavel_id: string | null
   total: number
   responsavel?: { nome: string } | null
@@ -52,6 +57,9 @@ export interface Square {
   posicao: number
   etapa: SquareEtapa
   responsavel_id: string | null
+  /** quem fez cada metade — meio square também é entrega */
+  miolo_por: string | null
+  borda_por: string | null
 }
 
 export interface Faixa {
@@ -73,14 +81,24 @@ export interface Unidade {
   responsavel?: { nome: string } | null
 }
 
+/* Um comentário pende de um projeto OU de um item da biblioteca, nunca dos dois
+   — o CHECK do banco garante. Daí o alvo ser um par discriminado, e não dois
+   parâmetros opcionais que alguém poderia passar juntos. */
+export type AlvoComentario = { projetoId: string } | { receitaId: string }
+
 export interface Comentario {
   id: string
-  projeto_id: string
+  projeto_id: string | null
+  receita_id: string | null
   autor_id: string
   texto: string
+  foto_path: string | null
   created_at: string
   autor?: { nome: string; avatar_color: string; avatar_url: string | null } | null
 }
+
+export const chaveComentarios = (alvo: AlvoComentario) =>
+  'projetoId' in alvo ? ['comentarios', 'projeto', alvo.projetoId] : ['comentarios', 'receita', alvo.receitaId]
 
 export interface Atividade {
   id: string
@@ -174,12 +192,14 @@ export async function fetchUnidades(projetoId: string): Promise<Unidade[]> {
   return (data ?? []) as unknown as Unidade[]
 }
 
-export async function fetchComentarios(projetoId: string): Promise<Comentario[]> {
-  const { data, error } = await supabase
+export async function fetchComentarios(alvo: AlvoComentario): Promise<Comentario[]> {
+  const q = supabase
     .from('comentarios')
     .select('*, autor:profiles!autor_id(nome, avatar_color, avatar_url)')
-    .eq('projeto_id', projetoId)
-    .order('created_at')
+  const { data, error } = await ('projetoId' in alvo
+    ? q.eq('projeto_id', alvo.projetoId)
+    : q.eq('receita_id', alvo.receitaId)
+  ).order('created_at')
   if (error) throw error
   return (data ?? []) as unknown as Comentario[]
 }
@@ -269,24 +289,6 @@ export function squaresPorResponsavel(squares: Square[]): Map<string, number> {
   return map
 }
 
-/** Linha/coluna de um square na grade da manta */
-export function coordenada(posicao: number, colunas: number) {
-  return { linha: Math.floor(posicao / colunas) + 1, coluna: (posicao % colunas) + 1 }
-}
-
-/** Posições dentro do retângulo entre dois cantos — seleção por arrasto no mapa */
-export function retangulo(de: number, ate: number, colunas: number): number[] {
-  const a = coordenada(de, colunas)
-  const b = coordenada(ate, colunas)
-  const l1 = Math.min(a.linha, b.linha)
-  const l2 = Math.max(a.linha, b.linha)
-  const c1 = Math.min(a.coluna, b.coluna)
-  const c2 = Math.max(a.coluna, b.coluna)
-  const out: number[] = []
-  for (let l = l1; l <= l2; l++) for (let c = c1; c <= c2; c++) out.push((l - 1) * colunas + (c - 1))
-  return out
-}
-
 export interface GrupoUnidades {
   ini: number
   fim: number
@@ -295,16 +297,19 @@ export interface GrupoUnidades {
   ids: string[]
 }
 
-/** Agrupa unidades em faixas consecutivas por responsável (ex.: "#1–3 · Ana") */
+/* Agrupa unidades em faixas consecutivas por responsável (ex.: "#1–3 · Ana").
+   O status também quebra o grupo: depois de concluir 2 de 5, o que sobra tem
+   que aparecer como duas faixas — senão "#1–5" continuava marcado como em
+   produção e escondia o que já foi entregue. */
 export function gruposUnidades(unidades: Unidade[]): GrupoUnidades[] {
   const sorted = [...unidades].sort((a, b) => a.numero - b.numero)
   const grupos: GrupoUnidades[] = []
   for (const u of sorted) {
     const nome = u.responsavel?.nome ?? '—'
+    const concluida = u.status === 'concluida'
     const last = grupos[grupos.length - 1]
-    if (last && last.nome === nome && u.numero === last.fim + 1) {
+    if (last && last.nome === nome && last.concluido === concluida && u.numero === last.fim + 1) {
       last.fim = u.numero
-      last.concluido = last.concluido && u.status === 'concluida'
       last.ids.push(u.id)
     } else {
       grupos.push({
@@ -331,6 +336,20 @@ export async function inserirAtividade(a: {
 }
 
 /** Registrar produção: marca a etapa (e quem fez) dos squares selecionados no mapa */
+/* Cada metade do square guarda quem a fez. Voltar uma etapa limpa a metade
+   correspondente — senão alguém levaria crédito por trabalho desfeito. */
+function creditoDaEtapa(etapa: SquareEtapa, quem: string | null) {
+  switch (etapa) {
+    case 'afazer':
+      return { miolo_por: null, borda_por: null }
+    case 'miolo':
+    case 'aguardando_borda':
+      return { miolo_por: quem, borda_por: null }
+    default:
+      return { borda_por: quem }
+  }
+}
+
 export async function marcarSquares(opts: {
   projetoId: string
   ids: string[]
@@ -344,7 +363,13 @@ export async function marcarSquares(opts: {
 
   const { error } = await supabase
     .from('squares')
-    .update({ etapa, responsavel_id: etapa === 'afazer' ? null : responsavelId })
+    .update({
+      etapa,
+      responsavel_id: etapa === 'afazer' ? null : responsavelId,
+      // quem fez o miolo não pode ser apagada quando outra pessoa marca a borda:
+      // o normal aqui é o square ser dividido entre duas
+      ...creditoDaEtapa(etapa, responsavelId),
+    })
     .in('id', ids)
   if (error) throw error
 
@@ -490,25 +515,62 @@ export async function apagarComentario(id: string) {
   if (error) throw error
 }
 
-export async function comentar(projetoId: string, autorId: string, texto: string) {
-  const { error } = await supabase
-    .from('comentarios')
-    .insert({ projeto_id: projetoId, autor_id: autorId, texto })
+export async function comentar(
+  alvo: AlvoComentario,
+  autorId: string,
+  texto: string,
+  fotoPath: string | null = null,
+) {
+  const { error } = await supabase.from('comentarios').insert({
+    ...('projetoId' in alvo ? { projeto_id: alvo.projetoId } : { receita_id: alvo.receitaId }),
+    autor_id: autorId,
+    texto,
+    foto_path: fotoPath,
+  })
   if (error) throw error
+}
+
+/* Foto de comentário vai como está, sem passar pelo recorte: quem fotografa o
+   progresso quer mandar e seguir, não enquadrar. */
+export async function subirFotoComentario(arquivo: File): Promise<string> {
+  const ext = arquivo.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const caminho = `${crypto.randomUUID()}.${ext}`
+  const { error } = await supabase.storage
+    .from('comentarios')
+    .upload(caminho, arquivo, { contentType: arquivo.type || 'image/jpeg' })
+  if (error) throw error
+  return caminho
+}
+
+export async function urlsDasFotos(caminhos: string[]): Promise<Map<string, string>> {
+  if (caminhos.length === 0) return new Map()
+  const { data } = await supabase.storage.from('comentarios').createSignedUrls(caminhos, 60 * 60 * 8)
+  const mapa = new Map<string, string>()
+  for (const item of data ?? []) {
+    if (item.path && item.signedUrl) mapa.set(item.path, item.signedUrl)
+  }
+  return mapa
 }
 
 export interface ModeloNovo {
   letra: string
   nome: string
+  /* Continuam sendo o primeiro e o último anel: são `not null` no banco e o
+     fallback de tudo que foi criado quando o modelo só tinha duas cores. */
   cor_borda: string
   cor_miolo: string
+  /** todas as carreiras, do miolo para fora */
+  cores?: string[]
+  /** de qual granny da biblioteca este modelo veio */
+  receita_id?: string
+  /** as cores foram mexidas depois de puxar o padrão */
+  ajustado?: boolean
 }
 
 export interface NovoProjeto {
   nome: string
   tipo: ProjetoTipo
   destino: string | null
-  emoji: string | null
   receita_id?: string | null
   meta?: number | null
   created_by: string
@@ -520,15 +582,12 @@ export interface NovoProjeto {
   // manta tricô: padrão das faixas
   faixaSeq?: string[]
   faixaCount?: number
+  // tamanho de um square (crochê) ou de uma faixa (tricô), em cm
+  pecaLarguraCm?: number | null
+  pecaAlturaCm?: number | null
 }
 
 /** Grade padrão quando a manta começa do zero: alterna os modelos em xadrez */
-export function gradePadrao(colunas: number, linhas: number, letras: string[]): string[][] {
-  return Array.from({ length: linhas }, (_, l) =>
-    Array.from({ length: colunas }, (_, c) => letras[(l + c) % letras.length]),
-  )
-}
-
 export async function criarProjeto(novo: NovoProjeto): Promise<string> {
   // manta de crochê nasce inteira numa transação só (projeto + modelos + squares),
   // senão uma falha no meio deixava um projeto pela metade
@@ -539,11 +598,13 @@ export async function criarProjeto(novo: NovoProjeto): Promise<string> {
     const { data, error } = await supabase.rpc('criar_projeto_manta', {
       p_nome: novo.nome,
       p_destino: novo.destino,
-      p_emoji: novo.emoji,
+      p_emoji: null,
       p_colunas: colunas,
       p_linhas: linhas,
       p_modelos: modelos,
       p_celulas: novo.celulas ?? gradePadrao(colunas, linhas, modelos.map((m) => m.letra)),
+      p_peca_largura_cm: novo.pecaLarguraCm ?? null,
+      p_peca_altura_cm: novo.pecaAlturaCm ?? null,
     })
     if (error) throw error
     return data as string
@@ -561,9 +622,10 @@ export async function criarProjeto(novo: NovoProjeto): Promise<string> {
       nome: novo.nome,
       tipo: novo.tipo,
       destino: novo.destino,
-      emoji: novo.emoji,
       receita_id: novo.receita_id ?? null,
       meta: novo.meta ?? null,
+      peca_largura_cm: novo.pecaLarguraCm ?? null,
+      peca_altura_cm: novo.pecaAlturaCm ?? null,
       created_by: novo.created_by,
     })
     .select('id')
@@ -574,10 +636,12 @@ export async function criarProjeto(novo: NovoProjeto): Promise<string> {
   if (novo.tipo === 'manta_trico') {
     const seq = novo.faixaSeq ?? []
     const count = novo.faixaCount ?? 8
+    // cada faixa desloca a sequência uma posição: é o que faz as cores
+    // caminharem na diagonal em vez de virarem blocos retos
     const faixas = Array.from({ length: count }, (_, i) => ({
       projeto_id: projetoId,
       ordem: i + 1,
-      cores: seq,
+      cores: sequenciaDaFaixa(seq, i),
     }))
     const { error: e3 } = await supabase.from('faixas').insert(faixas)
     if (e3) throw e3
@@ -595,7 +659,7 @@ export async function criarProjeto(novo: NovoProjeto): Promise<string> {
 
 export async function atualizarProjeto(
   id: string,
-  patch: Partial<Pick<Projeto, 'nome' | 'destino' | 'emoji' | 'meta' | 'receita_id' | 'status'>>,
+  patch: Partial<Pick<Projeto, 'nome' | 'destino' | 'meta' | 'receita_id' | 'status'>>,
 ) {
   const { error } = await supabase.from('projetos').update(patch).eq('id', id)
   if (error) throw error

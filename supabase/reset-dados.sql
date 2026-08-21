@@ -2,12 +2,15 @@
 -- Uso: colar no SQL Editor do Supabase e rodar. Não é uma migration — nunca
 -- é aplicado automaticamente pela integração do GitHub.
 --
--- Preserva: profiles, permissoes, semestres.
+-- Preserva: profiles (com RA e nível), permissoes, semestres e as regras de
+--           crédito do semestre.
 -- Apaga: projetos e produção, encontros e chamada, estoque e empréstimos,
---        biblioteca, caixa e o feed de atividades.
+--        biblioteca, caixa, arquivos da extensão, marcas de crédito, o mural,
+--        o diário de auditoria e o feed de atividades.
 --
--- ATENÇÃO: os PDFs no bucket `receitas` e as fotos no bucket `avatares` NÃO
--- saem daqui. Apague-os pelo Storage se quiser limpeza completa.
+-- ATENÇÃO: os arquivos nos buckets `receitas`, `avatares`, `capas`,
+-- `comentarios`, `extensao` e `mural` NÃO saem daqui. Apague-os pelo Storage se
+-- quiser limpeza completa.
 
 begin;
 
@@ -26,6 +29,11 @@ truncate table
   public.estoque_movimentos,
   public.estoque_itens,
   public.receitas,
+  public.arquivos_extensao,
+  public.credito_marcas,
+  public.auditoria,
+  public.mural_fotos,
+  public.mural_albuns,
   public.movimentacoes
   restart identity cascade;
 

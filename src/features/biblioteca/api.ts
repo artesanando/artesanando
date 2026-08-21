@@ -18,12 +18,21 @@ export interface NovaReceita {
   specs: [string, string][]
   conteudo: ReceitaConteudo
   pdf_path?: string | null
+  video_url?: string | null
+  capa_path?: string | null
+  largura_cm?: number | null
+  altura_cm?: number | null
   origem: 'manual' | 'criador'
   criado_por: string
 }
 
 export async function criarReceita(r: NovaReceita) {
   const { error } = await supabase.from('receitas').insert(r)
+  if (error) throw error
+}
+
+export async function atualizarReceita(id: string, patch: Partial<NovaReceita>) {
+  const { error } = await supabase.from('receitas').update(patch).eq('id', id)
   if (error) throw error
 }
 

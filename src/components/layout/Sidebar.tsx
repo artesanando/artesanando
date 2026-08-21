@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactElement } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../state/auth'
+import { useAuth, type Perm } from '../../state/auth'
 import { AvatarPerfil } from '../ui/AvatarPerfil'
 import { Dica, MenuKebab } from '../ui/controles'
 import { PAPEL_LABEL } from '../../types/database'
 import {
+  IconSeta,
   IconBib,
   IconDash,
+  IconGaleria,
   IconEst,
   IconFin,
   IconInt,
@@ -14,14 +16,17 @@ import {
   IconProj,
 } from '../ui/icons'
 
-const ITEMS = [
+/* `perm` esconde o item de quem não tem a permissão — o caixa do projeto não é
+   assunto de todo mundo, e um item que sempre leva a um aviso é ruído. */
+const ITEMS: { to: string; label: string; Icon: () => ReactElement; perm?: Perm }[] = [
   { to: '/', label: 'Início', Icon: IconDash },
+  { to: '/mural', label: 'Mural', Icon: IconGaleria },
   { to: '/projetos', label: 'Projetos', Icon: IconProj },
   { to: '/integrantes', label: 'Integrantes', Icon: IconInt },
   { to: '/estoque', label: 'Estoque', Icon: IconEst },
   { to: '/biblioteca', label: 'Biblioteca', Icon: IconBib },
   { to: '/presenca', label: 'Presença', Icon: IconPres },
-  { to: '/financeiro', label: 'Financeiro', Icon: IconFin },
+  { to: '/financeiro', label: 'Financeiro', Icon: IconFin, perm: 'financeiro' },
 ]
 
 const CHAVE = 'artesanando:menu-encolhido'
@@ -46,7 +51,7 @@ export function Sidebar({
   /** no celular, navegar fecha a gaveta */
   aoNavegar?: () => void
 }) {
-  const { profile, isAdmin, logout } = useAuth()
+  const { profile, isAdmin, can, logout } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
 
@@ -69,7 +74,7 @@ export function Sidebar({
       </div>
 
       <div className="nav-list">
-        {ITEMS.map(({ to, label, Icon }) => {
+        {ITEMS.filter((i) => !i.perm || can(i.perm)).map(({ to, label, Icon }) => {
           const on = isActive(to)
           const botao = (
             <button
@@ -124,13 +129,18 @@ export function Sidebar({
           acoes={[
             { label: 'Meu perfil', onSelect: () => go('/perfil') },
             ...(isAdmin
-              ? [{ label: 'Configurações', onSelect: () => go('/configuracoes') }]
+              ? [
+                  { label: 'Atividade de extensão', onSelect: () => go('/extensao') },
+                  { label: 'Configurações', onSelect: () => go('/configuracoes') },
+                ]
               : []),
             { label: 'Sair', onSelect: () => void logout(), perigo: true },
           ]}
         />
       </div>
 
+      {/* discreto de propósito: é um ajuste de vez em quando, não uma ação
+          do dia a dia — só a seta, sem palavra nenhuma */}
       <button
         type="button"
         className="sidebar-encolher"
@@ -138,7 +148,7 @@ export function Sidebar({
         aria-label={encolhido ? 'Expandir menu' : 'Encolher menu'}
         aria-pressed={encolhido}
       >
-        {encolhido ? '›' : '‹ Encolher'}
+        <IconSeta virada={encolhido} />
       </button>
     </nav>
   )

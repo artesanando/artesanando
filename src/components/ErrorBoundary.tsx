@@ -25,7 +25,6 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
         }}
       >
         <div className="card" style={{ maxWidth: 440, padding: '28px 32px', textAlign: 'center' }}>
-          <div style={{ fontSize: 34, marginBottom: 10 }}>🧶</div>
           <div className="h" style={{ fontSize: 20, marginBottom: 8 }}>
             Algo deu errado por aqui
           </div>

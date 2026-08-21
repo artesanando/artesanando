@@ -1,9 +1,19 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react'
 import { useStore } from '../state/store'
 import { usePrendeFoco } from '../components/ui/Popover'
+import { IconX } from '../components/ui/icons'
 
-export function ModalHeader({ title, sub }: { title: string; sub: string }) {
+/* O título do ModalHeader é o rótulo acessível do diálogo: o ModalBox gera o id
+   e passa por contexto, o header o carimba no <h>, e o `aria-labelledby` liga os
+   dois. Antes o id existia mas ninguém apontava para ele — o diálogo ficava sem
+   nome para quem usa leitor de tela. */
+const IdTitulo = createContext<string | undefined>(undefined)
+
+/* `sub` só existe onde a linha carrega informação que o título não dá — não é
+   lugar de explicar o óbvio. */
+export function ModalHeader({ title, sub }: { title: string; sub?: string }) {
   const { close } = useStore()
+  const id = useContext(IdTitulo)
   return (
     <>
       <div
@@ -11,17 +21,19 @@ export function ModalHeader({ title, sub }: { title: string; sub: string }) {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 4,
+          marginBottom: sub ? 4 : 20,
         }}
       >
-        <div className="h" style={{ fontSize: 22 }}>
+        <div id={id} className="h" style={{ fontSize: 22 }}>
           {title}
         </div>
         <button className="x" onClick={close} aria-label="Fechar">
-          ×
+          <IconX size={15} />
         </button>
       </div>
-      <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 20 }}>{sub}</div>
+      {sub && (
+        <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 20 }}>{sub}</div>
+      )}
     </>
   )
 }
@@ -40,8 +52,6 @@ export function ModalFooter({ okLabel, cancelLabel }: { okLabel: string; cancelL
   )
 }
 
-/* O título do modal é o rótulo acessível: ModalHeader renderiza um .h e o
-   ModalBox aponta para ele por id. */
 let seq = 0
 
 export function ModalBox({
@@ -57,7 +67,7 @@ export function ModalBox({
   titulo?: string
 }) {
   const caixa = useRef<HTMLDivElement>(null)
-  const id = useRef(`modal-${++seq}`)
+  const id = useRef(`modal-titulo-${++seq}`)
 
   usePrendeFoco(caixa, true)
 
@@ -71,17 +81,19 @@ export function ModalBox({
   }, [])
 
   return (
-    <div
-      ref={caixa}
-      id={id.current}
-      className="modal"
-      role="dialog"
-      aria-modal="true"
-      aria-label={titulo}
-      style={{ maxWidth, ...(noPadding ? { padding: 0, overflow: 'hidden' } : {}) }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      {children}
-    </div>
+    <IdTitulo.Provider value={titulo ? undefined : id.current}>
+      <div
+        ref={caixa}
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={titulo}
+        aria-labelledby={titulo ? undefined : id.current}
+        style={{ maxWidth, ...(noPadding ? { padding: 0, overflow: 'hidden' } : {}) }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </IdTitulo.Provider>
   )
 }

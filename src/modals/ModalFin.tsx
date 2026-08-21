@@ -8,6 +8,7 @@ import { DatePicker, Select } from '../components/ui/controles'
 import { ModalBox, ModalHeader } from './shared'
 import { criarMovimentacao, fetchMovimentacoes, saldo } from '../features/financeiro/api'
 import { fmtCentavos, hojeIso } from '../lib/format'
+import { IconSetaLonga } from '../components/ui/icons'
 
 const box = (on: boolean, bg: string, bd: string, c: string): CSSProperties =>
   on
@@ -102,7 +103,7 @@ export function ModalFin() {
             onClick={() => setFinKind('entrada')}
             style={box(entrada, 'var(--chip-green)', 'var(--chip-green-border)', 'var(--green-dark)')}
           >
-            ↑ Entrada
+            <IconSetaLonga size={12} para="cima" /> Entrada
           </button>
           <button
             type="button"
@@ -110,7 +111,7 @@ export function ModalFin() {
             onClick={() => setFinKind('saida')}
             style={box(!entrada, 'var(--chip-soft)', 'var(--chip-rose-border)', 'var(--accent)')}
           >
-            ↓ Saída
+            <IconSetaLonga size={12} para="baixo" /> Saída
           </button>
         </div>
         <Campo label="VALOR" obrigatorio erro={form.erros.valor} style={{ marginBottom: 18 }}>

@@ -2,26 +2,36 @@ import type { ReactNode } from 'react'
 import type { ReceitaCategoria, ReceitaConteudo } from '../types/database'
 import { CAT_TAG } from '../features/biblioteca/meta'
 import { Lbl } from '../components/ui/bits'
+import { PreviaFaixas } from '../components/ui/PreviaFaixas'
+import { PreviaGrade } from '../components/ui/PreviaGrade'
+import { Comentarios } from '../features/projetos/Comentarios'
 import { ModalBox } from './shared'
+import { IconX } from '../components/ui/icons'
 
 export interface DetalheProps {
+  /** id da receita — sem ele o detalhe é só prévia e não abre comentários */
+  receitaId?: string
   nome: string
   categoria: ReceitaCategoria
   sub: string | null
   resumo: string | null
   specs: [string, string][]
   conteudo: ReceitaConteudo
+  /** url assinada da foto de capa, quando houver */
+  capa?: string | null
   onClose: () => void
   footerExtra?: ReactNode
 }
 
 export function DetalheView({
+  receitaId,
   nome,
   categoria,
   sub,
   resumo,
   specs,
   conteudo,
+  capa,
   onClose,
   footerExtra,
 }: DetalheProps) {
@@ -31,19 +41,9 @@ export function DetalheView({
   if (categoria === 'faixa' && conteudo.seq) {
     body = (
       <>
-        <Lbl style={{ marginBottom: 9 }}>SEQUÊNCIA DE CORES</Lbl>
-        <div
-          style={{
-            display: 'flex',
-            borderRadius: 8,
-            overflow: 'hidden',
-            border: '1px solid #E7D9D2',
-            marginBottom: 22,
-          }}
-        >
-          {conteudo.seq.map((c, i) => (
-            <div key={i} style={{ flex: 1, height: 40, background: c }} />
-          ))}
+        <Lbl style={{ marginBottom: 9 }}>PRÉVIA DA MANTA</Lbl>
+        <div style={{ marginBottom: 22, maxWidth: 320 }}>
+          <PreviaFaixas seq={conteudo.seq} faixas={conteudo.faixas ?? 8} />
         </div>
         {conteudo.materiais && (
           <>
@@ -108,40 +108,7 @@ export function DetalheView({
                 ))}
               </div>
             )}
-            {cells && modelos && (
-              <div
-                style={{
-                  display: 'inline-grid',
-                  gridTemplateColumns: `repeat(${cells[0]?.length ?? 1}, 16px)`,
-                  gap: 2,
-                  background: 'var(--sand)',
-                  padding: 5,
-                  borderRadius: 6,
-                }}
-              >
-                {cells.flatMap((row, r) =>
-                  row.map((m, c) => {
-                    const md = modelos[m]
-                    return (
-                      <div
-                        key={`${r}-${c}`}
-                        style={{
-                          width: 16,
-                          height: 16,
-                          background: md?.border ?? '#ccc',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderRadius: 1,
-                        }}
-                      >
-                        <div style={{ width: 8, height: 8, background: md?.inner ?? '#eee' }} />
-                      </div>
-                    )
-                  }),
-                )}
-              </div>
-            )}
+            {cells && modelos && <PreviaGrade celulas={cells} cores={modelos} celula={16} />}
           </div>
           {conteudo.paleta && (
             <div>
@@ -306,10 +273,17 @@ export function DetalheView({
           </div>
           {sub && <div style={{ fontSize: 12, color: '#7A6C62', marginTop: 2 }}>{sub}</div>}
         </div>
-        <button className="x" onClick={onClose}>
-          ×
+        <button className="x" onClick={onClose} aria-label="Fechar">
+          <IconX size={15} />
         </button>
       </div>
+      {capa && (
+        <img
+          src={capa}
+          alt=""
+          style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', display: 'block' }}
+        />
+      )}
       <div style={{ padding: '22px 26px' }}>
         {resumo && (
           <div
@@ -341,6 +315,12 @@ export function DetalheView({
           </div>
         )}
         {body}
+        {receitaId && (
+          <div style={{ marginTop: 24, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+            <Lbl style={{ marginBottom: 10 }}>COMENTÁRIOS</Lbl>
+            <Comentarios receitaId={receitaId} />
+          </div>
+        )}
         <div
           style={{
             display: 'flex',

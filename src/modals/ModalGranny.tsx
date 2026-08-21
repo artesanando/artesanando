@@ -2,10 +2,26 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../state/store'
 import { useAuth } from '../state/auth'
-import { PALETTE } from '../lib/paleta'
 import { Lbl } from '../components/ui/bits'
+import { ColorPicker } from '../components/ui/controles'
+import { CampoMedida } from '../components/ui/CampoMedida'
 import { ModalBox, ModalHeader } from './shared'
+import { SeletorCategoria } from './SeletorCategoria'
 import { criarReceita } from '../features/biblioteca/api'
+import { fmtMedida } from '../lib/medida'
+import { IconX } from '../components/ui/icons'
+import { useFios } from '../features/estoque/useFios'
+
+const passo = (cor: string): React.CSSProperties => ({
+  border: 'none',
+  background: 'none',
+  fontFamily: 'inherit',
+  cursor: 'pointer',
+  color: cor,
+  fontWeight: 800,
+  fontSize: 15,
+  padding: '2px 5px',
+})
 
 export function ModalGranny() {
   const {
@@ -18,8 +34,13 @@ export function ModalGranny() {
     backToProjeto,
   } = useStore()
   const { profile } = useAuth()
+  const fios = useFios()
   const qc = useQueryClient()
   const [nome, setNome] = useState('Novo granny')
+  const [medida, setMedida] = useState<{ largura: number | null; altura: number | null }>({
+    largura: null,
+    altura: null,
+  })
   const [erro, setErro] = useState<string | null>(null)
 
   const total = rings.reduce((s, r) => s + r.n, 0)
@@ -34,7 +55,15 @@ export function ModalGranny() {
         specs: [
           ['Carreiras', String(total)],
           ['Cores', String(rings.length)],
+          ...(medida.largura && medida.altura
+            ? ([['Tamanho', fmtMedida({ largura: medida.largura, altura: medida.altura })]] as [
+                string,
+                string,
+              ][])
+            : []),
         ],
+        largura_cm: medida.largura,
+        altura_cm: medida.altura,
         conteudo: {
           rings: rings.map((r, i) => ({
             ...r,
@@ -59,10 +88,8 @@ export function ModalGranny() {
 
   return (
     <ModalBox maxWidth={580}>
-      <ModalHeader
-        title="Padrão de granny square"
-        sub="Vai para a biblioteca e pode ser usado em qualquer manta"
-      />
+      <ModalHeader title="Adicionar à biblioteca" />
+      <SeletorCategoria atual="granny" />
       <Lbl style={{ marginBottom: 7 }}>NOME</Lbl>
       <input
         className="field"
@@ -82,40 +109,36 @@ export function ModalGranny() {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
+                gap: 8,
                 border: '1px solid var(--field-border)',
                 borderRadius: 12,
                 background: 'var(--card)',
                 padding: '9px 12px',
                 marginBottom: 7,
+                flexWrap: 'wrap',
               }}
             >
-              <span
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  background: r.c,
-                  border: '1px solid rgba(0,0,0,.1)',
-                  flex: 'none',
-                }}
-              />
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>
-                {r.name}
-                {nameOf(i)}
+              {/* mesmo seletor do cadastro de novelo: a paleta de fios e, se
+                  precisar, qualquer outra cor */}
+              <span style={{ flex: 1, minWidth: 130 }}>
+                <ColorPicker
+                  fios={fios}
+                  value={r.c}
+                  ariaLabel={`Cor da carreira ${i + 1}${nameOf(i)}`}
+                  onChange={(c) => grannySetColor(i, c)}
+                />
               </span>
-              <span
+              <span style={{ fontSize: 11.5, color: 'var(--faint)', fontWeight: 700 }}>
+                {nameOf(i).replace(' · ', '')}
+              </span>
+              <button
+                type="button"
+                aria-label={`Menos uma carreira em ${r.name}`}
                 onClick={() => grannyDec(i)}
-                style={{
-                  cursor: 'pointer',
-                  color: 'var(--faint)',
-                  fontWeight: 800,
-                  fontSize: 16,
-                  padding: '0 4px',
-                }}
+                style={passo('var(--faint)')}
               >
                 −
-              </span>
+              </button>
               <span
                 style={{
                   border: '1px solid var(--field-border)',
@@ -130,57 +153,34 @@ export function ModalGranny() {
               >
                 {r.n}
               </span>
-              <span
+              <button
+                type="button"
+                aria-label={`Mais uma carreira em ${r.name}`}
                 onClick={() => grannyInc(i)}
-                style={{
-                  cursor: 'pointer',
-                  color: 'var(--accent)',
-                  fontWeight: 800,
-                  fontSize: 16,
-                  padding: '0 4px',
-                }}
+                style={passo('var(--accent)')}
               >
                 +
-              </span>
+              </button>
               {rings.length > 1 && (
-                <span
+                <button
+                  type="button"
+                  aria-label={`Remover a carreira ${i + 1}`}
                   onClick={() => grannyDel(i)}
-                  style={{ cursor: 'pointer', color: 'var(--faint-3)', fontSize: 15 }}
+                  style={passo('var(--faint-3)')}
                 >
-                  ✕
-                </span>
+                  <IconX size={12} />
+                </button>
               )}
             </div>
           ))}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '10px 0 4px' }}>
-            {PALETTE.map(([c, name]) => (
-              <span
-                key={c}
-                onClick={() => grannySetColor(c, name)}
-                title={name}
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: '50%',
-                  background: c,
-                  border: '1px solid rgba(0,0,0,.12)',
-                  cursor: 'pointer',
-                }}
-              />
-            ))}
-          </div>
-          <div
+          <button
+            type="button"
+            className="pill ghost"
+            style={{ padding: '6px 14px', fontSize: 12, marginTop: 4 }}
             onClick={grannyAdd}
-            style={{
-              fontSize: 12.5,
-              fontWeight: 800,
-              color: 'var(--accent)',
-              padding: '6px 2px',
-              cursor: 'pointer',
-            }}
           >
-            + Adicionar cor
-          </div>
+            + Cor
+          </button>
           <div
             style={{
               borderTop: '1px dashed var(--field-border)',
@@ -195,6 +195,17 @@ export function ModalGranny() {
             <b className="h" style={{ fontSize: 16 }}>
               {total}
             </b>
+          </div>
+
+          {/* a medida do square é o que dá tamanho às mantas feitas com ele */}
+          <div style={{ marginTop: 14 }}>
+            <CampoMedida
+              largura={medida.largura}
+              altura={medida.altura}
+              rotuloLargura="LARGURA DO SQUARE (CM)"
+              rotuloAltura="ALTURA DO SQUARE (CM)"
+              aoMudar={(patch) => setMedida((m) => ({ ...m, ...patch }))}
+            />
           </div>
         </div>
         <div style={{ width: 140, flex: 'none' }}>

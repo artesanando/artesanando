@@ -2,18 +2,19 @@ import { useState, type CSSProperties } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
 import { Campo, useFormulario } from '../../components/ui/Campo'
-import { DatePicker, MenuKebab } from '../../components/ui/controles'
+import { DatePicker } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
-import { useAcoesArquivo } from '../../components/ui/useAcoesItem'
-import { useStore } from '../../state/store'
-import { separaArquivados } from '../../lib/arquivo'
-import { fmtDataCurta, hojeIso } from '../../lib/format'
+import { hojeIso } from '../../lib/format'
 import { ativarSemestre, atualizarSemestre, criarSemestre, fetchSemestres } from '../../lib/semestre'
-import { encontrosPassados, fetchEncontros, proximoEncontro, type Encontro } from '../presenca/api'
+import { useAuth } from '../../state/auth'
+import { definirPapel } from '../integrantes/api'
 import { fetchPermissoes, togglePermissao, type PermCol } from './api'
+import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
+import { useOrdenacao } from '../../components/ui/useOrdenacao'
+import { ColunaOrdenavel } from '../../components/ui/CabecalhoOrdenavel'
 
-type Secao = 'permissoes' | 'projeto' | 'encontros'
+type Secao = 'permissoes' | 'projeto'
 
 /* O alcance de cada chave cresceu quando as ações que antes não existiam
    ganharam caminho no app — este texto é o que a admin lê para decidir. */
@@ -24,9 +25,15 @@ const COLS: [PermCol, string, string][] = [
     'marcar etapa e responsável dos squares, redesenhar a manta, pegar e concluir faixas, mexer nas unidades de amigurumi',
   ],
   ['devolucoes', 'MATERIAIS', 'registrar empréstimo e devolução, cadastrar e repor material'],
-  ['comentarios', 'COMENTÁRIOS', 'escrever nos projetos'],
+  ['presenca', 'PRESENÇA', 'marcar a chamada, agendar encontro e cancelar encontro'],
   ['financeiro', 'FINANCEIRO', 'lançar entradas e saídas do caixa'],
 ]
+
+/* Administradora não é uma permissão a mais: é o papel que já traz todas elas,
+   mais o que nenhuma chave dá (configurações, área de extensão, apagar
+   comentário alheio). Fica na mesma tabela porque é aqui que se olha para
+   decidir quem pode o quê. */
+const COL_ADMIN = 'ADMINISTRADORA'
 
 const item = (on: boolean): CSSProperties => ({
   padding: '9px 12px',
@@ -47,26 +54,22 @@ export function ConfigPage() {
   const [secao, setSecao] = useState<Secao>('permissoes')
 
   return (
-    <div className="pagina pgrid" style={{ '--cols': '180px 1fr', '--gap': '34px' } as CSSProperties}>
+    <div className="pagina">
+      <CabecalhoPagina titulo="Ajustes" sub="Permissões e semestre" />
+      <div className="pgrid" style={{ '--cols': '180px 1fr', '--gap': '34px' } as CSSProperties}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <div className="h" style={{ fontWeight: 500, fontSize: 26, marginBottom: 12 }}>
-          Ajustes
-        </div>
         <button style={item(secao === 'permissoes')} onClick={() => setSecao('permissoes')}>
           Permissões
         </button>
         <button style={item(secao === 'projeto')} onClick={() => setSecao('projeto')}>
-          Projeto
-        </button>
-        <button style={item(secao === 'encontros')} onClick={() => setSecao('encontros')}>
-          Encontros
+          Semestre
         </button>
       </div>
 
       <div>
         {secao === 'permissoes' && <Permissoes />}
         {secao === 'projeto' && <SecaoProjeto />}
-        {secao === 'encontros' && <SecaoEncontros />}
+      </div>
       </div>
     </div>
   )
@@ -77,11 +80,26 @@ export function ConfigPage() {
 function Permissoes() {
   const qc = useQueryClient()
   const toast = useToast()
+  const confirmar = useConfirmar()
+  const { profile } = useAuth()
+  const meuId = profile?.id
   const {
     data: rows,
     isLoading,
     isError,
   } = useQuery({ queryKey: ['permissoes'], queryFn: fetchPermissoes })
+
+  // a grade da tabela conta as colunas de permissão mais a de administradora
+  const colunas = { '--n-col': COLS.length + 1 } as CSSProperties
+  const ord = useOrdenacao<PermCol | 'nome' | 'papel'>('nome')
+
+  /* Admin conta como ligada em tudo: é o que a tabela mostra, então é o que ela
+     tem que ordenar. */
+  const ordenados = ord.ordenar(rows ?? [], (p, k) => {
+    if (k === 'nome') return p.nome
+    if (k === 'papel') return p.papel === 'admin' ? 1 : 0
+    return p.papel === 'admin' || (p.permissoes?.[k] ?? false) ? 1 : 0
+  })
 
   const toggle = useMutation({
     mutationFn: ({ id, col, value }: { id: string; col: PermCol; value: boolean }) =>
@@ -90,29 +108,40 @@ function Permissoes() {
     onSettled: () => qc.invalidateQueries({ queryKey: ['permissoes'] }),
   })
 
+  const papel = useMutation({
+    mutationFn: ({ id, admin }: { id: string; admin: boolean }) =>
+      definirPapel(id, admin ? 'admin' : 'integrante'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['permissoes'] })
+      qc.invalidateQueries({ queryKey: ['integrantes'] })
+      toast('Perfil alterado')
+    },
+    onError: () => toast('Não foi possível alterar o perfil.', 'erro'),
+  })
+
+  /* Promover dá acesso total, inclusive a esta tabela — e tirar a última
+     administradora deixaria o app sem quem administra. Nenhuma das duas coisas
+     deve acontecer por um clique distraído. */
+  const promover = async (id: string, nome: string, admin: boolean) => {
+    const restantes = (rows ?? []).filter((r) => r.papel === 'admin' && r.id !== id).length
+    if (admin && restantes === 0) {
+      toast('Esta é a única administradora — promova outra antes.', 'erro')
+      return
+    }
+    const ok = await confirmar({
+      titulo: admin
+        ? `${nome} deixa de ser administradora?`
+        : `Tornar ${nome} administradora?`,
+      okLabel: admin ? 'Tornar integrante' : 'Tornar administradora',
+      perigo: admin,
+    })
+    if (ok) papel.mutate({ id, admin: !admin })
+  }
+
   return (
     <>
-      <div className="h" style={{ fontSize: 18, marginBottom: 4 }}>
+      <div className="h" style={{ fontSize: 18, marginBottom: 14 }}>
         Permissões das integrantes
-      </div>
-      <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 8 }}>
-        Defina o que cada integrante pode editar. O perfil de administradora é fixo.
-      </div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          background: 'var(--chip-soft)',
-          border: '1px solid var(--chip-rose-border)',
-          borderRadius: 10,
-          padding: '9px 13px',
-          fontSize: 12,
-          color: 'var(--primary-dark)',
-          marginBottom: 16,
-        }}
-      >
-        🔒 Apenas administradoras alteram permissões — o banco recusa qualquer outra escrita.
       </div>
 
       <div style={{ marginBottom: 20 }}>
@@ -124,13 +153,30 @@ function Permissoes() {
       </div>
 
       <div className="card" style={{ borderRadius: 14, overflow: 'hidden' }}>
-        <div className="lbl linha-perm cabecalho">
-          <div>INTEGRANTE</div>
-          {COLS.map(([, label]) => (
-            <div key={label} style={{ textAlign: 'center' }}>
-              {label}
-            </div>
+        <div className="lbl linha-perm cabecalho" style={colunas} role="row">
+          <ColunaOrdenavel
+            rotulo="INTEGRANTE"
+            ativa={ord.coluna === 'nome'}
+            direcao={ord.direcao}
+            aoClicar={() => ord.alternar('nome')}
+          />
+          {COLS.map(([col, label]) => (
+            <ColunaOrdenavel
+              key={label}
+              rotulo={label}
+              centro
+              ativa={ord.coluna === col}
+              direcao={ord.direcao}
+              aoClicar={() => ord.alternar(col, 'desc')}
+            />
           ))}
+          <ColunaOrdenavel
+            rotulo={COL_ADMIN}
+            centro
+            ativa={ord.coluna === 'papel'}
+            direcao={ord.direcao}
+            aoClicar={() => ord.alternar('papel', 'desc')}
+          />
         </div>
         {isLoading && (
           <div style={{ padding: 18, fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>
@@ -145,8 +191,10 @@ function Permissoes() {
             Nenhuma integrante cadastrada ainda.
           </div>
         )}
-        {rows?.map((p) => (
-          <div key={p.id} className="linha-perm">
+        {ordenados.map((p) => {
+          const admin = p.papel === 'admin'
+          return (
+          <div key={p.id} className="linha-perm" style={colunas}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
               <AvatarPerfil
                 nome={p.nome}
@@ -166,12 +214,12 @@ function Permissoes() {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {p.email ?? 'ainda sem conta'}
+                  {admin ? 'administradora — acesso total' : (p.email ?? 'ainda sem conta')}
                 </div>
               </div>
             </div>
             {COLS.map(([col, label]) => {
-              const value = p.permissoes?.[col] ?? false
+              const value = admin || (p.permissoes?.[col] ?? false)
               return (
                 <div key={col} className="cel-perm">
                   <span className="rotulo-perm">{label}</span>
@@ -181,13 +229,14 @@ function Permissoes() {
                     role="switch"
                     aria-checked={value}
                     aria-label={`${label} de ${p.nome}`}
+                    disabled={admin}
                     onClick={() => toggle.mutate({ id: p.id, col, value: !value })}
                     style={{
                       background: value ? 'var(--primary)' : '#E7DCCF',
-                      cursor: 'pointer',
+                      cursor: admin ? 'default' : 'pointer',
                       border: 'none',
                       padding: 0,
-                      opacity: toggle.isPending ? 0.6 : 1,
+                      opacity: admin ? 0.45 : toggle.isPending ? 0.6 : 1,
                       transition: 'background var(--dur-rapida) var(--ease-suave)',
                     }}
                   >
@@ -196,8 +245,31 @@ function Permissoes() {
                 </div>
               )
             })}
+            <div className="cel-perm">
+              <span className="rotulo-perm">{COL_ADMIN}</span>
+              <button
+                type="button"
+                className="sw"
+                role="switch"
+                aria-checked={admin}
+                aria-label={`${COL_ADMIN} de ${p.nome}`}
+                disabled={p.id === meuId || papel.isPending}
+                onClick={() => promover(p.id, p.nome, admin)}
+                style={{
+                  background: admin ? 'var(--primary)' : '#E7DCCF',
+                  cursor: p.id === meuId ? 'default' : 'pointer',
+                  border: 'none',
+                  padding: 0,
+                  opacity: p.id === meuId ? 0.45 : papel.isPending ? 0.6 : 1,
+                  transition: 'background var(--dur-rapida) var(--ease-suave)',
+                }}
+              >
+                <span style={admin ? { right: 2 } : { left: 2 }} />
+              </button>
+            </div>
           </div>
-        ))}
+          )
+        })}
       </div>
     </>
   )
@@ -227,7 +299,7 @@ function SecaoProjeto() {
     onSuccess: () => {
       setLabel('')
       invalidar()
-      toast('Semestre criado ✓')
+      toast('Semestre criado')
     },
     onError: () => toast('Não foi possível criar — o rótulo já existe?', 'erro'),
   })
@@ -236,7 +308,7 @@ function SecaoProjeto() {
     mutationFn: (id: string) => ativarSemestre(id),
     onSuccess: () => {
       invalidar()
-      toast('Semestre ativo trocado ✓')
+      toast('Semestre ativo trocado')
     },
     onError: () => toast('Não foi possível ativar.', 'erro'),
   })
@@ -308,8 +380,6 @@ function SecaoProjeto() {
                 onClick={async () => {
                   const ok = await confirmar({
                     titulo: `Tornar ${s.label} o semestre ativo?`,
-                    descricao:
-                      'Os projetos e encontros novos passam a entrar neste semestre. O que já existe não muda.',
                     okLabel: 'Ativar',
                   })
                   if (ok) ativar.mutate(s.id)
@@ -358,129 +428,6 @@ function SecaoProjeto() {
           {criar.isPending ? 'Criando…' : 'Criar'}
         </button>
       </form>
-    </>
-  )
-}
-
-/* ---------- Encontros ---------- */
-
-function SecaoEncontros() {
-  const { open, openEncontro } = useStore()
-  const acoesArquivo = useAcoesArquivo()
-  const hoje = hojeIso()
-
-  const { data: encontros, isLoading } = useQuery({
-    queryKey: ['encontros'],
-    queryFn: fetchEncontros,
-  })
-
-  const { ativos, arquivados } = separaArquivados(encontros ?? [])
-  const proximo = proximoEncontro(ativos, hoje)
-  const passados = encontrosPassados(ativos, hoje)
-
-  const linha = (e: Encontro, arquivado: boolean) => (
-    <div
-      key={e.id}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '13px 18px',
-        borderTop: '1px solid var(--divider)',
-        fontSize: 13,
-      }}
-    >
-      <b style={{ width: 74, flex: 'none' }}>{fmtDataCurta(e.data)}</b>
-      <span
-        style={{
-          color: 'var(--muted)',
-          flex: 1,
-          minWidth: 0,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {e.hora ? `${e.hora.slice(0, 5)}h` : ''}
-        {e.local ? ` · ${e.local}` : ''}
-        {e.pauta ? ` · ${e.pauta}` : ''}
-      </span>
-      <MenuKebab
-        ariaLabel={`Ações do encontro de ${fmtDataCurta(e.data)}`}
-        acoes={[
-          { label: 'Editar encontro', onSelect: () => openEncontro(e.id) },
-          ...acoesArquivo({
-            tabela: 'encontros',
-            id: e.id,
-            nome: `o encontro de ${fmtDataCurta(e.data)}`,
-            rotulo: 'o encontro',
-            motivoHistorico: 'A chamada já feita',
-            arquivado,
-            invalidar: ['encontros', 'presencas'],
-          }),
-        ]}
-      />
-    </div>
-  )
-
-  return (
-    <>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-end',
-          gap: 12,
-          marginBottom: 4,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div className="h" style={{ fontSize: 18 }}>
-          Encontros do semestre
-        </div>
-        <button className="pill" onClick={() => open('encontro')}>
-          + Novo encontro
-        </button>
-      </div>
-      <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 18 }}>
-        A chamada de cada um fica na tela de Presença.
-      </div>
-
-      {isLoading && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>}
-
-      {proximo && (
-        <>
-          <div className="lbl" style={{ marginBottom: 8 }}>
-            PRÓXIMO
-          </div>
-          <div className="card" style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 20 }}>
-            {linha(proximo, false)}
-          </div>
-        </>
-      )}
-
-      <div className="lbl" style={{ marginBottom: 8 }}>
-        JÁ ACONTECERAM
-      </div>
-      <div className="card" style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 20 }}>
-        {passados.length === 0 && !isLoading && (
-          <div style={{ padding: 18, fontSize: 13, color: 'var(--muted)' }}>
-            Nenhum encontro registrado ainda.
-          </div>
-        )}
-        {passados.map((e) => linha(e, false))}
-      </div>
-
-      {arquivados.length > 0 && (
-        <>
-          <div className="lbl" style={{ marginBottom: 8 }}>
-            ARQUIVADOS
-          </div>
-          <div className="card" style={{ borderRadius: 14, overflow: 'hidden' }}>
-            {arquivados.map((e) => linha(e, true))}
-          </div>
-        </>
-      )}
     </>
   )
 }

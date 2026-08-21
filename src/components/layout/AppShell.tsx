@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar, useMenuEncolhido } from './Sidebar'
 import { ModalRoot } from '../../modals/ModalRoot'
+import { IconMenu } from '../ui/icons'
 
 export function AppShell() {
   const [encolhido, alternarEncolhido] = useMenuEncolhido()
@@ -27,7 +28,7 @@ export function AppShell() {
           aria-expanded={gaveta}
           onClick={() => setGaveta(true)}
         >
-          ☰
+          <IconMenu />
         </button>
         <span className="h" style={{ fontSize: 17 }}>
           Artesanando<span style={{ color: 'var(--primary)' }}>.</span>

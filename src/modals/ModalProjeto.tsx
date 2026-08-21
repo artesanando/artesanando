@@ -1,20 +1,21 @@
-import { useState, type CSSProperties, type FormEvent } from 'react'
+import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../state/store'
 import { useAuth } from '../state/auth'
 import { Stepper } from '../components/ui/bits'
 import { Campo, LegendaObrigatorio, useFormulario } from '../components/ui/Campo'
-import { ColorPicker, Select } from '../components/ui/controles'
+import { CampoMedida } from '../components/ui/CampoMedida'
+import { PreviaFaixas } from '../components/ui/PreviaFaixas'
+import { PreviaGrade } from '../components/ui/PreviaGrade'
+import { Select } from '../components/ui/controles'
+import { useConfirmar } from '../components/ui/Confirm'
 import { ModalBox, ModalHeader } from './shared'
-import { MODELS } from '../lib/paleta'
+import { redimensionaCelulas } from '../lib/grade'
+import { fmtMedida, gradeParaTamanho, tamanhoManta } from '../lib/medida'
+import { tecnicaDoEsquema } from '../types/database'
 import { fetchReceitas } from '../features/biblioteca/api'
-import {
-  criarProjeto,
-  fetchReceitasAmigurumi,
-  gradePadrao,
-  type ModeloNovo,
-} from '../features/projetos/api'
+import { criarProjeto, fetchReceitasAmigurumi } from '../features/projetos/api'
 
 const cardOn: CSSProperties = {
   border: '1px solid var(--chip-rose-border)',
@@ -61,36 +62,37 @@ const tec = (on: boolean, c: string): CSSProperties => ({
       }),
 })
 
-const MODELOS_INICIAIS: ModeloNovo[] = [
-  { letra: 'A', nome: 'Modelo A', cor_borda: MODELS.A.border, cor_miolo: MODELS.A.inner },
-  { letra: 'B', nome: 'Modelo B', cor_borda: MODELS.B.border, cor_miolo: MODELS.B.inner },
-]
-
-const LETRAS = 'ABCDEFGH'.split('')
-
 export function ModalProjeto() {
-  const { projCat, projTec, setProjCat, setProjTec, openFaixa, faixaSeq, faixaCount, close } =
-    useStore()
+  const { projCat, projTec, setProjCat, setProjTec, openLayout, close } = useStore()
   const { profile } = useAuth()
+  const confirmar = useConfirmar()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const form = useFormulario<'nome' | 'manta'>()
 
   const [nome, setNome] = useState('')
   const [destino, setDestino] = useState('')
-  const [emoji, setEmoji] = useState('🧶')
   const [receitaId, setReceitaId] = useState('')
   const [meta, setMeta] = useState(12)
   const [erro, setErro] = useState<string | null>(null)
 
-  /* Antes, a manta de crochê nascia com A/B/C e 80 squares fixos, sem nada
-     configurável. Agora: do zero (tamanho + modelos) ou a partir de um esquema
-     salvo na biblioteca — que até então não servia para nada. */
-  const [origem, setOrigem] = useState<'zero' | 'esquema'>('zero')
-  const [colunas, setColunas] = useState(8)
-  const [linhas, setLinhas] = useState(10)
-  const [modelos, setModelos] = useState<ModeloNovo[]>(MODELOS_INICIAIS)
+  /* Manta nasce sempre de um esquema salvo — nas duas técnicas. Montar cores e
+     tamanho aqui dentro produzia mantas que ninguém conseguia repetir depois,
+     porque o desenho não ficava guardado em lugar nenhum. */
   const [esquemaId, setEsquemaId] = useState('')
+  /* Grade sobrescrita só para este projeto, quando alguém manda o tamanho final
+     em vez da contagem de peças. O esquema salvo na biblioteca não muda. */
+  const [redim, setRedim] = useState<{ colunas: number; linhas: number } | null>(null)
+  /* A peça vem do padrão escolhido e pode ser ajustada só para este projeto: a
+     mesma receita rende tamanhos diferentes conforme o fio e a mão. */
+  const [peca, setPeca] = useState<{ largura: number | null; altura: number | null }>({
+    largura: null,
+    altura: null,
+  })
+  const [alvo, setAlvo] = useState<{ largura: number | null; altura: number | null }>({
+    largura: null,
+    altura: null,
+  })
 
   const manta = projCat === 'manta'
   const croche = manta && projTec === 'croche'
@@ -104,55 +106,92 @@ export function ModalProjeto() {
   const { data: todasReceitas } = useQuery({
     queryKey: ['receitas'],
     queryFn: fetchReceitas,
-    enabled: croche,
+    enabled: manta,
   })
+  /* Esquema antigo não guarda a técnica; `tecnicaDoEsquema` deduz pela forma do
+     conteúdo, para que os de crochê salvos antes disso continuem aparecendo. */
   const esquemas = (todasReceitas ?? []).filter(
-    (r) => r.categoria === 'manta' && r.conteudo.cells && r.conteudo.modelos,
+    (r) =>
+      r.categoria === 'manta' &&
+      !r.arquivado_em &&
+      tecnicaDoEsquema(r.conteudo) === (croche ? 'croche' : 'trico'),
   )
   const esquema = esquemas.find((e) => e.id === esquemaId)
 
+  const modelosDoEsquema = esquema?.conteudo.modelos ?? {}
+  const letrasDoEsquema = Object.keys(modelosDoEsquema)
+  const cellsBase = esquema?.conteudo.cells ?? null
+  const celulas =
+    cellsBase && redim
+      ? redimensionaCelulas(cellsBase, redim.colunas, redim.linhas, letrasDoEsquema)
+      : cellsBase
+
+  const seqDoEsquema = esquema?.conteudo.seq ?? []
+  const faixasDoEsquema = redim?.linhas ?? esquema?.conteudo.faixas ?? 0
+
+  const grade = croche
+    ? { colunas: celulas?.[0]?.length ?? 0, linhas: celulas?.length ?? 0 }
+    : { colunas: 1, linhas: faixasDoEsquema }
+
+  const tamanho =
+    manta && esquema
+      ? tamanhoManta(croche ? 'manta_croche' : 'manta_trico', grade.colunas, grade.linhas, peca)
+      : null
+
+  /* Herda a medida do esquema escolhido enquanto ninguém digitou a sua. */
+  useEffect(() => {
+    if (!esquema || peca.largura || peca.altura) return
+    setPeca({ largura: esquema.largura_cm, altura: esquema.altura_cm })
+  }, [esquema, peca.largura, peca.altura])
+
+  /* Tamanho final editado à mão: recalcula a grade pela mais próxima e mostra o
+     que deu antes de aplicar — o número quase nunca fecha redondo. */
+  const aplicarAlvo = async () => {
+    if (!alvo.largura || !alvo.altura || !peca.largura || !peca.altura) return
+    const tipo = croche ? 'manta_croche' : 'manta_trico'
+    const nova = gradeParaTamanho(
+      tipo,
+      { largura: alvo.largura, altura: alvo.altura },
+      { largura: peca.largura, altura: peca.altura },
+    )
+    const resultado = tamanhoManta(tipo, nova.colunas, nova.linhas, peca)!
+    const ok = await confirmar({
+      titulo: croche
+        ? `${nova.colunas} × ${nova.linhas} squares = ${fmtMedida(resultado)}`
+        : `${nova.linhas} faixas = ${fmtMedida(resultado)}`,
+      descricao: `Você pediu ${fmtMedida({ largura: alvo.largura, altura: alvo.altura })}.`,
+      okLabel: 'Usar esta grade',
+    })
+    if (!ok) return
+    setRedim(nova)
+  }
+
   const criar = useMutation({
-    mutationFn: () => {
-      if (croche && origem === 'esquema' && esquema?.conteudo.cells && esquema.conteudo.modelos) {
-        const cells = esquema.conteudo.cells
-        const defs = esquema.conteudo.modelos
-        return criarProjeto({
-          nome: nome.trim(),
-          tipo: 'manta_croche',
-          destino: destino.trim() || null,
-          emoji: '🌸',
-          created_by: profile!.id,
-          colunas: cells[0]?.length ?? 1,
-          linhas: cells.length,
-          modelos: Object.entries(defs).map(([letra, d]) => ({
-            letra,
-            nome: `Modelo ${letra}`,
-            cor_borda: d.border,
-            cor_miolo: d.inner,
-          })),
-          celulas: cells,
-        })
-      }
-      return criarProjeto({
+    mutationFn: () =>
+      criarProjeto({
         nome: nome.trim(),
         tipo: manta ? (croche ? 'manta_croche' : 'manta_trico') : 'amigurumi',
         destino: destino.trim() || null,
-        emoji: manta ? (croche ? '🌸' : '☁️') : emoji,
         receita_id: !manta && receitaId ? receitaId : null,
         meta: !manta ? meta : null,
         created_by: profile!.id,
-        colunas,
-        linhas,
-        modelos,
-        celulas: gradePadrao(
-          colunas,
-          linhas,
-          modelos.map((m) => m.letra),
-        ),
-        faixaSeq,
-        faixaCount,
-      })
-    },
+        colunas: grade.colunas,
+        linhas: grade.linhas,
+        pecaLarguraCm: peca.largura,
+        pecaAlturaCm: peca.altura,
+        // o nome que a pessoa deu ao modelo no esquema é o que vai para o mapa
+        modelos: Object.entries(modelosDoEsquema).map(([letra, d]) => ({
+          letra,
+          nome: d.nome ?? `Modelo ${letra}`,
+          cor_borda: d.border,
+          cor_miolo: d.inner,
+          // as carreiras do meio só chegam ao mapa se forem junto daqui
+          cores: d.cores && d.cores.length > 0 ? d.cores : [d.inner, d.border],
+        })),
+        celulas: celulas ?? [],
+        faixaSeq: seqDoEsquema,
+        faixaCount: faixasDoEsquema,
+      }),
     onSuccess: (id) => {
       qc.invalidateQueries({ queryKey: ['projetos'] })
       qc.invalidateQueries({ queryKey: ['progresso-geral'] })
@@ -167,23 +206,15 @@ export function ModalProjeto() {
     setErro(null)
     const ok = form.checar({
       nome: nome.trim() ? undefined : 'Dê um nome ao projeto.',
-      manta:
-        croche && origem === 'zero' && modelos.length === 0
-          ? 'A manta precisa de pelo menos um modelo de granny.'
-          : croche && origem === 'esquema' && !esquemaId
-            ? 'Escolha um esquema da biblioteca.'
-            : undefined,
+      manta: manta && !esquemaId ? 'Escolha um esquema da biblioteca.' : undefined,
     })
     if (!ok) return
     criar.mutate()
   }
 
-  const mudarModelo = (i: number, patch: Partial<ModeloNovo>) =>
-    setModelos((ms) => ms.map((m, j) => (j === i ? { ...m, ...patch } : m)))
-
   return (
     <ModalBox maxWidth={600}>
-      <ModalHeader title="Novo projeto" sub="Defina o tipo para configurar a produção" />
+      <ModalHeader title="Novo projeto" />
       <form onSubmit={submit}>
         <div className="grid2" style={{ gap: 10, marginBottom: 20 }}>
           <button type="button" onClick={() => setProjCat('manta')} style={manta ? cardOn : cardOff}>
@@ -215,7 +246,7 @@ export function ModalProjeto() {
                 setNome(e.target.value)
                 form.aoMudar('nome')
               }}
-              placeholder={manta ? 'Manta Primavera' : 'Capivara'}
+              placeholder={manta ? 'Manta Ada' : 'Capivara'}
             />
           )}
         </Campo>
@@ -243,7 +274,7 @@ export function ModalProjeto() {
               )}
             </Campo>
           ) : (
-            <Campo label="RECEITA (OPCIONAL)">
+            <Campo label="RECEITA">
               {() => (
                 <Select
                   ariaLabel="Receita"
@@ -257,7 +288,7 @@ export function ModalProjeto() {
               )}
             </Campo>
           )}
-          <Campo label="DESTINO (OPCIONAL)">
+          <Campo label="DESTINO">
             {(p) => (
               <input
                 {...p}
@@ -270,256 +301,139 @@ export function ModalProjeto() {
           </Campo>
         </div>
 
-        {croche && (
+        {manta && (
           <div
             style={{
-              background: 'var(--sand-soft)',
+              background: croche ? 'var(--sand-soft)' : '#EEF3EA',
+              border: `1px solid ${croche ? 'var(--border)' : '#D8E0D2'}`,
+              borderRadius: 12,
+              padding: '14px 16px',
+              marginBottom: 20,
+            }}
+          >
+            <Campo label="ESQUEMA" obrigatorio erro={form.erros.manta}>
+              {() => (
+                <Select
+                  ariaLabel="Esquema de manta"
+                  value={esquemaId}
+                  onChange={(v) => {
+                    setEsquemaId(v)
+                    setRedim(null)
+                    form.aoMudar('manta')
+                  }}
+                  options={[
+                    ['', esquemas.length ? 'Escolher…' : 'Nenhum esquema salvo ainda'],
+                    ...esquemas.map((e) => [e.id, e.nome] as [string, string]),
+                  ]}
+                />
+              )}
+            </Campo>
+
+            {/* Lista vazia não é beco sem saída: daqui se cria o esquema e o
+                fluxo volta para cá, que é o mesmo ida-e-volta do SeletorCategoria. */}
+            <button
+              type="button"
+              onClick={() => openLayout('projeto')}
+              style={{
+                marginTop: 10,
+                fontSize: 12,
+                fontWeight: 800,
+                color: croche ? 'var(--accent)' : 'var(--green-dark)',
+                cursor: 'pointer',
+                border: 'none',
+                background: 'none',
+                fontFamily: 'inherit',
+                padding: 0,
+              }}
+            >
+              + Criar esquema
+            </button>
+
+            {esquema && (
+              <div style={{ marginTop: 14 }}>
+                <div className="lbl" style={{ marginBottom: 6 }}>
+                  PRÉVIA
+                </div>
+                {croche && celulas ? (
+                  <>
+                    <PreviaGrade celulas={celulas} cores={modelosDoEsquema} />
+                    <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>
+                      {grade.colunas} × {grade.linhas} · {grade.colunas * grade.linhas} squares
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <PreviaFaixas seq={seqDoEsquema} faixas={grade.linhas} />
+                    <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>
+                      {grade.linhas} faixas · {seqDoEsquema.length} cores
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {manta && (
+          <div
+            style={{
               border: '1px solid var(--border)',
               borderRadius: 12,
               padding: '14px 16px',
               marginBottom: 20,
             }}
           >
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="seg"
-                aria-pressed={origem === 'zero'}
-                onClick={() => setOrigem('zero')}
-                style={
-                  origem === 'zero'
-                    ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }
-                    : undefined
-                }
-              >
-                Começar do zero
-              </button>
-              <button
-                type="button"
-                className="seg"
-                aria-pressed={origem === 'esquema'}
-                onClick={() => setOrigem('esquema')}
-                style={
-                  origem === 'esquema'
-                    ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }
-                    : undefined
-                }
-              >
-                Usar um esquema salvo
-              </button>
+            <CampoMedida
+              largura={peca.largura}
+              altura={peca.altura}
+              rotuloLargura={croche ? 'LARGURA DO SQUARE (CM)' : 'LARGURA DA FAIXA (CM)'}
+              rotuloAltura={croche ? 'ALTURA DO SQUARE (CM)' : 'ALTURA DA FAIXA (CM)'}
+              aoMudar={(patch) => setPeca((m) => ({ ...m, ...patch }))}
+            />
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                marginTop: 12,
+                paddingTop: 12,
+                borderTop: '1px solid var(--divider)',
+                flexWrap: 'wrap',
+                fontSize: 12.5,
+              }}
+            >
+              <span style={{ fontWeight: 700, color: 'var(--muted)' }}>Manta</span>
+              <b className="h" style={{ fontSize: 16, color: 'var(--accent)' }}>
+                {fmtMedida(tamanho)}
+              </b>
             </div>
-
-            {origem === 'zero' ? (
-              <>
-                <div className="grid2" style={{ marginBottom: 14 }}>
-                  <Campo label="COLUNAS">
-                    {() => (
-                      <Stepper
-                        value={colunas}
-                        onChange={setColunas}
-                        min={2}
-                        max={20}
-                        ariaLabel="Colunas"
-                      />
-                    )}
-                  </Campo>
-                  <Campo label="LINHAS">
-                    {() => (
-                      <Stepper
-                        value={linhas}
-                        onChange={setLinhas}
-                        min={2}
-                        max={30}
-                        ariaLabel="Linhas"
-                      />
-                    )}
-                  </Campo>
+            {tamanho && (
+              <div style={{ marginTop: 12 }}>
+                <div className="lbl" style={{ marginBottom: 7 }}>
+                  OU MANDE O TAMANHO FINAL
                 </div>
-
-                <div className="lbl" style={{ marginBottom: 8 }}>
-                  MODELOS DE GRANNY <span style={{ color: 'var(--accent)' }}>*</span>
-                </div>
-                {modelos.map((m, i) => (
-                  <div
-                    key={m.letra}
-                    style={{
-                      display: 'flex',
-                      gap: 8,
-                      alignItems: 'center',
-                      marginBottom: 8,
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <b style={{ width: 16, flex: 'none' }}>{m.letra}</b>
-                    <input
-                      className="field"
-                      style={{ flex: 1, minWidth: 110 }}
-                      value={m.nome}
-                      aria-label={`Nome do modelo ${m.letra}`}
-                      onChange={(e) => mudarModelo(i, { nome: e.target.value })}
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  <span style={{ flex: 1, minWidth: 190 }}>
+                    <CampoMedida
+                      largura={alvo.largura}
+                      altura={alvo.altura}
+                      rotuloLargura="LARGURA DA MANTA (CM)"
+                      rotuloAltura="ALTURA DA MANTA (CM)"
+                      aoMudar={(patch) => setAlvo((m) => ({ ...m, ...patch }))}
                     />
-                    <span style={{ width: 124 }}>
-                      <ColorPicker
-                        value={m.cor_borda}
-                        ariaLabel={`Cor da borda do modelo ${m.letra}`}
-                        onChange={(cor_borda) => mudarModelo(i, { cor_borda })}
-                      />
-                    </span>
-                    <span style={{ width: 124 }}>
-                      <ColorPicker
-                        value={m.cor_miolo}
-                        ariaLabel={`Cor do miolo do modelo ${m.letra}`}
-                        onChange={(cor_miolo) => mudarModelo(i, { cor_miolo })}
-                      />
-                    </span>
-                    {modelos.length > 1 && (
-                      <button
-                        type="button"
-                        className="kebab"
-                        aria-label={`Remover modelo ${m.letra}`}
-                        onClick={() => setModelos((ms) => ms.filter((_, j) => j !== i))}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {modelos.length < LETRAS.length && (
+                  </span>
                   <button
                     type="button"
                     className="pill ghost"
-                    style={{ padding: '6px 14px', fontSize: 12 }}
-                    onClick={() =>
-                      setModelos((ms) => [
-                        ...ms,
-                        {
-                          letra: LETRAS[ms.length],
-                          nome: `Modelo ${LETRAS[ms.length]}`,
-                          cor_borda: '#B99BC4',
-                          cor_miolo: '#E3C07A',
-                        },
-                      ])
-                    }
+                    disabled={!alvo.largura || !alvo.altura}
+                    onClick={aplicarAlvo}
                   >
-                    + Modelo
+                    Ajustar a grade
                   </button>
-                )}
-                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 10 }}>
-                  A manta nasce com <b>{colunas * linhas} squares</b> em "a fazer", alternando os
-                  modelos. Depois dá para arrastar, pintar e mudar o tamanho no mapa.
                 </div>
-              </>
-            ) : (
-              <>
-                <Campo label="ESQUEMA" obrigatorio erro={form.erros.manta}>
-                  {() => (
-                    <Select
-                      ariaLabel="Esquema de manta"
-                      value={esquemaId}
-                      onChange={(v) => {
-                        setEsquemaId(v)
-                        form.aoMudar('manta')
-                      }}
-                      options={[
-                        ['', esquemas.length ? 'Escolher…' : 'Nenhum esquema salvo ainda'],
-                        ...esquemas.map((e) => [e.id, e.nome] as [string, string]),
-                      ]}
-                    />
-                  )}
-                </Campo>
-                {esquema?.conteudo.cells && (
-                  <div style={{ marginTop: 12 }}>
-                    <div className="lbl" style={{ marginBottom: 6 }}>
-                      PRÉVIA
-                    </div>
-                    <div
-                      style={{
-                        display: 'inline-grid',
-                        gridTemplateColumns: `repeat(${esquema.conteudo.cells[0]?.length ?? 1}, 14px)`,
-                        gap: 2,
-                        background: 'var(--sand)',
-                        padding: 5,
-                        borderRadius: 6,
-                      }}
-                    >
-                      {esquema.conteudo.cells.flatMap((row, r) =>
-                        row.map((letra, c) => {
-                          const d = esquema.conteudo.modelos?.[letra]
-                          return (
-                            <span
-                              key={`${r}-${c}`}
-                              style={{
-                                width: 14,
-                                height: 14,
-                                background: d?.border ?? '#ccc',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              <span style={{ width: 7, height: 7, background: d?.inner ?? '#eee' }} />
-                            </span>
-                          )
-                        }),
-                      )}
-                    </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>
-                      {esquema.conteudo.cells.length} linhas ×{' '}
-                      {esquema.conteudo.cells[0]?.length ?? 0} colunas
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        {manta && !croche && (
-          <div
-            style={{
-              background: '#EEF3EA',
-              border: '1px solid #D8E0D2',
-              borderRadius: 12,
-              padding: '14px 16px',
-              marginBottom: 20,
-            }}
-          >
-            <div style={{ fontSize: 12, color: '#5E6E55', marginBottom: 10 }}>
-              A manta nasce com <b>{faixaCount} faixas</b> usando esta sequência de cores. Tudo
-              continua editável depois.
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div
-                style={{
-                  display: 'flex',
-                  borderRadius: 6,
-                  overflow: 'hidden',
-                  border: '1px solid var(--field-border)',
-                  flex: 1,
-                  height: 22,
-                }}
-              >
-                {faixaSeq.map((c, i) => (
-                  <div key={i} style={{ flex: 1, background: c }} />
-                ))}
               </div>
-              <button
-                type="button"
-                onClick={() => openFaixa('projeto')}
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  color: 'var(--green-dark)',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  border: 'none',
-                  background: 'none',
-                  fontFamily: 'inherit',
-                }}
-              >
-                + Editar padrão
-              </button>
-            </div>
+            )}
           </div>
         )}
 
@@ -527,17 +441,6 @@ export function ModalProjeto() {
           <div className="grid2" style={{ marginBottom: 20 }}>
             <Campo label="META DE UNIDADES">
               {() => <Stepper value={meta} onChange={setMeta} min={1} max={999} ariaLabel="Meta" />}
-            </Campo>
-            <Campo label="EMOJI">
-              {(p) => (
-                <input
-                  {...p}
-                  className="field"
-                  value={emoji}
-                  onChange={(e) => setEmoji(e.target.value)}
-                  maxLength={4}
-                />
-              )}
             </Campo>
           </div>
         )}

@@ -8,6 +8,10 @@ import { useAcoesArquivo } from '../../components/ui/useAcoesItem'
 import { separaArquivados } from '../../lib/arquivo'
 import { useSemestreAtivo } from '../../lib/semestre'
 import { fmtCentavos, fmtDataCurta, hojeIso } from '../../lib/format'
+import { IconSetaLonga } from '../../components/ui/icons'
+import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
+import { useOrdenacao } from '../../components/ui/useOrdenacao'
+import { ColunaOrdenavel } from '../../components/ui/CabecalhoOrdenavel'
 import {
   fetchMovimentacoes,
   filtraPeriodo,
@@ -37,6 +41,7 @@ export function FinanceiroPage() {
   const { openFin } = useStore()
   const { can } = useAuth()
   const semestre = useSemestreAtivo()
+  const ord = useOrdenacao<'data' | 'descricao' | 'categoria' | 'valor'>('data', 'desc')
   const acoesArquivo = useAcoesArquivo()
 
   const {
@@ -67,6 +72,12 @@ export function FinanceiroPage() {
   const { ativos, arquivados } = separaArquivados(movs ?? [])
   const base = verArquivadas ? arquivados : ativos
   const doPeriodo = filtraPeriodo(base, periodo.de, periodo.ate)
+
+  /* Saída é valor negativo na conta, mas na tabela quem ordena por valor quer o
+     tamanho do lançamento — não o sinal dele. */
+  const ordenados = ord.ordenar(doPeriodo, (m, k) =>
+    k === 'valor' ? m.valor_centavos : k === 'data' ? m.data : (m[k] ?? ''),
+  )
 
   // o saldo é sempre do caixa inteiro; entradas e saídas seguem o filtro
   const kpiSaldo = saldo(ativos)
@@ -111,7 +122,6 @@ export function FinanceiroPage() {
                 tabela: 'movimentacoes',
                 id: m.id,
                 nome: `a movimentação "${m.descricao}"`,
-                rotulo: 'o lançamento',
                 motivoHistorico: 'O caixa',
                 arquivado: Boolean(m.arquivado_em),
                 invalidar: ['movimentacoes'],
@@ -125,35 +135,22 @@ export function FinanceiroPage() {
 
   return (
     <div className="pagina">
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          marginBottom: 24,
-          gap: 14,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div>
-          <div className="h" style={{ fontWeight: 500, fontSize: 28 }}>
-            Financeiro
-          </div>
-          <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
-            Caixa do projeto · semestre {semestre?.label ?? '—'}
-          </div>
-        </div>
-        {can('financeiro') && (
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button className="pill ghost" onClick={() => openFin('saida')}>
-              ↓ Saída
-            </button>
-            <button className="pill" onClick={() => openFin('entrada')}>
-              ↑ Entrada
-            </button>
-          </div>
-        )}
-      </div>
+      <CabecalhoPagina
+        titulo="Financeiro"
+        sub={`Caixa do projeto · semestre ${semestre?.label ?? '—'}`}
+        acoes={
+          can('financeiro') && (
+            <>
+              <button className="pill ghost" onClick={() => openFin('saida')}>
+                <IconSetaLonga size={12} para="baixo" /> Saída
+              </button>
+              <button className="pill" onClick={() => openFin('entrada')}>
+                <IconSetaLonga size={12} para="cima" /> Entrada
+              </button>
+            </>
+          )
+        }
+      />
 
       <div
         style={{
@@ -252,17 +249,30 @@ export function FinanceiroPage() {
             style={{ border: 'none', background: 'none', fontFamily: 'inherit' }}
             onClick={() => setVerArquivadas((v) => !v)}
           >
-            {verArquivadas ? '‹ Voltar às ativas' : `Ver arquivadas (${arquivados.length}) ›`}
+            {verArquivadas ? 'Voltar às ativas' : `Ver arquivadas (${arquivados.length})`}
           </button>
         )}
       </div>
 
       <div className="card" style={{ overflow: 'hidden' }}>
-        <div className="lbl linha-fin cabecalho">
-          <div>DATA</div>
-          <div>DESCRIÇÃO</div>
-          <div>CATEGORIA</div>
-          <div style={{ textAlign: 'right' }}>VALOR</div>
+        <div className="lbl linha-fin cabecalho" role="row">
+          {(
+            [
+              ['data', 'DATA', 'desc'],
+              ['descricao', 'DESCRIÇÃO', 'asc'],
+              ['categoria', 'CATEGORIA', 'asc'],
+              ['valor', 'VALOR', 'desc'],
+            ] as const
+          ).map(([k, rotulo, natural]) => (
+            <div key={k} style={k === 'valor' ? { textAlign: 'right' } : undefined}>
+              <ColunaOrdenavel
+                rotulo={rotulo}
+                ativa={ord.coluna === k}
+                direcao={ord.direcao}
+                aoClicar={() => ord.alternar(k, natural)}
+              />
+            </div>
+          ))}
           <div />
         </div>
         {isLoading && (
@@ -280,7 +290,7 @@ export function FinanceiroPage() {
             Nenhuma movimentação neste período.
           </div>
         )}
-        {doPeriodo.map((m, i) => linha(m, i === doPeriodo.length - 1))}
+        {ordenados.map((m, i) => linha(m, i === ordenados.length - 1))}
       </div>
     </div>
   )

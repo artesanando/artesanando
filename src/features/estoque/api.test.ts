@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   disponivel,
   emprestadoPorItem,
-  estoqueBaixo,
   saldoEmprestimo,
   type EmprestimoAtivo,
 } from './api'
@@ -30,8 +29,8 @@ const item = (over: Partial<EstoqueItem>): EstoqueItem => ({
   cor_hex: null,
   quantidade: 20,
   vendidos: 0,
-  minimo: 5,
   custo_centavos: null,
+  capa_path: null,
   arquivado_em: null,
   ...over,
 })
@@ -64,12 +63,11 @@ describe('emprestadoPorItem', () => {
   })
 })
 
-describe('disponível e estoque baixo', () => {
-  it('disponível desconta o emprestado', () => {
+describe('disponível', () => {
+  it('desconta o emprestado', () => {
     expect(disponivel(item({ quantidade: 20 }), 2)).toBe(18)
   })
-  it('alerta quando disponível fica no mínimo ou abaixo', () => {
-    expect(estoqueBaixo(item({ quantidade: 5, minimo: 3 }), 3)).toBe(true)
-    expect(estoqueBaixo(item({ quantidade: 20, minimo: 5 }), 2)).toBe(false)
+  it('nunca fica negativo, mesmo com mais emprestado do que em posse', () => {
+    expect(disponivel(item({ quantidade: 3 }), 5)).toBe(0)
   })
 })

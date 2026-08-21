@@ -4,6 +4,40 @@
 export type Preferencia = 'croche' | 'trico' | 'ambos'
 export type Papel = 'admin' | 'integrante'
 
+/** Define qual regra de crédito do semestre vale para ela */
+export type Nivel = 'iniciante' | 'experiente'
+
+export const NIVEL_LABEL: Record<Nivel, string> = {
+  iniciante: 'Iniciante',
+  experiente: 'Experiente',
+}
+
+/* Mesmo caso do turno: enquanto a migration do nível não roda, `select('*')`
+   devolve a linha sem a coluna, e o app usa isso como chave de objeto. */
+export const nivelDaPessoa = (v: unknown): Nivel => (v === 'experiente' ? 'experiente' : 'iniciante')
+
+/** RA: seis dígitos, e só isso — cada instituição tem o seu formato, este é o daqui */
+export const RA_VALIDO = /^[0-9]{6}$/
+
+/** Turno de um encontro; a integrante pode ser dos dois */
+export type TurnoEncontro = 'diurno' | 'noturno'
+export type Turno = TurnoEncontro | 'ambos'
+
+export const TURNO_LABEL: Record<Turno, string> = {
+  diurno: 'Diurno',
+  noturno: 'Noturno',
+  ambos: 'Os dois turnos',
+}
+
+/* `select('*')` devolve a linha sem a coluna enquanto a migration do turno não
+   rodou, e o app usa esse valor como chave de objeto — sem normalizar aqui, a
+   tela quebrava inteira em vez de só perder a separação por turno. */
+export const turnoDaPessoa = (v: unknown): Turno =>
+  v === 'diurno' || v === 'noturno' ? v : 'ambos'
+
+export const turnoDoEncontro = (v: unknown): TurnoEncontro =>
+  v === 'noturno' ? 'noturno' : 'diurno'
+
 export interface Profile {
   id: string
   /** conta do auth ligada a este perfil — null em integrante que só entra na chamada */
@@ -18,6 +52,9 @@ export interface Profile {
   papel: Papel
   ativo: boolean
   desde: string | null
+  /** em qual turno ela vem — define o denominador da frequência total dela */
+  turno: Turno
+  nivel: Nivel
 }
 
 /** Integrante anotada na chamada que ainda não tem acesso ao app */
@@ -27,8 +64,9 @@ export interface Permissoes {
   profile_id: string
   progresso: boolean
   devolucoes: boolean
-  comentarios: boolean
   financeiro: boolean
+  /** marcar chamada e mexer no calendário de encontros */
+  presenca: boolean
 }
 
 export interface Semestre {
@@ -39,7 +77,7 @@ export interface Semestre {
   ativo: boolean
 }
 
-export type EstoqueCategoria = 'novelos' | 'agulhas' | 'olhos' | 'enchimento' | 'feira'
+export type EstoqueCategoria = 'novelos' | 'agulhas' | 'outros' | 'feira'
 
 export interface EstoqueItem {
   id: string
@@ -49,12 +87,21 @@ export interface EstoqueItem {
   cor_hex: string | null
   quantidade: number
   vendidos: number
-  minimo: number
   custo_centavos: number | null
+  capa_path: string | null
   arquivado_em: string | null
 }
 
-export type MotivoMovimento = 'compra' | 'doacao' | 'ajuste' | 'perda' | 'venda'
+/* O app só grava 'entrada' e 'saida'. Os cinco antigos continuam aqui porque o
+   histórico é imutável e as linhas já gravadas precisam seguir legíveis. */
+export type MotivoMovimento =
+  | 'entrada'
+  | 'saida'
+  | 'compra'
+  | 'doacao'
+  | 'ajuste'
+  | 'perda'
+  | 'venda'
 
 export interface EstoqueMovimento {
   id: string
@@ -69,6 +116,8 @@ export interface EstoqueMovimento {
 }
 
 export const MOTIVO_LABEL: Record<MotivoMovimento, string> = {
+  entrada: 'Entrada',
+  saida: 'Saída',
   compra: 'Compra',
   doacao: 'Doação',
   ajuste: 'Ajuste de contagem',
@@ -95,7 +144,14 @@ export interface Devolucao {
 
 export type ReceitaCategoria = 'amigurumi' | 'granny' | 'faixa' | 'manta'
 
+/* O esquema de manta serve as duas técnicas. Crochê guarda `cells` + `modelos`
+   (a grade de squares); tricô guarda `seq` + `faixas` (a faixa modelo e quantas
+   empilham). Esquema antigo, salvo antes disso, não tem `tecnica` e é de crochê
+   — daí a leitura sempre passar por `tecnicaDoEsquema`. */
+export type Tecnica = 'croche' | 'trico'
+
 export interface ReceitaConteudo {
+  tecnica?: Tecnica
   rings?: { c: string; name: string; n: number; role?: string }[]
   seq?: string[]
   materiais?: { c: string; name: string; qty: string }[]
@@ -104,8 +160,16 @@ export interface ReceitaConteudo {
   esquema?: string[][]
   faixas?: number
   cells?: string[][]
-  modelos?: Record<string, { border: string; inner: string }>
+  /* `cores` traz todas as carreiras; `border`/`inner` seguem como fallback do
+     que foi salvo quando o modelo só sabia duas. `receita_id` liga ao granny. */
+  modelos?: Record<
+    string,
+    { border: string; inner: string; cores?: string[]; nome?: string; receita_id?: string }
+  >
 }
+
+export const tecnicaDoEsquema = (c: ReceitaConteudo): Tecnica =>
+  c.tecnica ?? (c.seq && !c.cells ? 'trico' : 'croche')
 
 export interface Receita {
   id: string
@@ -116,15 +180,21 @@ export interface Receita {
   specs: [string, string][]
   conteudo: ReceitaConteudo
   pdf_path: string | null
+  video_url: string | null
+  capa_path: string | null
+  /** tamanho esperado da peça, em cm — o projeto herda daqui */
+  largura_cm: number | null
+  altura_cm: number | null
   origem: 'manual' | 'criador'
   criado_por: string | null
   arquivado_em: string | null
 }
 
-/** Tabelas que o app arquiva em vez de apagar — chave usada em `pode_excluir` */
+/* Tabelas que o app arquiva em vez de apagar — chave usada em `pode_excluir`.
+   Encontro saiu da lista: cancelar já tira das contas e mantém o dia visível,
+   que é o que a coordenação precisa para conferir semestre passado. */
 export type Arquivavel =
   | 'projetos'
-  | 'encontros'
   | 'receitas'
   | 'estoque_itens'
   | 'movimentacoes'

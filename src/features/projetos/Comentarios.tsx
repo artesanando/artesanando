@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../state/auth'
 import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
@@ -6,34 +6,56 @@ import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
 import { MenuKebab } from '../../components/ui/controles'
 import { tempoRelativo } from '../../lib/format'
+import { IconCamera, IconX } from '../../components/ui/icons'
 import {
   apagarComentario,
+  chaveComentarios,
   comentar,
   editarComentario,
   fetchAtividades,
   fetchComentarios,
+  subirFotoComentario,
+  urlsDasFotos,
+  type AlvoComentario,
 } from './api'
 
-export function Comentarios({ projetoId }: { projetoId: string }) {
-  const { profile, can, isAdmin } = useAuth()
+/* Comentar não pede permissão: qualquer integrante logada escreve, aqui e na
+   biblioteca. Apagar comentário de outra é só de administradora. */
+export function Comentarios(alvo: AlvoComentario) {
+  const { profile, isAdmin } = useAuth()
   const qc = useQueryClient()
   const toast = useToast()
   const confirmar = useConfirmar()
+  const inputFoto = useRef<HTMLInputElement>(null)
   const [texto, setTexto] = useState('')
+  const [foto, setFoto] = useState<File | null>(null)
   const [editando, setEditando] = useState<string | null>(null)
   const [rascunho, setRascunho] = useState('')
 
+  const chave = chaveComentarios(alvo)
   const { data: comentarios } = useQuery({
-    queryKey: ['comentarios', projetoId],
-    queryFn: () => fetchComentarios(projetoId),
+    queryKey: chave,
+    queryFn: () => fetchComentarios(alvo),
   })
 
-  const invalidar = () => qc.invalidateQueries({ queryKey: ['comentarios', projetoId] })
+  const caminhos = (comentarios ?? []).filter((c) => c.foto_path).map((c) => c.foto_path!)
+  const { data: fotos } = useQuery({
+    queryKey: ['fotos-comentarios', caminhos.join(',')],
+    queryFn: () => urlsDasFotos(caminhos),
+    enabled: caminhos.length > 0,
+  })
+
+  const invalidar = () => qc.invalidateQueries({ queryKey: chave })
 
   const enviar = useMutation({
-    mutationFn: () => comentar(projetoId, profile!.id, texto.trim()),
+    mutationFn: async () => {
+      // a foto só sobe no envio: cancelar não deixa arquivo órfão no bucket
+      const caminho = foto ? await subirFotoComentario(foto) : null
+      await comentar(alvo, profile!.id, texto.trim(), caminho)
+    },
     onSuccess: () => {
       setTexto('')
+      setFoto(null)
       invalidar()
     },
     onError: () => toast('Não foi possível enviar o comentário.', 'erro'),
@@ -52,7 +74,7 @@ export function Comentarios({ projetoId }: { projetoId: string }) {
     mutationFn: (id: string) => apagarComentario(id),
     onSuccess: () => {
       invalidar()
-      toast('Comentário apagado ✓')
+      toast('Comentário apagado')
     },
     onError: () => toast('Não foi possível apagar o comentário.', 'erro'),
   })
@@ -64,6 +86,8 @@ export function Comentarios({ projetoId }: { projetoId: string }) {
       </div>
       {(comentarios ?? []).map((c) => {
         const meu = c.autor_id === profile?.id
+        // apagar comentário alheio é decisão de coordenação, não uma chave à parte
+        const modera = isAdmin
         return (
           <div key={c.id} style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
             <AvatarPerfil
@@ -89,7 +113,7 @@ export function Comentarios({ projetoId }: { projetoId: string }) {
                 <span style={{ color: 'var(--faint)', fontSize: 11, flex: 1 }}>
                   · {tempoRelativo(c.created_at)}
                 </span>
-                {(meu || isAdmin) && editando !== c.id && (
+                {(meu || modera) && editando !== c.id && (
                   <MenuKebab
                     ariaLabel={`Ações do comentário de ${c.autor?.nome ?? 'integrante'}`}
                     acoes={[
@@ -110,7 +134,6 @@ export function Comentarios({ projetoId }: { projetoId: string }) {
                         onSelect: async () => {
                           const ok = await confirmar({
                             titulo: 'Apagar este comentário?',
-                            descricao: 'Não tem volta.',
                             okLabel: 'Apagar',
                             perigo: true,
                           })
@@ -147,20 +170,40 @@ export function Comentarios({ projetoId }: { projetoId: string }) {
                   </button>
                 </div>
               ) : (
-                c.texto
+                <>
+                  {c.texto}
+                  {c.foto_path && fotos?.get(c.foto_path) && (
+                    <a
+                      href={fotos.get(c.foto_path)}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ display: 'block', marginTop: 8 }}
+                    >
+                      <img
+                        src={fotos.get(c.foto_path)}
+                        alt="Foto do comentário"
+                        style={{
+                          maxWidth: '100%',
+                          maxHeight: 220,
+                          borderRadius: 8,
+                          display: 'block',
+                        }}
+                      />
+                    </a>
+                  )}
+                </>
               )}
             </div>
           </div>
         )
       })}
-      {can('comentarios') && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (texto.trim()) enviar.mutate()
-          }}
-          style={{ display: 'flex', gap: 8 }}
-        >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (texto.trim() || foto) enviar.mutate()
+        }}
+      >
+        <div style={{ display: 'flex', gap: 8 }}>
           <input
             className="field"
             style={{ borderRadius: 99, flex: 1 }}
@@ -170,17 +213,58 @@ export function Comentarios({ projetoId }: { projetoId: string }) {
             onChange={(e) => setTexto(e.target.value)}
             disabled={enviar.isPending}
           />
+          <input
+            ref={inputFoto}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => setFoto(e.target.files?.[0] ?? null)}
+          />
+          <button
+            type="button"
+            className="pill ghost"
+            aria-label="Anexar foto ao comentário"
+            onClick={() => inputFoto.current?.click()}
+            style={{ flex: 'none' }}
+          >
+            <IconCamera />
+          </button>
           {/* antes só dava para enviar com Enter — no celular o botão é o caminho */}
           <button
             type="submit"
             className="pill"
-            disabled={!texto.trim() || enviar.isPending}
+            disabled={(!texto.trim() && !foto) || enviar.isPending}
             style={{ flex: 'none' }}
           >
             Enviar
           </button>
-        </form>
-      )}
+        </div>
+        {foto && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginTop: 8,
+              fontSize: 11.5,
+              color: 'var(--muted)',
+            }}
+          >
+            {foto.name}
+            <button
+              type="button"
+              className="kebab"
+              aria-label="Tirar a foto do comentário"
+              onClick={() => {
+                setFoto(null)
+                if (inputFoto.current) inputFoto.current.value = ''
+              }}
+            >
+              <IconX size={12} />
+            </button>
+          </div>
+        )}
+      </form>
     </div>
   )
 }

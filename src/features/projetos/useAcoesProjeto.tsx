@@ -20,7 +20,7 @@ export function useAcoesProjeto() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['projetos'] })
       qc.invalidateQueries({ queryKey: ['projeto'] })
-      toast('Projeto atualizado ✓')
+      toast('Projeto atualizado')
     },
     onError: () => toast('Não foi possível mudar o projeto.', 'erro'),
   })
@@ -39,7 +39,6 @@ export function useAcoesProjeto() {
         tabela: 'projetos',
         id: projeto.id,
         nome: `o projeto "${projeto.nome}"`,
-        rotulo: 'o projeto',
         motivoHistorico: 'A produção registrada e os comentários',
         arquivado: Boolean(projeto.arquivado_em),
         invalidar: ['projetos', 'progresso-geral'],

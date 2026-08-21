@@ -252,19 +252,22 @@ textarea.field::placeholder {
   gap: 6px;
 }
 .sidebar-encolher {
-  margin-top: 12px;
+  margin-top: 10px;
+  align-self: flex-end;
   border: none;
   background: none;
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--faint);
+  color: var(--faint-3);
   cursor: pointer;
   padding: 6px;
   border-radius: 8px;
+  display: flex;
   transition: color var(--dur-rapida) var(--ease-suave);
 }
-.sidebar-encolher:hover {
+.sidebar.encolhida .sidebar-encolher {
+  align-self: center;
+}
+.sidebar-encolher:hover,
+.sidebar-encolher:focus-visible {
   color: var(--accent);
 }
 
@@ -296,6 +299,13 @@ textarea.field::placeholder {
   background: rgba(59, 52, 47, 0.34);
   z-index: 45;
   animation: fade var(--dur-media) var(--ease-entrada);
+}
+
+/* título de cada página — encolhe junto com a largura da tela */
+.titulo-pagina {
+  font-weight: 500;
+  font-size: clamp(20px, 6vw, 28px);
+  line-height: 1.2;
 }
 
 /* respiro padrão de toda página — substitui os padding: 30px 40px espalhados */
@@ -423,7 +433,11 @@ textarea.field::placeholder {
   padding: 5px 9px;
   border-radius: 7px;
   pointer-events: none;
-  white-space: nowrap;
+  /* texto de ajuda de coluna passa dos 100 caracteres: nowrap virava uma faixa
+     atravessando a tela inteira */
+  max-width: 260px;
+  white-space: normal;
+  line-height: 1.4;
   animation: pop-entra var(--dur-rapida) var(--ease-entrada);
 }
 
@@ -475,10 +489,12 @@ textarea.field::placeholder {
   border-radius: 4px;
 }
 
-/* tabela de permissões — vira ficha por integrante no celular */
+/* tabela de permissões — vira ficha por integrante no celular.
+   O número de colunas vem do componente: fixá-lo aqui já quebrou o layout uma
+   vez, quando a chave de presença entrou e o 6º item caiu na coluna do nome. */
 .linha-perm {
   display: grid;
-  grid-template-columns: 1.6fr repeat(4, 1fr);
+  grid-template-columns: 1.6fr repeat(var(--n-col, 4), 1fr);
   align-items: center;
   padding: 13px 18px;
   border-top: 1px solid var(--divider);
@@ -511,6 +527,51 @@ textarea.field::placeholder {
     padding-left: 38px;
   }
   .rotulo-perm {
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    color: var(--muted);
+  }
+}
+
+/* tabelas da Atividade de extensão — viram ficha por integrante no celular */
+.linha-extensao {
+  display: grid;
+  grid-template-columns: 1.7fr repeat(var(--n-col, 4), 0.7fr);
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border-top: 1px solid var(--divider);
+}
+.linha-extensao.cabecalho {
+  border-top: none;
+  background: var(--sand-head);
+  padding: 9px 18px;
+}
+.cel-extensao {
+  text-align: center;
+}
+.rotulo-extensao {
+  display: none;
+}
+@media (max-width: 900px) {
+  .linha-extensao {
+    grid-template-columns: 1fr;
+    gap: 5px;
+    padding: 14px 16px;
+  }
+  .linha-extensao.cabecalho {
+    display: none;
+  }
+  .cel-extensao {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 38px;
+    text-align: right;
+  }
+  .rotulo-extensao {
     display: block;
     font-size: 11px;
     font-weight: 800;
@@ -563,6 +624,174 @@ textarea.field::placeholder {
     grid-column: 3;
     grid-row: 1 / span 2;
   }
+}
+
+/* a grade da manta rola nos dois eixos e nunca empurra a página */
+.rolagem-grade {
+  overflow: auto;
+  max-width: 100%;
+  padding-bottom: 4px;
+  overscroll-behavior-x: contain;
+}
+@media (max-width: 640px) {
+  .rolagem-grade {
+    max-height: 62vh;
+  }
+}
+
+/* miniatura do material na lista de estoque — cor sólida quando não há foto */
+.miniatura-item {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  display: block;
+}
+.miniatura-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* card tracejado de "+ Adicionar" no fim das grades */
+.card-adicionar {
+  border: 2px dashed var(--field-border);
+  border-radius: 14px;
+  background: none;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--faint);
+  cursor: pointer;
+  min-height: 150px;
+  transition: border-color var(--dur-rapida) var(--ease-suave);
+}
+.card-adicionar:hover {
+  border-color: var(--primary);
+  color: var(--accent);
+}
+
+/* Enquadramento de foto: a imagem inteira embaixo, moldura arrastável em cima */
+.palco-recorte {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--sand);
+  touch-action: none;
+  user-select: none;
+}
+.sombra-recorte {
+  position: absolute;
+  inset: 0;
+  background: rgba(59, 52, 47, 0.55);
+  pointer-events: none;
+}
+.moldura-recorte {
+  position: absolute;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(59, 52, 47, 0.35);
+  cursor: grab;
+  background: none;
+  padding: 0;
+}
+.canto-recorte {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(59, 52, 47, 0.4);
+}
+@media (max-width: 640px) {
+  .canto-recorte {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* alças de redimensionar a grade do esquema de manta. A faixa visível é fina,
+   mas a área de toque é generosa — no celular o dedo não acerta 4px. */
+.alca-grade {
+  position: absolute;
+  border: none;
+  background: transparent;
+  padding: 0;
+  touch-action: none;
+}
+.alca-grade::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  border-radius: 99px;
+  background: var(--field-border);
+  transition: background var(--dur-rapida) var(--ease-suave);
+}
+.alca-grade:hover::after,
+.alca-grade:focus-visible::after {
+  background: var(--primary);
+}
+.alca-x {
+  top: 0;
+  right: 0;
+  width: 14px;
+  bottom: 14px;
+  cursor: ew-resize;
+}
+.alca-x::after {
+  width: 4px;
+  height: 46%;
+}
+.alca-y {
+  left: 0;
+  bottom: 0;
+  height: 14px;
+  right: 14px;
+  cursor: ns-resize;
+}
+.alca-y::after {
+  height: 4px;
+  width: 46%;
+}
+.alca-xy {
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+}
+.alca-xy::after {
+  width: 8px;
+  height: 8px;
+}
+@media (max-width: 640px) {
+  .alca-x {
+    width: 22px;
+  }
+  .alca-y {
+    height: 22px;
+  }
+  .alca-xy {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* faixa "#1–5 · Ana" das unidades de amigurumi */
+.linha-grupo-und {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  font-size: 12.5px;
+  flex-wrap: wrap;
 }
 
 /* cartão de amigurumi na lista de projetos — 4 colunas no desktop,
@@ -711,9 +940,6 @@ textarea.field::placeholder {
 
 /* Celular: alvos de toque confortáveis e tabelas viram cartão. */
 @media (max-width: 640px) {
-  :root {
-    --celula: 26px;
-  }
   .pill {
     padding: 11px 18px;
   }
@@ -734,4 +960,59 @@ textarea.field::placeholder {
     display: block !important;
     grid-template-columns: none !important;
   }
+
+  /* Modal vira folha subindo do rodapé: um modal de 560px de largura fixa
+     estourava a tela, e os botões do rodapé ficavam fora do alcance. Agora a
+     folha ocupa o que precisa até quase a altura toda e rola por dentro. */
+  .ov {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal {
+    border-radius: 18px 18px 0 0;
+    padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
+    max-width: 100% !important;
+    max-height: calc(100dvh - 28px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    animation: folha-sobe var(--dur-lenta) var(--ease-entrada);
+  }
+  /* alça visual no topo da folha */
+  .modal::before {
+    content: '';
+    display: block;
+    width: 38px;
+    height: 4px;
+    border-radius: 99px;
+    background: var(--border-strong);
+    margin: -6px auto 14px;
+  }
+  @keyframes folha-sobe {
+    from {
+      transform: translateY(24px);
+      opacity: 0;
+    }
+  }
+
+}
+
+/* cabeçalho de página — ver CabecalhoPagina.tsx */
+.cabecalho-pagina {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.sub-pagina {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 4px;
+  min-height: 17px;
+}
+.acoes-pagina {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }

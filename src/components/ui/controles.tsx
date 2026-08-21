@@ -1,8 +1,9 @@
-import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Popover, useGatilho } from './Popover'
 import { PALETTE } from '../../lib/paleta'
 import { dataLocal, fmtDataBarra } from '../../lib/format'
+import { IconCheck, IconChevron, IconKebab } from './icons'
 
 /* Substitutos dos controles nativos: o <select>, o <input type=date|time|color>
    e o window.confirm abrem janelas do sistema, que não seguem a estética do app
@@ -70,7 +71,7 @@ export function Select<T extends string>({
         >
           {atual?.[1] ?? placeholder}
         </span>
-        <span className="seta">▼</span>
+        <span className="seta"><IconChevron /></span>
       </button>
       <Popover aberto={g.aberto} aoFechar={g.fechar} ancora={g.ref.current} ariaLabel={ariaLabel}>
         {comBusca && (
@@ -93,7 +94,7 @@ export function Select<T extends string>({
               className="opcao"
               onClick={() => escolher(v)}
             >
-              <span style={{ width: 12, flex: 'none' }}>{v === value ? '✓' : ''}</span>
+              <span style={{ width: 12, flex: 'none' }}>{v === value && <IconCheck size={12} />}</span>
               {label}
             </button>
           ))}
@@ -129,20 +130,29 @@ export function diasDoMes(ano: number, mes: number): (string | null)[] {
   ]
 }
 
+/** Marcador de um dia no calendário: a bolinha embaixo do número */
+export interface MarcaDia {
+  cor: string
+  /** dia riscado — encontro cancelado continua visível, mas sem chamada */
+  riscado?: boolean
+}
+
 export function Calendario({
   valor,
   onChange,
-  /** datas que ganham marcador — ex.: dias com encontro */
-  marcados = [],
+  /** dias que ganham marcador, por data ISO */
+  marcas = {},
+  /** ocupa a largura disponível em vez dos 250px do popover */
+  fluido = false,
 }: {
   valor: string
   onChange: (iso: string) => void
-  marcados?: string[]
+  marcas?: Record<string, MarcaDia>
+  fluido?: boolean
 }) {
   const base = valor ? dataLocal(valor) : new Date()
   const [ano, setAno] = useState(base.getFullYear())
   const [mes, setMes] = useState(base.getMonth())
-  const marcadosSet = useMemo(() => new Set(marcados), [marcados])
   const hoje = iso(new Date())
 
   const mover = (delta: number) => {
@@ -152,7 +162,7 @@ export function Calendario({
   }
 
   return (
-    <div style={{ width: 250, padding: 4 }}>
+    <div style={{ width: fluido ? '100%' : 250, maxWidth: '100%', padding: 4 }}>
       <div
         style={{
           display: 'flex',
@@ -162,13 +172,13 @@ export function Calendario({
         }}
       >
         <button type="button" className="kebab" aria-label="Mês anterior" onClick={() => mover(-1)}>
-          ‹
+          <IconChevron size={12} para="esquerda" />
         </button>
         <b style={{ fontSize: 13 }}>
           {MESES[mes]} {ano}
         </b>
         <button type="button" className="kebab" aria-label="Próximo mês" onClick={() => mover(1)}>
-          ›
+          <IconChevron size={12} para="direita" />
         </button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2 }}>
@@ -185,6 +195,7 @@ export function Calendario({
           if (!dia) return <span key={`v${i}`} />
           const nun = Number(dia.slice(8))
           const ativo = dia === valor
+          const marca = marcas[dia]
           return (
             <button
               key={dia}
@@ -203,11 +214,13 @@ export function Calendario({
                 borderRadius: 8,
                 padding: '7px 0',
                 cursor: 'pointer',
+                textDecoration: marca?.riscado ? 'line-through' : undefined,
+                opacity: marca?.riscado ? 0.55 : 1,
                 transition: 'background var(--dur-rapida) var(--ease-suave)',
               }}
             >
               {nun}
-              {marcadosSet.has(dia) && (
+              {marca && (
                 <span
                   style={{
                     position: 'absolute',
@@ -217,7 +230,7 @@ export function Calendario({
                     width: 4,
                     height: 4,
                     borderRadius: '50%',
-                    background: ativo ? '#fff' : 'var(--primary)',
+                    background: ativo ? '#fff' : marca.cor,
                   }}
                 />
               )}
@@ -233,13 +246,11 @@ export function DatePicker({
   value,
   onChange,
   ariaLabel,
-  marcados,
   disabled,
 }: {
   value: string
   onChange: (iso: string) => void
   ariaLabel?: string
-  marcados?: string[]
   disabled?: boolean
 }) {
   const g = useGatilho()
@@ -258,7 +269,7 @@ export function DatePicker({
         <span style={{ color: value ? 'var(--ink)' : 'var(--faint)' }}>
           {value ? fmtDataBarra(value) : 'dd/mm'}
         </span>
-        <span className="seta">▼</span>
+        <span className="seta"><IconChevron /></span>
       </button>
       <Popover
         aberto={g.aberto}
@@ -269,7 +280,6 @@ export function DatePicker({
       >
         <Calendario
           valor={value}
-          marcados={marcados}
           onChange={(d) => {
             onChange(d)
             g.fechar()
@@ -315,7 +325,7 @@ export function TimePicker({
         onClick={g.alternar}
       >
         <span style={{ color: value ? 'var(--ink)' : 'var(--faint)' }}>{value || '--:--'}</span>
-        <span className="seta">▼</span>
+        <span className="seta"><IconChevron /></span>
       </button>
       <Popover aberto={g.aberto} aoFechar={g.fechar} ancora={g.ref.current} ariaLabel={ariaLabel}>
         <div role="listbox" aria-label={ariaLabel}>
@@ -331,7 +341,7 @@ export function TimePicker({
                 g.fechar()
               }}
             >
-              <span style={{ width: 12, flex: 'none' }}>{h === value ? '✓' : ''}</span>
+              <span style={{ width: 12, flex: 'none' }}>{h === value && <IconCheck size={12} />}</span>
               {h}
             </button>
           ))}
@@ -343,20 +353,36 @@ export function TimePicker({
 
 /* ---------- Cor ---------- */
 
+/* Um novelo do estoque oferecido como cor. Quem chama monta a lista — assim o
+   ColorPicker segue sem saber que `features/estoque` existe. */
+export interface FioDoEstoque {
+  id: string
+  nome: string
+  detalhe: string | null
+  cor_hex: string
+  capa?: string | null
+}
+
 export function ColorPicker({
   value,
   onChange,
   ariaLabel = 'Cor',
   /** deixa escolher qualquer cor além da paleta de fios */
   livre = true,
+  /** novelos do estoque, com foto — some quando a lista vem vazia */
+  fios,
 }: {
   value: string
   onChange: (hex: string) => void
   ariaLabel?: string
   livre?: boolean
+  fios?: FioDoEstoque[]
 }) {
   const g = useGatilho()
-  const nome = PALETTE.find(([c]) => c.toLowerCase() === value.toLowerCase())?.[1]
+  const daPaleta = PALETTE.find(([c]) => c.toLowerCase() === value.toLowerCase())?.[1]
+  // o fio escolhido nomeia a cor melhor do que o hex cru
+  const fio = (fios ?? []).find((f) => f.cor_hex.toLowerCase() === value.toLowerCase())
+  const nome = fio?.nome ?? daPaleta
 
   return (
     <>
@@ -382,7 +408,7 @@ export function ColorPicker({
           />
           {nome ?? value}
         </span>
-        <span className="seta">▼</span>
+        <span className="seta"><IconChevron /></span>
       </button>
       <Popover
         aberto={g.aberto}
@@ -420,6 +446,63 @@ export function ColorPicker({
               />
             ))}
           </div>
+          {(fios ?? []).length > 0 && (
+            <>
+              <div className="lbl" style={{ margin: '12px 0 6px' }}>
+                FIOS DO ESTOQUE
+              </div>
+              <div style={{ maxHeight: 168, overflowY: 'auto' }}>
+                {(fios ?? []).map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    aria-pressed={f.cor_hex.toLowerCase() === value.toLowerCase()}
+                    onClick={() => {
+                      onChange(f.cor_hex)
+                      g.fechar()
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      width: '100%',
+                      border: 'none',
+                      background:
+                        f.cor_hex.toLowerCase() === value.toLowerCase()
+                          ? 'var(--chip-rose)'
+                          : 'none',
+                      borderRadius: 8,
+                      padding: '5px 6px',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span className="miniatura-item" style={{ background: f.cor_hex }}>
+                      {f.capa && <img src={f.capa} alt="" />}
+                    </span>
+                    <span style={{ minWidth: 0, flex: 1 }}>
+                      <span
+                        style={{
+                          display: 'block',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {f.nome}
+                      </span>
+                      {f.detalhe && (
+                        <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>{f.detalhe}</span>
+                      )}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           {livre && (
             <label
               style={{
@@ -454,7 +537,7 @@ export function ColorPicker({
   )
 }
 
-/* ---------- Menu ⋮ ---------- */
+/* ---------- Menu de ações ---------- */
 
 export interface AcaoMenu {
   label: string
@@ -482,7 +565,7 @@ export function MenuKebab({ acoes, ariaLabel = 'Ações' }: { acoes: AcaoMenu[];
           g.alternar()
         }}
       >
-        ⋮
+        <IconKebab />
       </button>
       <Popover
         aberto={g.aberto}
@@ -518,30 +601,88 @@ export function MenuKebab({ acoes, ariaLabel = 'Ações' }: { acoes: AcaoMenu[];
 
 /* ---------- Dica (tooltip) ---------- */
 
+interface Caixa {
+  top: number
+  left: number
+  right: number
+  altura: number
+}
+
+const MARGEM = 10
+const BORDA = 8
+
 export function Dica({ texto, children }: { texto: string; children: ReactNode }) {
   const alvo = useRef<HTMLSpanElement>(null)
+  const balao = useRef<HTMLSpanElement>(null)
+  const [caixa, setCaixa] = useState<Caixa | null>(null)
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
 
-  const mostrar = () => {
-    const r = alvo.current?.getBoundingClientRect()
-    if (r) setPos({ top: r.top + r.height / 2 - 12, left: r.right + 10 })
+  /* O invólucro é `display: contents` para não entrar no layout de quem chama —
+     e elemento assim não gera caixa nenhuma: `getBoundingClientRect()` devolve
+     tudo zero, e a dica ia parar no canto de cima da janela. Quem tem caixa é o
+     filho, que é o botão de verdade. */
+  const mostrar = (ponteiro?: { clientX: number; clientY: number }) => {
+    const el = alvo.current?.firstElementChild ?? alvo.current
+    const r = el?.getBoundingClientRect()
+    if (r && (r.width > 0 || r.height > 0)) {
+      setCaixa({ top: r.top, left: r.left, right: r.right, altura: r.height })
+    } else if (ponteiro) {
+      setCaixa({
+        top: ponteiro.clientY,
+        left: ponteiro.clientX,
+        right: ponteiro.clientX,
+        altura: 0,
+      })
+    } else if (r) {
+      setCaixa({ top: r.top, left: r.left, right: r.right, altura: r.height })
+    }
   }
+
+  const esconder = () => {
+    setCaixa(null)
+    setPos(null)
+  }
+
+  /* A posição depende do tamanho do balão, que só se sabe depois de desenhado —
+     por isso ele nasce invisível e só ganha lugar aqui. */
+  useLayoutEffect(() => {
+    if (!caixa) return
+    const b = balao.current?.getBoundingClientRect()
+    const largura = b?.width ?? 0
+    const altura = b?.height ?? 0
+    const cabeADireita = caixa.right + MARGEM + largura <= window.innerWidth - BORDA
+    const left = cabeADireita
+      ? caixa.right + MARGEM
+      : Math.max(BORDA, caixa.left - MARGEM - largura)
+    const teto = Math.max(BORDA, window.innerHeight - altura - BORDA)
+    const top = Math.min(Math.max(BORDA, caixa.top + caixa.altura / 2 - altura / 2), teto)
+    setPos({ top, left })
+  }, [caixa])
 
   return (
     <>
       <span
         ref={alvo}
-        onPointerEnter={mostrar}
-        onPointerLeave={() => setPos(null)}
-        onFocus={mostrar}
-        onBlur={() => setPos(null)}
+        onPointerEnter={(e) => mostrar(e)}
+        onPointerLeave={esconder}
+        onFocus={() => mostrar()}
+        onBlur={esconder}
         style={{ display: 'contents' }}
       >
         {children}
       </span>
-      {pos &&
+      {caixa &&
         createPortal(
-          <span role="tooltip" className="dica" style={{ top: pos.top, left: pos.left }}>
+          <span
+            ref={balao}
+            role="tooltip"
+            className="dica"
+            style={{
+              top: pos?.top ?? 0,
+              left: pos?.left ?? 0,
+              visibility: pos ? 'visible' : 'hidden',
+            }}
+          >
             {texto}
           </span>,
           document.body,

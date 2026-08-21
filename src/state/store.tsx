@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
-import { FAIXA_SEQ_INICIAL, GRANNY_RINGS_INICIAL, PALETTE, type ModelKey } from '../lib/paleta'
+import { FAIXA_SEQ_INICIAL, GRANNY_RINGS_INICIAL, nomeDaCor, PALETTE } from '../lib/paleta'
 import { useAuth } from './auth'
 
 /* Estado global de UI portado do protótipo (objeto S de js/app.js).
@@ -35,16 +35,16 @@ interface StoreState {
   estoqueItemId: string | null
   /** encontro sendo editado; null = novo encontro */
   encontroId: string | null
+  /** perfil sem conta sendo convidado; null = cadastro do zero */
+  integranteId: string | null
+  /** receita sendo editada; null = criação */
+  receitaId: string | null
   finKind: 'entrada' | 'saida'
   projCat: 'manta' | 'amig'
   projTec: 'croche' | 'trico'
   grannyRings: Ring[]
   faixaSeq: string[]
   faixaCount: number
-  layoutCols: number
-  layoutRows: number
-  layoutBrush: ModelKey
-  layoutMap: Record<string, ModelKey>
 }
 
 const INITIAL: StoreState = {
@@ -54,16 +54,14 @@ const INITIAL: StoreState = {
   projetoId: null,
   estoqueItemId: null,
   encontroId: null,
+  integranteId: null,
+  receitaId: null,
   finKind: 'entrada',
   projCat: 'manta',
   projTec: 'croche',
   grannyRings: GRANNY_RINGS_INICIAL,
   faixaSeq: FAIXA_SEQ_INICIAL,
   faixaCount: 8,
-  layoutCols: 8,
-  layoutRows: 6,
-  layoutBrush: 'A',
-  layoutMap: {},
 }
 
 export interface Store extends StoreState {
@@ -76,6 +74,10 @@ export interface Store extends StoreState {
   openMovimentoEstoque: (itemId: string) => void
   openFichaProjeto: (projetoId: string) => void
   openEncontro: (encontroId: string | null) => void
+  /** com id, convida o perfil sem conta que já existe; sem id, cadastra do zero */
+  openIntegrante: (integranteId: string | null) => void
+  /** com id, abre a receita para edição; sem id, cria uma nova */
+  openReceita: (receitaId: string | null) => void
   setFinKind: (k: 'entrada' | 'saida') => void
   openFin: (k: 'entrada' | 'saida') => void
   setProjCat: (c: 'manta' | 'amig') => void
@@ -88,18 +90,14 @@ export interface Store extends StoreState {
   grannyDec: (i: number) => void
   grannyDel: (i: number) => void
   grannyAdd: () => void
-  grannySetColor: (c: string, name: string) => void
-  faixaCycle: (i: number) => void
+  grannySetColor: (i: number, c: string) => void
+  faixaSetColor: (i: number, c: string) => void
   faixaAdd: () => void
-  faixaDrop: () => void
+  faixaRemover: (i: number) => void
+  faixaSeqSet: (seq: string[]) => void
   incFaixa: () => void
   decFaixa: () => void
-  layoutPaint: (r: number, c: number) => void
-  pickBrush: (k: ModelKey) => void
-  incCols: () => void
-  decCols: () => void
-  incRows: () => void
-  decRows: () => void
+  setFaixaCount: (n: number) => void
 }
 
 const Ctx = createContext<Store | null>(null)
@@ -120,12 +118,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         projetoId: null,
         estoqueItemId: null,
         encontroId: null,
+        integranteId: null,
+        receitaId: null,
       }),
     openDevolucao: (devolucaoId) => set({ modal: 'devolucao', devolucaoId }),
     openMaterial: (estoqueItemId) => set({ modal: 'material', estoqueItemId }),
     openMovimentoEstoque: (estoqueItemId) => set({ modal: 'movimento-estoque', estoqueItemId }),
     openFichaProjeto: (projetoId) => set({ modal: 'ficha-projeto', projetoId }),
     openEncontro: (encontroId) => set({ modal: 'encontro', encontroId }),
+    openIntegrante: (integranteId) => set({ modal: 'integrante', integranteId }),
+    openReceita: (receitaId) => set({ modal: 'receita', receitaId }),
     setFinKind: (finKind) => set({ finKind }),
     openFin: (finKind) => set({ modal: 'financeiro', finKind }),
     setProjCat: (projCat) => set({ projCat }),
@@ -152,25 +154,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const pick = PALETTE.find((p) => !used.includes(p[0])) || PALETTE[0]
       set({ grannyRings: [...s.grannyRings, { c: pick[0], name: pick[1], n: 2 }] })
     },
-    grannySetColor: (c, name) => {
-      const last = s.grannyRings.length - 1
-      set({ grannyRings: s.grannyRings.map((x, j) => (j === last ? { ...x, c, name } : x)) })
-    },
-    faixaCycle: (i) => {
-      const pal = PALETTE.map((p) => p[0])
-      const nx = pal[(pal.indexOf(s.faixaSeq[i]) + 1) % pal.length]
-      set({ faixaSeq: s.faixaSeq.map((x, j) => (j === i ? nx : x)) })
-    },
+    grannySetColor: (i, c) =>
+      set({
+        grannyRings: s.grannyRings.map((x, j) => (j === i ? { ...x, c, name: nomeDaCor(c) } : x)),
+      }),
+    /* Antes a cor só ciclava pelas oito da paleta ao clicar no quadradinho —
+       sem cor livre e sem teclado. Agora é o mesmo ColorPicker do granny. */
+    faixaSetColor: (i, c) => set({ faixaSeq: s.faixaSeq.map((x, j) => (j === i ? c : x)) }),
+    faixaSeqSet: (faixaSeq) => set({ faixaSeq }),
     faixaAdd: () => set({ faixaSeq: [...s.faixaSeq, PALETTE[s.faixaSeq.length % PALETTE.length][0]] }),
-    faixaDrop: () => set({ faixaSeq: s.faixaSeq.length > 2 ? s.faixaSeq.slice(0, -1) : s.faixaSeq }),
+    /* Removia sempre a última cor, qualquer que fosse o ✕ clicado — o rótulo
+       dizia "remover a cor 1" e sumia a 6. */
+    faixaRemover: (i) =>
+      set({ faixaSeq: s.faixaSeq.length > 2 ? s.faixaSeq.filter((_, j) => j !== i) : s.faixaSeq }),
     incFaixa: () => set({ faixaCount: Math.min(20, s.faixaCount + 1) }),
     decFaixa: () => set({ faixaCount: Math.max(2, s.faixaCount - 1) }),
-    layoutPaint: (r, c) => set({ layoutMap: { ...s.layoutMap, [r + '-' + c]: s.layoutBrush } }),
-    pickBrush: (layoutBrush) => set({ layoutBrush }),
-    incCols: () => set({ layoutCols: Math.min(12, s.layoutCols + 1) }),
-    decCols: () => set({ layoutCols: Math.max(3, s.layoutCols - 1) }),
-    incRows: () => set({ layoutRows: Math.min(12, s.layoutRows + 1) }),
-    decRows: () => set({ layoutRows: Math.max(3, s.layoutRows - 1) }),
+    setFaixaCount: (n) => set({ faixaCount: Math.max(2, Math.min(60, n)) }),
   }
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>

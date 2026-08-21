@@ -7,8 +7,10 @@ import { ColorPicker } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
 import { ini } from '../../lib/format'
-import { PALETTE } from '../../lib/paleta'
+import { nomeDaCor, PALETTE } from '../../lib/paleta'
+import { fmtMedida, tamanhoManta } from '../../lib/medida'
 import { Comentarios, Historico } from './Comentarios'
+import { IconArrastar, IconCheck, IconChevron, IconX } from '../../components/ui/icons'
 import {
   adicionarFaixa,
   fetchFaixas,
@@ -19,9 +21,6 @@ import {
   type Faixa,
   type Projeto,
 } from './api'
-
-const nomeDaCor = (hex: string) =>
-  PALETTE.find(([c]) => c.toLowerCase() === hex.toLowerCase())?.[1] ?? 'Cor'
 
 /* Editor da faixa selecionada. O estado das cores é local e só vai para o banco
    no Salvar; status e responsável gravam na hora, porque são o que destrava o
@@ -79,7 +78,7 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
       ),
     onSuccess: () => {
       invalidar()
-      toast('Ordem salva ✓')
+      toast('Ordem salva')
     },
     onError: () => toast('Não foi possível salvar.', 'erro'),
   })
@@ -143,9 +142,6 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
         <div className="h" style={{ fontSize: 16, marginBottom: 4 }}>
           Prévia da manta
         </div>
-        <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>
-          toque numa faixa para abrir a ordem de cores dela
-        </div>
         <div
           style={{
             border: '1.5px solid #D8C7BF',
@@ -194,7 +190,7 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
                   }}
                 >
                   F{f.ordem}
-                  {f.status === 'feita' && '✓'}
+                  {f.status === 'feita' && <IconCheck size={11} />}
                 </span>
                 {cores.map((c, j) => (
                   <span key={j} style={{ flex: 1, background: c }} />
@@ -229,7 +225,6 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
                   ultima.status !== 'afazer' &&
                   !(await confirmar({
                     titulo: `Remover a faixa ${ultima.ordem}?`,
-                    descricao: 'Ela já tem trabalho registrado — isso se perde.',
                     okLabel: 'Remover',
                     perigo: true,
                   }))
@@ -304,7 +299,7 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
                 disabled={status.isPending}
                 onClick={() => status.mutate('feita')}
               >
-                Concluir ✓
+                Concluir
               </button>
             )}
             {feita && podeReabrir && (
@@ -371,7 +366,7 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
                   touchAction: 'none',
                 }}
               >
-                ⠿
+                <IconArrastar />
               </button>
               <span
                 style={{
@@ -414,7 +409,7 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
                 onClick={() => mover(i, i - 1)}
                 style={setaStyle(travada || i === 0)}
               >
-                ▲
+                <IconChevron size={11} para="cima" />
               </button>
               <button
                 type="button"
@@ -423,7 +418,7 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
                 onClick={() => mover(i, i + 1)}
                 style={setaStyle(travada || i === coresSel.length - 1)}
               >
-                ▼
+                <IconChevron size={11} para="baixo" />
               </button>
               {!travada && coresSel.length > 2 && (
                 <button
@@ -432,7 +427,7 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
                   onClick={() => removerCor(i)}
                   style={{ ...setaStyle(false), color: 'var(--faint-3)' }}
                 >
-                  ✕
+                  <IconX size={12} />
                 </button>
               )}
             </div>
@@ -494,11 +489,15 @@ export function MantaTricoPage({ projeto }: { projeto: Projeto }) {
   })
 
   const prog = progressoFaixas(faixas ?? [])
+  const tamanho = tamanhoManta('manta_trico', 1, (faixas ?? []).length, {
+    largura: projeto.peca_largura_cm,
+    altura: projeto.peca_altura_cm,
+  })
 
   return (
     <div className="pagina">
       <div className="crumb" onClick={() => navigate('/projetos')} style={{ marginBottom: 8 }}>
-        ‹ Projetos / <span style={{ color: 'var(--ink)' }}>{projeto.nome}</span>
+        <IconChevron size={11} para="esquerda" /> Projetos / <span style={{ color: 'var(--ink)' }}>{projeto.nome}</span>
       </div>
       <div
         style={{
@@ -511,7 +510,7 @@ export function MantaTricoPage({ projeto }: { projeto: Projeto }) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div className="h" style={{ fontWeight: 500, fontSize: 26 }}>
+          <div className="h titulo-pagina">
             {projeto.nome}
           </div>
           <span
@@ -526,7 +525,7 @@ export function MantaTricoPage({ projeto }: { projeto: Projeto }) {
         </div>
       </div>
       <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 20 }}>
-        Ponto arroz · agulha 5mm · cada faixa é uma linha inteira, feita por uma integrante
+        {tamanho ? fmtMedida(tamanho) : ''}
       </div>
       {isLoading && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>}
       {faixas && faixas.length > 0 && <Editor projeto={projeto} faixas={faixas} />}

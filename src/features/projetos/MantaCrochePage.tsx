@@ -1,15 +1,20 @@
-import { useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../state/auth'
 import { Lbl, Progress } from '../../components/ui/bits'
 import { Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
+import { useGradeInterativa, type ModoGrade } from '../../components/ui/useGradeInterativa'
+import { useZoomGrade } from '../../components/ui/ZoomGrade'
+import { coordenada } from '../../lib/grade'
+import { fmtMedida, tamanhoManta } from '../../lib/medida'
 import { Comentarios, Historico } from './Comentarios'
+import { IconChevron } from '../../components/ui/icons'
+import { SquareGranny, coresDoModelo } from '../../components/ui/SquareGranny'
 import {
   ETAPAS,
   ETAPA_LABEL,
-  coordenada,
   fetchIntegrantesAtivas,
   fetchModelos,
   fetchSquares,
@@ -17,7 +22,6 @@ import {
   pintarSquares,
   progressoSquares,
   resumoPorEtapa,
-  retangulo,
   trocarSquares,
   type MantaModelo,
   type Projeto,
@@ -25,9 +29,7 @@ import {
   type SquareEtapa,
 } from './api'
 
-type Modo = 'marcar' | 'mover' | 'pintar'
-
-const MODOS: [Modo, string, string][] = [
+const MODOS: [ModoGrade, string, string][] = [
   ['marcar', 'Marcar', 'selecione squares e diga em que etapa estão'],
   ['mover', 'Mover', 'arraste um square sobre outro para trocarem de lugar'],
   ['pintar', 'Pintar', 'escolha um modelo e arraste pela grade'],
@@ -68,22 +70,14 @@ function Mapa({
   modelos: MantaModelo[]
   colunas: number
 }) {
-  const { profile, can, isAdmin } = useAuth()
+  const { profile, can } = useAuth()
   const qc = useQueryClient()
   const toast = useToast()
 
-  const [modo, setModo] = useState<Modo>('marcar')
-  const [sel, setSel] = useState<Set<number>>(new Set())
+  const [modo, setModo] = useState<ModoGrade>('marcar')
   const [pincel, setPincel] = useState<string>(modelos[0]?.id ?? '')
   const [respId, setRespId] = useState('')
-  const [arrastado, setArrastado] = useState<number | null>(null)
-  const [alvo, setAlvo] = useState<number | null>(null)
-
-  const grade = useRef<HTMLDivElement>(null)
-  const ancora = useRef<number | null>(null)
-  const pressionado = useRef(false)
-  /** houve arrasto de verdade? se sim, o clique que vem depois é ignorado */
-  const arrastou = useRef(false)
+  const zoom = useZoomGrade()
 
   const { data: integrantes } = useQuery({
     queryKey: ['integrantes-min'],
@@ -115,7 +109,7 @@ function Mapa({
     onSuccess: () => {
       setSel(new Set())
       invalidar()
-      toast('Progresso registrado ✓')
+      toast('Progresso registrado')
     },
     onError: () => toast('Não foi possível registrar.', 'erro'),
   })
@@ -137,96 +131,17 @@ function Mapa({
 
   const podeEditar = can('progresso')
 
-  /* A célula é um <button>: clicar funciona no teclado e no leitor de tela, e é o
-     caminho único de interação. O arrasto abaixo é reforço para mouse e toque —
-     estende a seleção, arrasta para trocar, pinta em área. */
-  const aoClicar = (pos: number) => {
-    if (!podeEditar || arrastou.current) return
-    if (modo === 'pintar') {
-      pintar.mutate([pos])
-      return
-    }
-    if (modo === 'mover') {
-      if (arrastado === null) {
-        setArrastado(pos)
-      } else if (arrastado !== pos) {
-        const de = porPosicao.get(arrastado)
-        const para = porPosicao.get(pos)
-        if (de && para) trocar.mutate({ de, para })
-        setArrastado(null)
-      } else {
-        setArrastado(null)
-      }
-      return
-    }
-    setSel((atual) => {
-      const novo = new Set(atual)
-      if (novo.has(pos)) novo.delete(pos)
-      else novo.add(pos)
-      return novo
-    })
-  }
-
-  /* posição sob o ponteiro — o mesmo caminho no mouse e no toque */
-  const posSob = (x: number, y: number): number | null => {
-    const el = document.elementFromPoint?.(x, y)?.closest('[data-pos]')
-    return el ? Number((el as HTMLElement).dataset.pos) : null
-  }
-
-  const onDown = (e: React.PointerEvent) => {
-    if (!podeEditar) return
-    const pos = posSob(e.clientX, e.clientY)
-    if (pos === null) return
-    grade.current?.setPointerCapture(e.pointerId)
-    pressionado.current = true
-    arrastou.current = false
-    ancora.current = pos
-    if (modo === 'mover') setArrastado(pos)
-  }
-
-  const onMove = (e: React.PointerEvent) => {
-    if (!pressionado.current || ancora.current === null) return
-    const pos = posSob(e.clientX, e.clientY)
-    if (pos === null || pos === ancora.current) return
-    arrastou.current = true
-
-    if (modo === 'mover') {
-      setAlvo(pos)
-      return
-    }
-    setSel(new Set(retangulo(ancora.current, pos, colunas)))
-  }
-
-  const onUp = () => {
-    if (!pressionado.current) return
-    pressionado.current = false
-
-    if (arrastou.current) {
-      if (modo === 'mover' && arrastado !== null && alvo !== null && alvo !== arrastado) {
-        const de = porPosicao.get(arrastado)
-        const para = porPosicao.get(alvo)
-        if (de && para) trocar.mutate({ de, para })
-      }
-      if (modo === 'pintar' && sel.size > 0) {
-        pintar.mutate([...sel])
-        setSel(new Set())
-      }
-      setArrastado(null)
-    }
-    setAlvo(null)
-    ancora.current = null
-    // o clique chega logo depois do pointerup; solta a trava no próximo tique
-    setTimeout(() => {
-      arrastou.current = false
-    }, 0)
-  }
-
-  const trocarModo = (m: Modo) => {
-    setModo(m)
-    setSel(new Set())
-    setArrastado(null)
-    setAlvo(null)
-  }
+  const { sel, setSel, arrastado, alvo, aoClicar, propsGrade } = useGradeInterativa({
+    colunas,
+    modo,
+    ativo: podeEditar,
+    aoPintar: (posicoes) => pintar.mutate(posicoes),
+    aoTrocar: (de, para) => {
+      const a = porPosicao.get(de)
+      const b = porPosicao.get(para)
+      if (a && b) trocar.mutate({ de: a, para: b })
+    },
+  })
 
   const linhas = Math.ceil(squares.length / colunas)
   const selecionado = sel.size === 1 ? porPosicao.get([...sel][0]) : undefined
@@ -238,10 +153,11 @@ function Mapa({
         style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}
       >
         {MODOS.map(([m, label]) => (
-          <button key={m} onClick={() => trocarModo(m)} style={seg(modo === m)} disabled={!podeEditar}>
+          <button key={m} onClick={() => setModo(m)} style={seg(modo === m)} disabled={!podeEditar}>
             {label}
           </button>
         ))}
+        <span style={{ marginLeft: 'auto' }}>{zoom.controles}</span>
       </div>
       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
         {podeEditar
@@ -271,20 +187,7 @@ function Mapa({
                 boxShadow: m.id === pincel ? '0 0 0 2px var(--ink)' : undefined,
               }}
             >
-              <span
-                style={{
-                  width: 22,
-                  height: 22,
-                  background: m.cor_borda,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 3,
-                  flex: 'none',
-                }}
-              >
-                <span style={{ width: 11, height: 11, background: m.cor_miolo }} />
-              </span>
+              <SquareGranny cores={coresDoModelo(m)} tamanho={22} radius={3} style={{ flex: 'none' }} />
               <span style={{ fontSize: 12, fontWeight: 700 }}>{m.letra}</span>
             </button>
           ))}
@@ -295,17 +198,13 @@ function Mapa({
         className="pgrid"
         style={{ '--cols': 'auto 1fr', '--gap': '26px', marginBottom: 26 } as CSSProperties}
       >
-        <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
+        <div className="rolagem-grade">
           <div
-            ref={grade}
-            onPointerDown={onDown}
-            onPointerMove={onMove}
-            onPointerUp={onUp}
-            onPointerCancel={onUp}
+            {...propsGrade}
             style={{
               display: 'grid',
-              gridTemplateColumns: `repeat(${colunas}, var(--celula, 30px))`,
-              gap: 3,
+              gridTemplateColumns: `repeat(${colunas}, ${zoom.celula}px)`,
+              gap: 1,
               touchAction: 'none',
               width: 'max-content',
             }}
@@ -332,11 +231,11 @@ function Mapa({
                   disabled={!podeEditar}
                   onClick={() => aoClicar(pos)}
                   style={{
-                    width: 'var(--celula)',
-                    height: 'var(--celula)',
+                    width: zoom.celula,
+                    height: zoom.celula,
                     padding: 0,
                     border: 'none',
-                    background: m?.cor_borda ?? 'var(--sand)',
+                    background: 'var(--sand)',
                     opacity: ehArrastado ? 0.35 : feito ? 1 : 0.42,
                     display: 'flex',
                     alignItems: 'center',
@@ -355,13 +254,7 @@ function Mapa({
                       'transform var(--dur-media) var(--ease-mola), opacity var(--dur-rapida)',
                   }}
                 >
-                  <span
-                    style={{
-                      width: '53%',
-                      height: '53%',
-                      background: m?.cor_miolo ?? 'var(--card)',
-                    }}
-                  />
+                  {m && <SquareGranny cores={coresDoModelo(m)} tamanho={zoom.celula} />}
                 </button>
               )
             })}
@@ -389,16 +282,14 @@ function Mapa({
                   }}
                 >
                   <span style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span
-                      style={{ width: 10, height: 10, borderRadius: 2, background: m.cor_borda }}
-                    />
+                    <SquareGranny cores={coresDoModelo(m)} tamanho={12} />
                     {m.nome.split('—')[0].trim()}
                   </span>
                   <span
                     style={{ fontWeight: 800, color: full ? 'var(--green-dark)' : 'var(--accent)' }}
                   >
                     {done}/{doModelo.length}
-                    {full ? ' ✓' : ''}
+                    {full ? '' : ''}
                   </span>
                 </div>
               )
@@ -412,19 +303,11 @@ function Mapa({
                 {coordenada(selecionado.posicao, colunas).coluna}
               </Lbl>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    background: modeloSel.cor_borda,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flex: 'none',
-                  }}
-                >
-                  <div style={{ width: 22, height: 22, background: modeloSel.cor_miolo }} />
-                </div>
+                <SquareGranny
+                  cores={coresDoModelo(modeloSel)}
+                  tamanho={40}
+                  style={{ flex: 'none' }}
+                />
                 <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
                   <b>{modeloSel.nome}</b>
                   <br />
@@ -478,11 +361,6 @@ function Mapa({
         </div>
       )}
 
-      {!isAdmin && (
-        <div style={{ fontSize: 11.5, color: 'var(--faint)', marginBottom: 20 }}>
-          Mudar o tamanho da manta e editar os modelos é coisa de administradora.
-        </div>
-      )}
     </>
   )
 }
@@ -493,10 +371,6 @@ function PorEtapa({ squares, modelos }: { squares: Square[]; modelos: MantaModel
   const resumo = resumoPorEtapa(squares, modelos)
   return (
     <>
-      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
-        a fazer → miolo → aguardando borda → borda → pronto · a contagem vem dos próprios
-        squares do mapa
-      </div>
       <div
         className="pgrid"
         style={{ '--cols': 'repeat(auto-fit,minmax(150px,1fr))', '--gap': '12px', marginBottom: 26 } as CSSProperties}
@@ -556,14 +430,18 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
   const letras = (modelos ?? []).map((m) => m.letra).join('/')
   // mantas criadas antes da grade configurável não têm colunas gravadas
   const colunas = projeto.colunas ?? 10
+  const tamanho = tamanhoManta('manta_croche', colunas, Math.ceil(lista.length / colunas), {
+    largura: projeto.peca_largura_cm,
+    altura: projeto.peca_altura_cm,
+  })
 
   return (
     <div className="pagina">
       <div className="crumb" onClick={() => navigate('/projetos')} style={{ marginBottom: 8 }}>
-        ‹ Projetos / <span style={{ color: 'var(--ink)' }}>{projeto.nome}</span>
+        <IconChevron size={11} para="esquerda" /> Projetos / <span style={{ color: 'var(--ink)' }}>{projeto.nome}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-        <div className="h" style={{ fontWeight: 500, fontSize: 26 }}>
+        <div className="h titulo-pagina">
           {projeto.nome}
         </div>
         <span
@@ -576,6 +454,7 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
       <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 18 }}>
         {projeto.destino ? `Destino: ${projeto.destino} · ` : ''}
         {prog.total} squares{letras ? ` · padrões ${letras}` : ''}
+        {tamanho ? ` · ${fmtMedida(tamanho)}` : ''}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26 }}>
         <Progress pct={`${pct}%`} style={{ flex: 1, height: 8 }} />

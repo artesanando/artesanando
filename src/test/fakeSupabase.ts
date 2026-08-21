@@ -19,6 +19,8 @@ export const ADMIN_PROFILE: Profile = {
   avatar_url: null,
   papel: 'admin',
   ativo: true,
+  turno: 'ambos',
+  nivel: 'iniciante',
   desde: '2024.1',
 }
 
@@ -35,6 +37,8 @@ export const ADMIN2_PROFILE: Profile = {
   avatar_url: null,
   papel: 'admin',
   ativo: true,
+  turno: 'ambos',
+  nivel: 'iniciante',
   desde: '2024.1',
 }
 
@@ -52,6 +56,8 @@ export const INTEGRANTE_PROFILE: Profile = {
   avatar_url: null,
   papel: 'integrante',
   ativo: true,
+  turno: 'ambos',
+  nivel: 'iniciante',
   desde: '2025.1',
 }
 
@@ -68,6 +74,8 @@ export const SEM_CONTA_PROFILE: Profile = {
   avatar_url: null,
   papel: 'integrante',
   ativo: true,
+  turno: 'ambos',
+  nivel: 'iniciante',
   desde: '2026.2',
 }
 
@@ -80,7 +88,6 @@ const ESTOQUE_FAKE = [
     cor_hex: '#DFA2AC',
     quantidade: 20,
     vendidos: 0,
-    minimo: 5,
     custo_centavos: null,
     arquivado_em: null,
   },
@@ -92,7 +99,6 @@ const ESTOQUE_FAKE = [
     cor_hex: null,
     quantidade: 11,
     vendidos: 0,
-    minimo: 2,
     custo_centavos: null,
     arquivado_em: null,
   },
@@ -137,6 +143,8 @@ const RECEITAS_FAKE = [
     conteudo: {
       rings: [
         { c: '#E3C07A', name: 'Amarelo', n: 1, role: 'miolo' },
+        { c: '#DFA2AC', name: 'Rosé', n: 1, role: 'meio' },
+        { c: '#B99BC4', name: 'Lilás', n: 1, role: 'meio' },
         { c: '#7D9B76', name: 'Sálvia', n: 1, role: 'borda' },
       ],
     },
@@ -150,7 +158,7 @@ const RECEITAS_FAKE = [
 const PROJETOS_FAKE = [
   {
     id: 'p1',
-    semestre_id: null,
+    semestre_id: 'sem1',
     nome: 'Manta Primavera',
     tipo: 'manta_croche',
     destino: 'Hospital Infantil',
@@ -163,7 +171,7 @@ const PROJETOS_FAKE = [
   },
   {
     id: 'p2',
-    semestre_id: null,
+    semestre_id: 'sem1',
     nome: 'Manta Nuvem',
     tipo: 'manta_trico',
     destino: 'Hospital Infantil',
@@ -176,7 +184,7 @@ const PROJETOS_FAKE = [
   },
   {
     id: 'p3',
-    semestre_id: null,
+    semestre_id: 'sem1',
     nome: 'Polvo Rosa',
     tipo: 'amigurumi',
     destino: 'Maternidade',
@@ -197,6 +205,7 @@ const MODELOS_FAKE = [
     nome: 'Modelo A — Flor de Maio',
     cor_borda: '#C4798A',
     cor_miolo: '#DFA2AC',
+    cores: null,
     responsavel_id: null,
     total: 4,
     responsavel: null,
@@ -255,16 +264,77 @@ const UNIDADES_FAKE = [
     status: 'em_producao',
     responsavel: { nome: 'Grace Hopper' },
   },
+  {
+    id: 'un3',
+    projeto_id: 'p3',
+    numero: 3,
+    responsavel_id: 'u4',
+    status: 'em_producao',
+    responsavel: { nome: 'Grace Hopper' },
+  },
+]
+
+const MURAL_ALBUNS_FAKE = [
+  { id: 'al1', nome: 'Feira de junho', criado_por: 'u2', created_at: '2026-06-30T12:00:00Z' },
+]
+
+const MURAL_FOTOS_FAKE = [
+  {
+    id: 'mf1',
+    path: 'mf1.jpg',
+    album_id: 'al1',
+    autor_id: 'u2',
+    created_at: '2026-07-14T12:00:00Z',
+    autor: { nome: 'Ada Lovelace' },
+  },
+  {
+    id: 'mf2',
+    path: 'mf2.jpg',
+    album_id: null,
+    autor_id: 'u1',
+    created_at: '2026-07-15T12:00:00Z',
+    autor: { nome: 'Cândida Nunes' },
+  },
+]
+
+/* quem apareceu em chamada do semestre — a vista `participacao_semestre` */
+const PARTICIPACAO_FAKE = [
+  { semestre_id: 'sem1', integrante_id: 'u1' },
+  { semestre_id: 'sem1', integrante_id: 'u2' },
+  { semestre_id: 'sem1', integrante_id: 'u7' },
+]
+
+/* o RA mora em `perfis_academico`; a Ada é a que ainda não preencheu */
+const RAS_FAKE = [
+  { profile_id: 'u1', ra: '100100' },
+  { profile_id: 'u7', ra: '700700' },
+]
+
+const SEMESTRES_FAKE = [
+  { id: 'sem1', label: '2026.2', inicio: '2026-07-01', fim: '2026-12-15', ativo: true },
 ]
 
 const COMENTARIOS_FAKE = [
   {
     id: 'c1',
     projeto_id: 'p1',
+    receita_id: null,
     autor_id: 'u5',
     texto: 'Peguei as bordas do Modelo A 👍',
+    foto_path: null,
     created_at: '2026-07-14T12:00:00Z',
     autor: { nome: 'Edsger Dijkstra', avatar_color: '#7D9B76' },
+  },
+  /* comentário de item da biblioteca: o mesmo lugar serve projeto e receita */
+  {
+    id: 'c2',
+    projeto_id: null,
+    receita_id: 'r1',
+    autor_id: 'u2',
+    texto: 'Fica melhor com agulha 4,0',
+    foto_path: null,
+    created_at: '2026-07-15T12:00:00Z',
+    autor: { nome: 'Ada Lovelace', avatar_color: '#A9BFA3' },
   },
 ]
 
@@ -283,20 +353,26 @@ const ATIVIDADES_FAKE = [
 const ENCONTROS_FAKE = [
   {
     id: 'en1',
-    semestre_id: null,
+    semestre_id: 'sem1',
     data: '2026-07-07',
     hora: '14:00',
     local: 'Sala 203',
     pauta: 'Bordas do Modelo A',
+    turno: 'diurno',
+    cancelado_em: null,
+    serie_id: null,
     arquivado_em: null,
   },
   {
     id: 'en2',
-    semestre_id: null,
+    semestre_id: 'sem1',
     data: '2099-07-14',
     hora: '14:00',
     local: 'Sala 203',
-    pauta: 'Montagem da Manta Primavera',
+    pauta: 'Montagem da Manta Ada',
+    turno: 'noturno',
+    cancelado_em: null,
+    serie_id: null,
     arquivado_em: null,
   },
 ]
@@ -340,7 +416,11 @@ const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
   devolucoes: { single: null, list: [] },
   receitas: { single: RECEITAS_FAKE[0], list: RECEITAS_FAKE },
   permissoes: { single: null, list: [] },
-  semestres: { single: null, list: [] },
+  semestres: { single: SEMESTRES_FAKE[0], list: SEMESTRES_FAKE },
+  mural_albuns: { single: MURAL_ALBUNS_FAKE[0], list: MURAL_ALBUNS_FAKE },
+  mural_fotos: { single: MURAL_FOTOS_FAKE[0], list: MURAL_FOTOS_FAKE },
+  participacao_semestre: { single: null, list: PARTICIPACAO_FAKE },
+  perfis_academico: { single: null, list: RAS_FAKE },
   projetos: { single: PROJETOS_FAKE[0], list: PROJETOS_FAKE },
   manta_modelos: { single: MODELOS_FAKE[0], list: MODELOS_FAKE },
   squares: { single: SQUARES_FAKE[0], list: SQUARES_FAKE },
@@ -352,6 +432,7 @@ const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
   encontros: { single: ENCONTROS_FAKE[0], list: ENCONTROS_FAKE },
   presencas: { single: PRESENCAS_FAKE[0], list: PRESENCAS_FAKE },
   movimentacoes: { single: MOVIMENTACOES_FAKE[0], list: MOVIMENTACOES_FAKE },
+  arquivos_extensao: { single: null, list: [] },
 }
 
 export function __login(profile: Profile = ADMIN_PROFILE) {

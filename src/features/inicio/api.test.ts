@@ -11,8 +11,8 @@ const item = (id: string, categoria: EstoqueItem['categoria'], quantidade: numbe
   cor_hex: null,
   quantidade,
   vendidos: 0,
-  minimo: 0,
   custo_centavos: null,
+  capa_path: null,
   arquivado_em: null,
 })
 
@@ -49,6 +49,11 @@ describe('kpis da pagina inicial', () => {
     expect(saudacao(8)).toBe('Bom dia')
     expect(saudacao(15)).toBe('Boa tarde')
     expect(saudacao(20)).toBe('Boa noite')
+  })
+  it('a noite vai até as 3h59, não até a meia-noite', () => {
+    expect(saudacao(0)).toBe('Boa noite')
+    expect(saudacao(3)).toBe('Boa noite')
+    expect(saudacao(4)).toBe('Bom dia')
   })
   it('primeiro nome para a saudação', () => {
     expect(primeiroNome('Cândida Nunes')).toBe('Cândida')

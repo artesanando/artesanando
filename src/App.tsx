@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import { AuthProvider, useAuth } from './state/auth'
+import { AuthProvider, useAuth, type Perm } from './state/auth'
 import { StoreProvider } from './state/store'
 import { supabaseConfigured } from './lib/supabase'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -19,7 +19,9 @@ import { PresencaPage } from './features/presenca/PresencaPage'
 import { FinanceiroPage } from './features/financeiro/FinanceiroPage'
 import { PerfilPage } from './features/perfil/PerfilPage'
 import { ConfigPage } from './features/config/ConfigPage'
+import { ExtensaoPage } from './features/extensao/ExtensaoPage'
 import { NotFoundPage } from './features/NotFoundPage'
+import { MuralPage } from './features/mural/MuralPage'
 
 function Splash() {
   return (
@@ -71,6 +73,14 @@ function RequireAdmin({ children }: { children: ReactNode }) {
   return children
 }
 
+/* Quem não tem a permissão nem vê o item no menu; a guarda fecha a porta de
+   quem digitar a rota na mão. */
+function RequirePerm({ perm, children }: { perm: Perm; children: ReactNode }) {
+  const { can } = useAuth()
+  if (!can(perm)) return <Navigate to="/" replace />
+  return children
+}
+
 export default function App() {
   if (!supabaseConfigured) return <SetupPage />
 
@@ -101,6 +111,7 @@ function AppRoutes() {
             }
           >
             <Route path="/" element={<InicioPage />} />
+            <Route path="/mural" element={<MuralPage />} />
             <Route path="/projetos" element={<ProjetosPage />} />
             <Route path="/projetos/:id" element={<ProjetoDetalhePage />} />
             <Route path="/integrantes" element={<IntegrantesPage />} />
@@ -109,13 +120,28 @@ function AppRoutes() {
             <Route path="/biblioteca" element={<BibliotecaPage />} />
             <Route path="/presenca" element={<PresencaPage />} />
             <Route path="/presenca/:encontroId" element={<PresencaPage />} />
-            <Route path="/financeiro" element={<FinanceiroPage />} />
+            <Route
+              path="/financeiro"
+              element={
+                <RequirePerm perm="financeiro">
+                  <FinanceiroPage />
+                </RequirePerm>
+              }
+            />
             <Route path="/perfil" element={<PerfilPage />} />
             <Route
               path="/configuracoes"
               element={
                 <RequireAdmin>
                   <ConfigPage />
+                </RequireAdmin>
+              }
+            />
+            <Route
+              path="/extensao"
+              element={
+                <RequireAdmin>
+                  <ExtensaoPage />
                 </RequireAdmin>
               }
             />

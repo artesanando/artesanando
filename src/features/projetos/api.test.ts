@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
-  coordenada,
-  gradePadrao,
   gruposUnidades,
   progressoFaixas,
   progressoSquares,
   progressoUnidades,
   proximaEtapa,
   resumoPorEtapa,
-  retangulo,
   squaresPorResponsavel,
   type MantaModelo,
   type Square,
@@ -23,6 +20,8 @@ const sq = (posicao: number, etapa: SquareEtapa, modelo = 'm1', resp: string | n
   posicao,
   etapa,
   responsavel_id: resp,
+  miolo_por: null,
+  borda_por: null,
 })
 
 const modelo = (id: string, letra: string): MantaModelo => ({
@@ -32,6 +31,7 @@ const modelo = (id: string, letra: string): MantaModelo => ({
   nome: `Modelo ${letra}`,
   cor_borda: '#000',
   cor_miolo: '#fff',
+  cores: null,
   responsavel_id: null,
   total: 0,
 })
@@ -77,27 +77,6 @@ describe('proximaEtapa', () => {
   })
 })
 
-describe('geometria do mapa', () => {
-  it('traduz posição em linha e coluna a partir de 1', () => {
-    expect(coordenada(0, 8)).toEqual({ linha: 1, coluna: 1 })
-    expect(coordenada(7, 8)).toEqual({ linha: 1, coluna: 8 })
-    expect(coordenada(8, 8)).toEqual({ linha: 2, coluna: 1 })
-  })
-
-  it('seleção por arrasto pega o retângulo entre os dois cantos', () => {
-    // grade 4 de largura: de (1,2) até (2,3) são 4 squares
-    expect(retangulo(1, 6, 4).sort((a, b) => a - b)).toEqual([1, 2, 5, 6])
-  })
-
-  it('o retângulo independe da ordem dos cantos', () => {
-    expect(retangulo(6, 1, 4).sort((a, b) => a - b)).toEqual(retangulo(1, 6, 4).sort((a, b) => a - b))
-  })
-
-  it('um canto só devolve um square', () => {
-    expect(retangulo(3, 3, 4)).toEqual([3])
-  })
-})
-
 describe('resumoPorEtapa', () => {
   it('conta squares por etapa e por modelo, cobrindo as cinco etapas', () => {
     const resumo = resumoPorEtapa(
@@ -128,15 +107,6 @@ describe('squaresPorResponsavel', () => {
   })
 })
 
-describe('gradePadrao', () => {
-  it('alterna os modelos em xadrez no tamanho pedido', () => {
-    expect(gradePadrao(3, 2, ['A', 'B'])).toEqual([
-      ['A', 'B', 'A'],
-      ['B', 'A', 'B'],
-    ])
-  })
-})
-
 describe('gruposUnidades', () => {
   it('agrupa números consecutivos da mesma responsável', () => {
     const grupos = gruposUnidades([
@@ -150,10 +120,10 @@ describe('gruposUnidades', () => {
     expect(grupos[1]).toMatchObject({ ini: 3, fim: 3, nome: 'Bia' })
     expect(grupos[2]).toMatchObject({ ini: 4, fim: 4, nome: 'Ana', concluido: false })
   })
-  it('grupo com uma unidade em produção não fica concluído', () => {
+  it('separa o que já foi concluído do que ainda está em produção', () => {
     const grupos = gruposUnidades([und(1, 'Ana', 'concluida'), und(2, 'Ana', 'em_producao')])
-    expect(grupos).toHaveLength(1)
-    expect(grupos[0].concluido).toBe(false)
-    expect(grupos[0].ids).toEqual(['u1', 'u2'])
+    expect(grupos).toHaveLength(2)
+    expect(grupos[0]).toMatchObject({ ini: 1, fim: 1, concluido: true, ids: ['u1'] })
+    expect(grupos[1]).toMatchObject({ ini: 2, fim: 2, concluido: false, ids: ['u2'] })
   })
 })

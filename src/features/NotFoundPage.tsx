@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { IconChevron } from '../components/ui/icons'
 
 export function NotFoundPage() {
   return (
@@ -10,7 +11,7 @@ export function NotFoundPage() {
         O endereço que você tentou abrir não existe.
       </div>
       <Link to="/" style={{ fontWeight: 800, fontSize: 13 }}>
-        ‹ Voltar ao Dashboard
+        <IconChevron size={12} para="esquerda" /> Voltar ao Dashboard
       </Link>
     </div>
   )
