@@ -448,15 +448,33 @@ export async function mudarStatusFaixa(opts: {
   })
 }
 
-export async function adicionarFaixa(projetoId: string, ordem: number, cores: string[]) {
-  const { error } = await supabase
-    .from('faixas')
-    .insert({ projeto_id: projetoId, ordem, cores })
+/* Inserir, remover e reordenar passam pelo banco: `faixas` tem unique
+   (projeto_id, ordem), então empurrar as de baixo não cabe num UPDATE só — as
+   funções fazem isso numa transação, sem a manta ficar com duas faixas na
+   mesma posição no meio do caminho. */
+
+/** Insere uma faixa na posição pedida, empurrando as de baixo */
+export async function inserirFaixa(projetoId: string, ordem: number, cores: string[]) {
+  const { error } = await supabase.rpc('inserir_faixa', {
+    p_projeto: projetoId,
+    p_ordem: ordem,
+    p_cores: cores,
+  })
   if (error) throw error
 }
 
+/** Remove a faixa e fecha o buraco que ela deixa */
 export async function removerFaixa(id: string) {
-  const { error } = await supabase.from('faixas').delete().eq('id', id)
+  const { error } = await supabase.rpc('remover_faixa', { p_faixa: id })
+  if (error) throw error
+}
+
+/** Renumera as faixas do projeto na ordem em que os ids chegam */
+export async function reordenarFaixas(projetoId: string, ids: string[]) {
+  const { error } = await supabase.rpc('reordenar_faixas', {
+    p_projeto: projetoId,
+    p_ids: ids,
+  })
   if (error) throw error
 }
 
