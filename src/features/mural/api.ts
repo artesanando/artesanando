@@ -111,3 +111,16 @@ export function contaPorAlbum(fotos: Foto[]): Map<string, number> {
 
 /** Quantas ainda não foram arrumadas em álbum nenhum */
 export const soltas = (fotos: Foto[]) => fotos.filter((f) => !f.album_id).length
+
+/* Blocos por dia de envio, na ordem em que as fotos chegaram — o mural sobe as
+   do encontro de uma vez, e sem a divisão de dia vira uma parede sem começo. */
+export function porDia(fotos: Foto[]): { dia: string; fotos: Foto[] }[] {
+  const blocos: { dia: string; fotos: Foto[] }[] = []
+  for (const f of fotos) {
+    const dia = f.created_at.slice(0, 10)
+    const ultimo = blocos[blocos.length - 1]
+    if (ultimo?.dia === dia) ultimo.fotos.push(f)
+    else blocos.push({ dia, fotos: [f] })
+  }
+  return blocos
+}

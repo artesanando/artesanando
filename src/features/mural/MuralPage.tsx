@@ -5,7 +5,7 @@ import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 import { MenuKebab } from '../../components/ui/controles'
 import { useConfirmar } from '../../components/ui/Confirm'
 import { useToast } from '../../components/ui/Toast'
-import { fmtDataCurta } from '../../lib/format'
+import { fmtDataCurta, fmtDataLonga } from '../../lib/format'
 import {
   apagarAlbum,
   apagarFoto,
@@ -15,6 +15,7 @@ import {
   fetchFotos,
   fotosDoAlbum,
   moverFoto,
+  porDia,
   renomearAlbum,
   soltas,
   subirFotos,
@@ -38,6 +39,9 @@ export function MuralPage() {
   const [sobreALista, setSobreALista] = useState(false)
   const [aberta, setAberta] = useState<Foto | null>(null)
   const [arrastada, setArrastada] = useState<string | null>(null)
+  /* `'novo'` é a criação; um id é o álbum sendo renomeado. O window.prompt que
+     estava aqui é janela do sistema, que o app trocou por controle próprio. */
+  const [editando, setEditando] = useState<string | null>(null)
 
   const { data: albuns } = useQuery({ queryKey: ['mural-albuns'], queryFn: fetchAlbuns })
   const { data: fotos, isLoading } = useQuery({ queryKey: ['mural-fotos'], queryFn: fetchFotos })
@@ -94,14 +98,12 @@ export function MuralPage() {
     if (arquivos.length > 0) subir.mutate(arquivos)
   }
 
-  const novoAlbum = async () => {
-    const nome = window.prompt('Nome do álbum')
-    if (nome?.trim()) albumMut.mutate(() => criarAlbum(nome, profile!.id))
-  }
-
-  const renomear = async (id: string, atual: string) => {
-    const nome = window.prompt('Novo nome do álbum', atual)
-    if (nome?.trim() && nome !== atual) albumMut.mutate(() => renomearAlbum(id, nome))
+  const salvarNome = (alvo: string, nome: string) => {
+    setEditando(null)
+    if (!nome.trim()) return
+    albumMut.mutate(() =>
+      alvo === 'novo' ? criarAlbum(nome, profile!.id) : renomearAlbum(alvo, nome),
+    )
   }
 
   const excluirAlbum = async (id: string, nome: string) => {
@@ -129,11 +131,6 @@ export function MuralPage() {
       <CabecalhoPagina
         titulo="Mural"
         sub={`${todas.length} fotos${soltas(todas) > 0 ? ` · ${soltas(todas)} fora de álbum` : ''}`}
-        acoes={
-          <button className="pill" onClick={() => inputArquivo.current?.click()}>
-            + Subir fotos
-          </button>
-        }
       />
       <input
         ref={inputArquivo}
@@ -149,8 +146,11 @@ export function MuralPage() {
 
       <div className="pgrid" style={{ '--cols': '1fr 220px', '--gap': '32px' } as CSSProperties}>
         <div>
-          {/* arrastar do computador direto para a grade */}
-          <div
+          {/* a caixa é o botão: arrastar do computador ou clicar para escolher —
+              um botão à parte fazia a mesma coisa duas vezes */}
+          <button
+            type="button"
+            onClick={() => inputArquivo.current?.click()}
             onDragOver={(e) => {
               e.preventDefault()
               setSobreALista(true)
@@ -162,19 +162,24 @@ export function MuralPage() {
               escolher(e.dataTransfer.files)
             }}
             style={{
+              width: '100%',
               border: `1.5px dashed ${sobreALista ? 'var(--primary)' : 'var(--field-border)'}`,
               background: sobreALista ? 'var(--chip-rose)' : 'transparent',
               borderRadius: 12,
-              padding: '14px 16px',
+              padding: '16px',
               marginBottom: 18,
+              fontFamily: 'inherit',
               fontSize: 12.5,
+              fontWeight: 700,
               color: 'var(--muted)',
               textAlign: 'center',
+              cursor: 'pointer',
               transition: 'background var(--dur-rapida) var(--ease-suave)',
             }}
           >
-            Arraste fotos aqui{album ? ' — elas entram neste álbum' : ''}
-          </div>
+            Arraste fotos aqui ou clique para escolher
+            {album ? ' — elas entram neste álbum' : ''}
+          </button>
 
           {isLoading && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>}
           {!isLoading && daVez.length === 0 && (
@@ -183,6 +188,14 @@ export function MuralPage() {
             </div>
           )}
 
+          {porDia(visiveis).map((bloco) => (
+          <div key={bloco.dia} style={{ marginBottom: 22 }}>
+          <div
+            className="lbl"
+            style={{ color: 'var(--faint)', fontSize: 10.5, marginBottom: 7 }}
+          >
+            {fmtDataLonga(bloco.dia)}
+          </div>
           <div
             style={{
               display: 'grid',
@@ -190,7 +203,7 @@ export function MuralPage() {
               gap: 10,
             }}
           >
-            {visiveis.map((f) => {
+            {bloco.fotos.map((f) => {
               const url = urls?.get(f.path)
               const minha = f.autor_id === profile?.id
               return (
@@ -270,6 +283,8 @@ export function MuralPage() {
               )
             })}
           </div>
+          </div>
+          ))}
 
           {daVez.length > visiveis.length && (
             <div style={{ textAlign: 'center', marginTop: 18 }}>
@@ -306,8 +321,11 @@ export function MuralPage() {
                 setQuantas(POR_PAGINA)
               }}
               aoSoltar={(e) => soltarNoAlbum(e, a.id)}
+              editando={editando === a.id}
+              aoSalvarNome={(nome) => salvarNome(a.id, nome)}
+              aoDesistir={() => setEditando(null)}
               acoes={[
-                { label: 'Renomear', onSelect: () => renomear(a.id, a.nome) },
+                { label: 'Renomear', onSelect: () => setEditando(a.id) },
                 {
                   label: 'Apagar álbum',
                   perigo: true,
@@ -316,13 +334,21 @@ export function MuralPage() {
               ]}
             />
           ))}
-          <button
-            className="pill ghost"
-            style={{ marginTop: 8, padding: '6px 14px', fontSize: 12 }}
-            onClick={novoAlbum}
-          >
-            + Novo álbum
-          </button>
+          {editando === 'novo' ? (
+            <CampoNome
+              inicial=""
+              aoSalvar={(nome) => salvarNome('novo', nome)}
+              aoDesistir={() => setEditando(null)}
+            />
+          ) : (
+            <button
+              className="pill ghost"
+              style={{ marginTop: 8, padding: '6px 14px', fontSize: 12 }}
+              onClick={() => setEditando('novo')}
+            >
+              + Novo álbum
+            </button>
+          )}
         </div>
       </div>
 
@@ -349,6 +375,40 @@ export function MuralPage() {
   )
 }
 
+/* Nome do álbum: confirma no Enter, desiste no Esc — e some assim que perde o
+   foco, para não ficar um campo aberto na lateral sem ninguém digitando. */
+function CampoNome({
+  inicial,
+  aoSalvar,
+  aoDesistir,
+}: {
+  inicial: string
+  aoSalvar: (nome: string) => void
+  aoDesistir: () => void
+}) {
+  const [nome, setNome] = useState(inicial)
+  return (
+    <input
+      className="field"
+      autoFocus
+      value={nome}
+      aria-label="Nome do álbum"
+      placeholder="Nome do álbum"
+      maxLength={60}
+      onChange={(e) => setNome(e.target.value)}
+      onBlur={() => (nome.trim() && nome !== inicial ? aoSalvar(nome) : aoDesistir())}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          aoSalvar(nome)
+        }
+        if (e.key === 'Escape') aoDesistir()
+      }}
+      style={{ marginTop: 8, fontSize: 13, padding: '8px 10px' }}
+    />
+  )
+}
+
 function BotaoAlbum({
   rotulo,
   contagem,
@@ -356,6 +416,9 @@ function BotaoAlbum({
   aoClicar,
   aoSoltar,
   acoes,
+  editando,
+  aoSalvarNome,
+  aoDesistir,
 }: {
   rotulo: string
   contagem: number
@@ -363,8 +426,16 @@ function BotaoAlbum({
   aoClicar: () => void
   aoSoltar: (e: DragEvent) => void
   acoes?: { label: string; perigo?: boolean; onSelect: () => void }[]
+  editando?: boolean
+  aoSalvarNome?: (nome: string) => void
+  aoDesistir?: () => void
 }) {
   const [sobre, setSobre] = useState(false)
+
+  if (editando && aoSalvarNome && aoDesistir) {
+    return <CampoNome inicial={rotulo} aoSalvar={aoSalvarNome} aoDesistir={aoDesistir} />
+  }
+
   return (
     <div
       onDragOver={(e) => {

@@ -332,9 +332,18 @@ describe('mural', () => {
   it('qualquer integrante vê o mural e os álbuns', async () => {
     __login(INTEGRANTE_PROFILE)
     renderAt('/mural')
-    // "Mural" aparece no menu e no título — o botão é o que prova que a página abriu
-    expect(await screen.findByRole('button', { name: '+ Subir fotos' })).toBeInTheDocument()
+    // "Mural" aparece no menu e no título — a caixa de subir prova que a página abriu
+    expect(
+      await screen.findByRole('button', { name: /clique para escolher/ }),
+    ).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: /^Feira de junho/ })).toBeInTheDocument()
+  })
+
+  it('criar álbum é um campo na lateral, não a janela do navegador', async () => {
+    __login(INTEGRANTE_PROFILE)
+    renderAt('/mural')
+    await userEvent.click(await screen.findByRole('button', { name: '+ Novo álbum' }))
+    expect(screen.getByLabelText('Nome do álbum')).toBeInTheDocument()
   })
 
   it('a lateral conta as fotos de cada álbum', async () => {
