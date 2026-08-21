@@ -50,9 +50,14 @@ export const IconPres = () => (
   </svg>
 )
 
+/* Cofrinho — o cifrão desenhado a traço parecia texto ao lado dos outros oito */
 export const IconFin = () => (
   <svg {...base}>
-    <path d="M12 2v20M17 6.5c0-2-2.2-3-5-3s-5 1-5 3 2.2 2.7 5 3.2 5 1.2 5 3.3-2.2 3-5 3-5-1-5-3" />
+    {/* corpo, focinho e as duas patas, num traço só */}
+    <path d="M15 6.6a7.4 7.4 0 0 1 3.9 4h2.1v3.2h-2.1a7.5 7.5 0 0 1-2.2 2.8v1.8a.6.6 0 0 1-.6.6h-1.8a.6.6 0 0 1-.6-.6v-.8h-2.6v.8a.6.6 0 0 1-.6.6H8.7a.6.6 0 0 1-.6-.6v-1.8A7 7 0 0 1 5 11.3 6 6 0 0 1 11 5.9h1.4l2.9-2z" />
+    {/* fenda da moeda e o olho */}
+    <path d="M9.8 8.7h3.4" />
+    <circle cx="16.7" cy="11.4" r=".9" fill="currentColor" stroke="none" />
   </svg>
 )
 
