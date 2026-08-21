@@ -145,7 +145,14 @@ export interface Devolucao {
 
 export type ReceitaCategoria = 'amigurumi' | 'granny' | 'faixa' | 'manta'
 
+/* O esquema de manta serve as duas técnicas. Crochê guarda `cells` + `modelos`
+   (a grade de squares); tricô guarda `seq` + `faixas` (a faixa modelo e quantas
+   empilham). Esquema antigo, salvo antes disso, não tem `tecnica` e é de crochê
+   — daí a leitura sempre passar por `tecnicaDoEsquema`. */
+export type Tecnica = 'croche' | 'trico'
+
 export interface ReceitaConteudo {
+  tecnica?: Tecnica
   rings?: { c: string; name: string; n: number; role?: string }[]
   seq?: string[]
   materiais?: { c: string; name: string; qty: string }[]
@@ -154,8 +161,12 @@ export interface ReceitaConteudo {
   esquema?: string[][]
   faixas?: number
   cells?: string[][]
-  modelos?: Record<string, { border: string; inner: string; nome?: string }>
+  /** `receita_id` liga o modelo ao padrão de granny que o originou */
+  modelos?: Record<string, { border: string; inner: string; nome?: string; receita_id?: string }>
 }
+
+export const tecnicaDoEsquema = (c: ReceitaConteudo): Tecnica =>
+  c.tecnica ?? (c.seq && !c.cells ? 'trico' : 'croche')
 
 export interface Receita {
   id: string

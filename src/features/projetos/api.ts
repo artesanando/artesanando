@@ -491,6 +491,9 @@ export interface ModeloNovo {
   nome: string
   cor_borda: string
   cor_miolo: string
+  /* De qual padrão de granny da biblioteca este modelo veio. Guardado só no
+     esquema — a RPC que cria o projeto não recebe isso. */
+  receita_id?: string
 }
 
 export interface NovoProjeto {

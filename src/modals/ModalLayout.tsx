@@ -1,18 +1,21 @@
 import { useRef, useState, type CSSProperties } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../state/store'
 import { useAuth } from '../state/auth'
-import { Lbl } from '../components/ui/bits'
-import { ColorPicker } from '../components/ui/controles'
+import { Lbl, Stepper } from '../components/ui/bits'
+import { ColorPicker, Select } from '../components/ui/controles'
 import { CampoMedida } from '../components/ui/CampoMedida'
+import { PreviaFaixas } from '../components/ui/PreviaFaixas'
 import { useGradeInterativa, type ModoGrade } from '../components/ui/useGradeInterativa'
 import { useZoomGrade } from '../components/ui/ZoomGrade'
 import { gradePadrao, redimensionaCelulas } from '../lib/grade'
-import { MODELS } from '../lib/paleta'
+import { MODELS, PALETTE } from '../lib/paleta'
+import { coresDoGranny, seqDaFaixa } from '../lib/padrao'
 import { ModalBox, ModalHeader } from './shared'
 import { SeletorCategoria } from './SeletorCategoria'
-import { criarReceita } from '../features/biblioteca/api'
+import { criarReceita, fetchReceitas } from '../features/biblioteca/api'
 import { fmtMedida, tamanhoManta } from '../lib/medida'
+import type { Tecnica } from '../types/database'
 import type { ModeloNovo } from '../features/projetos/api'
 
 const LETRAS = 'ABCDEFGH'.split('')
@@ -25,6 +28,13 @@ const MODELOS_INICIAIS: ModeloNovo[] = (['A', 'B', 'C'] as const).map((k) => ({
   cor_borda: MODELS[k].border,
   cor_miolo: MODELS[k].inner,
 }))
+
+const SEQ_INICIAL = PALETTE.slice(0, 3).map(([c]) => c)
+
+const TECNICAS: [Tecnica, string][] = [
+  ['croche', 'Crochê'],
+  ['trico', 'Tricô'],
+]
 
 const MODOS: [ModoGrade, string, string][] = [
   ['pintar', 'Pintar', 'escolha um modelo e arraste pela grade'],
@@ -44,18 +54,22 @@ const seg = (on: boolean): CSSProperties => ({
   fontWeight: on ? 800 : 700,
 })
 
-/* Editor do esquema de manta: quais modelos de granny entram e como ficam
-   dispostos. Antes eram três modelos de cor fixa e um clique pintava uma célula
-   por vez — dava para desenhar quase nada. Agora os modelos são livres, o
-   pincel corre arrastando, dois squares trocam de lugar e a grade cresce
-   puxando a borda. */
+/* Editor do esquema de manta, nas duas técnicas.
+   Crochê é a grade de squares: modelos livres, pincel que corre arrastando,
+   squares que trocam de lugar e grade que cresce puxando a borda.
+   Tricô é uma faixa modelo mais quantas faixas — as demais nascem com as cores
+   deslocadas uma posição, que é o que faz a diagonal na manta pronta.
+   Nos dois casos dá para puxar um padrão já salvo na biblioteca. */
 export function ModalLayout() {
   const { backToProjeto } = useStore()
   const { profile } = useAuth()
   const qc = useQueryClient()
 
   const [nome, setNome] = useState('')
+  const [tecnica, setTecnica] = useState<Tecnica>('croche')
   const [modelos, setModelos] = useState<ModeloNovo[]>(MODELOS_INICIAIS)
+  const [seq, setSeq] = useState<string[]>(SEQ_INICIAL)
+  const [faixas, setFaixas] = useState(8)
   const [colunas, setColunas] = useState(8)
   const [linhas, setLinhas] = useState(6)
   const [celulas, setCelulas] = useState<string[][]>(() =>
@@ -70,7 +84,38 @@ export function ModalLayout() {
   })
   const [erro, setErro] = useState<string | null>(null)
 
-  const daManta = tamanhoManta('manta_croche', colunas, linhas, medida)
+  const croche = tecnica === 'croche'
+
+  /* No tricô a largura da peça já é a largura da manta; o que empilha é a
+     altura da faixa, então a grade equivale a 1 coluna por N faixas. */
+  const daManta = croche
+    ? tamanhoManta('manta_croche', colunas, linhas, medida)
+    : tamanhoManta('manta_trico', 1, faixas, medida)
+
+  /* Os padrões salvos na biblioteca viram ponto de partida: granny para os
+     modelos do crochê, faixa para a sequência do tricô. Quem não quer amarrar
+     a nada segue escolhendo as cores à mão. */
+  const { data: receitas } = useQuery({ queryKey: ['receitas'], queryFn: fetchReceitas })
+  const grannies = (receitas ?? []).filter((r) => r.categoria === 'granny' && !r.arquivado_em)
+  const padroesFaixa = (receitas ?? []).filter((r) => r.categoria === 'faixa' && !r.arquivado_em)
+
+  const puxarGranny = (i: number, receitaId: string) => {
+    const r = grannies.find((x) => x.id === receitaId)
+    const cores = r && coresDoGranny(r)
+    if (!r || !cores) return
+    mudarModelo(i, {
+      nome: r.nome,
+      cor_borda: cores.border,
+      cor_miolo: cores.inner,
+      receita_id: r.id,
+    })
+  }
+
+  const puxarFaixa = (receitaId: string) => {
+    const r = padroesFaixa.find((x) => x.id === receitaId)
+    const s = r && seqDaFaixa(r)
+    if (s) setSeq(s)
+  }
 
   const letras = modelos.map((m) => m.letra)
   const porLetra = new Map(modelos.map((m) => [m.letra, m]))
@@ -164,22 +209,42 @@ export function ModalLayout() {
       criarReceita({
         nome: nome.trim() || 'Esquema sem nome',
         categoria: 'manta',
-        sub: `esquema · ${colunas}×${linhas} squares`,
+        sub: croche
+          ? `esquema de crochê · ${colunas}×${linhas} squares`
+          : `esquema de tricô · ${faixas} faixas`,
         resumo: null,
         specs: [
-          ['Colunas', String(colunas)],
-          ['Linhas', String(linhas)],
-          ['Total', String(colunas * linhas)],
+          ...(croche
+            ? ([
+                ['Colunas', String(colunas)],
+                ['Linhas', String(linhas)],
+                ['Total', String(colunas * linhas)],
+              ] as [string, string][])
+            : ([
+                ['Faixas', String(faixas)],
+                ['Cores', String(seq.length)],
+              ] as [string, string][])),
           ...(daManta ? ([['Manta', fmtMedida(daManta)]] as [string, string][]) : []),
         ],
         largura_cm: medida.largura,
         altura_cm: medida.altura,
-        conteudo: {
-          cells: celulas,
-          modelos: Object.fromEntries(
-            modelos.map((m) => [m.letra, { border: m.cor_borda, inner: m.cor_miolo, nome: m.nome }]),
-          ),
-        },
+        conteudo: croche
+          ? {
+              tecnica: 'croche',
+              cells: celulas,
+              modelos: Object.fromEntries(
+                modelos.map((m) => [
+                  m.letra,
+                  {
+                    border: m.cor_borda,
+                    inner: m.cor_miolo,
+                    nome: m.nome,
+                    ...(m.receita_id ? { receita_id: m.receita_id } : {}),
+                  },
+                ]),
+              ),
+            }
+          : { tecnica: 'trico', seq, faixas },
         origem: 'criador',
         criado_por: profile!.id,
       }),
@@ -205,6 +270,17 @@ export function ModalLayout() {
         placeholder="Manta Ada"
       />
 
+      <Lbl style={{ marginBottom: 7 }}>TÉCNICA</Lbl>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+        {TECNICAS.map(([t, label]) => (
+          <button key={t} type="button" onClick={() => setTecnica(t)} style={seg(tecnica === t)}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {croche ? (
+        <>
       <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
         {MODOS.map(([m, label]) => (
           <button key={m} type="button" onClick={() => setModo(m)} style={seg(modo === m)}>
@@ -399,22 +475,31 @@ export function ModalLayout() {
                   </button>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div style={{ display: 'flex', gap: 6, marginBottom: grannies.length > 0 ? 7 : 0 }}>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <ColorPicker
                     value={m.cor_borda}
                     ariaLabel={`Cor da borda do modelo ${m.letra}`}
-                    onChange={(cor_borda) => mudarModelo(i, { cor_borda })}
+                    onChange={(cor_borda) => mudarModelo(i, { cor_borda, receita_id: undefined })}
                   />
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <ColorPicker
                     value={m.cor_miolo}
                     ariaLabel={`Cor do miolo do modelo ${m.letra}`}
-                    onChange={(cor_miolo) => mudarModelo(i, { cor_miolo })}
+                    onChange={(cor_miolo) => mudarModelo(i, { cor_miolo, receita_id: undefined })}
                   />
                 </span>
               </div>
+              {grannies.length > 0 && (
+                <Select
+                  value={m.receita_id ?? ''}
+                  onChange={(id) => puxarGranny(i, id)}
+                  options={grannies.map((r) => [r.id, r.nome] as [string, string])}
+                  ariaLabel={`Padrão do modelo ${m.letra}`}
+                  placeholder="Puxar da biblioteca…"
+                />
+              )}
             </div>
           ))}
           {modelos.length < LETRAS.length && (
@@ -440,6 +525,93 @@ export function ModalLayout() {
           </div>
         </div>
       </div>
+        </>
+      ) : (
+        <>
+          <Lbl style={{ marginBottom: 9 }}>FAIXA MODELO</Lbl>
+          {padroesFaixa.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <Select
+                value=""
+                onChange={puxarFaixa}
+                options={padroesFaixa.map((r) => [r.id, r.nome] as [string, string])}
+                ariaLabel="Puxar padrão de faixa da biblioteca"
+                placeholder="Puxar da biblioteca…"
+              />
+            </div>
+          )}
+          <div style={{ marginBottom: 16 }}>
+            {seq.map((c, i) => (
+              <div
+                key={i}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}
+              >
+                <span style={{ fontSize: 11, color: 'var(--muted)', width: 16, fontWeight: 800 }}>
+                  {i + 1}
+                </span>
+                <span style={{ flex: 1, minWidth: 130 }}>
+                  <ColorPicker
+                    value={c}
+                    ariaLabel={`Cor ${i + 1} da faixa`}
+                    onChange={(nova) => setSeq((atual) => atual.map((x, j) => (j === i ? nova : x)))}
+                  />
+                </span>
+                <button
+                  type="button"
+                  className="kebab"
+                  aria-label={`Remover a cor ${i + 1}`}
+                  disabled={seq.length <= 2}
+                  onClick={() => setSeq((atual) => atual.filter((_, j) => j !== i))}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              className="pill ghost"
+              style={{ padding: '6px 14px', fontSize: 12 }}
+              onClick={() => setSeq((atual) => [...atual, PALETTE[atual.length % PALETTE.length][0]])}
+            >
+              + Cor
+            </button>
+          </div>
+
+          <Lbl style={{ marginBottom: 7 }}>QUANTAS FAIXAS</Lbl>
+          <div style={{ marginBottom: 18, maxWidth: 140 }}>
+            <Stepper value={faixas} onChange={setFaixas} min={2} max={60} ariaLabel="Faixas" />
+          </div>
+
+          <div style={{ marginBottom: 18 }}>
+            <CampoMedida
+              largura={medida.largura}
+              altura={medida.altura}
+              rotuloLargura="LARGURA DA FAIXA (CM)"
+              rotuloAltura="ALTURA DA FAIXA (CM)"
+              aoMudar={(patch) => setMedida((m) => ({ ...m, ...patch }))}
+            />
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              marginBottom: 9,
+            }}
+          >
+            <Lbl>PRÉVIA DA MANTA</Lbl>
+            {daManta && (
+              <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--accent)' }}>
+                {fmtMedida(daManta)}
+              </span>
+            )}
+          </div>
+          <div style={{ marginBottom: 22 }}>
+            <PreviaFaixas seq={seq} faixas={faixas} />
+          </div>
+        </>
+      )}
 
       {erro && (
         <div
