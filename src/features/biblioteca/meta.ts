@@ -16,5 +16,5 @@ export const CAT_TAG: Record<ReceitaCategoria, { tag: string; tBg: string; tC: s
   amigurumi: { tag: 'AMIGURUMI', tBg: '#F6E4E6', tC: '#A05666' },
   granny: { tag: 'GRANNY SQUARE', tBg: '#EAF0E6', tC: '#55704E' },
   faixa: { tag: 'FAIXA DE TRICÔ', tBg: '#F1EAE0', tC: '#9A7328' },
-  manta: { tag: 'MANTA DE TRICÔ', tBg: '#F1EAE0', tC: '#9A7328' },
+  manta: { tag: 'ESQUEMA DE MANTA', tBg: '#F1EAE0', tC: '#9A7328' },
 }

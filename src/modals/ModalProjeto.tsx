@@ -8,18 +8,14 @@ import { Campo, LegendaObrigatorio, useFormulario } from '../components/ui/Campo
 import { CampoMedida } from '../components/ui/CampoMedida'
 import { PreviaFaixas } from '../components/ui/PreviaFaixas'
 import { PreviaGrade } from '../components/ui/PreviaGrade'
-import { ColorPicker, Select } from '../components/ui/controles'
+import { Select } from '../components/ui/controles'
 import { useConfirmar } from '../components/ui/Confirm'
 import { ModalBox, ModalHeader } from './shared'
-import { gradePadrao } from '../lib/grade'
+import { redimensionaCelulas } from '../lib/grade'
 import { fmtMedida, gradeParaTamanho, tamanhoManta } from '../lib/medida'
-import { MODELS } from '../lib/paleta'
+import { tecnicaDoEsquema } from '../types/database'
 import { fetchReceitas } from '../features/biblioteca/api'
-import {
-  criarProjeto,
-  fetchReceitasAmigurumi,
-  type ModeloNovo,
-} from '../features/projetos/api'
+import { criarProjeto, fetchReceitasAmigurumi } from '../features/projetos/api'
 
 const cardOn: CSSProperties = {
   border: '1px solid var(--chip-rose-border)',
@@ -66,25 +62,8 @@ const tec = (on: boolean, c: string): CSSProperties => ({
       }),
 })
 
-const MODELOS_INICIAIS: ModeloNovo[] = [
-  { letra: 'A', nome: 'Modelo A', cor_borda: MODELS.A.border, cor_miolo: MODELS.A.inner },
-  { letra: 'B', nome: 'Modelo B', cor_borda: MODELS.B.border, cor_miolo: MODELS.B.inner },
-]
-
-const LETRAS = 'ABCDEFGH'.split('')
-
 export function ModalProjeto() {
-  const {
-    projCat,
-    projTec,
-    setProjCat,
-    setProjTec,
-    openFaixa,
-    faixaSeq,
-    faixaCount,
-    setFaixaCount,
-    close,
-  } = useStore()
+  const { projCat, projTec, setProjCat, setProjTec, openLayout, close } = useStore()
   const { profile } = useAuth()
   const confirmar = useConfirmar()
   const navigate = useNavigate()
@@ -98,14 +77,13 @@ export function ModalProjeto() {
   const [meta, setMeta] = useState(12)
   const [erro, setErro] = useState<string | null>(null)
 
-  /* Antes, a manta de crochê nascia com A/B/C e 80 squares fixos, sem nada
-     configurável. Agora: do zero (tamanho + modelos) ou a partir de um esquema
-     salvo na biblioteca — que até então não servia para nada. */
-  const [origem, setOrigem] = useState<'zero' | 'esquema'>('zero')
-  const [colunas, setColunas] = useState(8)
-  const [linhas, setLinhas] = useState(10)
-  const [modelos, setModelos] = useState<ModeloNovo[]>(MODELOS_INICIAIS)
+  /* Manta nasce sempre de um esquema salvo — nas duas técnicas. Montar cores e
+     tamanho aqui dentro produzia mantas que ninguém conseguia repetir depois,
+     porque o desenho não ficava guardado em lugar nenhum. */
   const [esquemaId, setEsquemaId] = useState('')
+  /* Grade sobrescrita só para este projeto, quando alguém manda o tamanho final
+     em vez da contagem de peças. O esquema salvo na biblioteca não muda. */
+  const [redim, setRedim] = useState<{ colunas: number; linhas: number } | null>(null)
   /* A peça vem do padrão escolhido e pode ser ajustada só para este projeto: a
      mesma receita rende tamanhos diferentes conforme o fio e a mão. */
   const [peca, setPeca] = useState<{ largura: number | null; altura: number | null }>({
@@ -129,20 +107,37 @@ export function ModalProjeto() {
   const { data: todasReceitas } = useQuery({
     queryKey: ['receitas'],
     queryFn: fetchReceitas,
-    enabled: croche,
+    enabled: manta,
   })
+  /* Esquema antigo não guarda a técnica; `tecnicaDoEsquema` deduz pela forma do
+     conteúdo, para que os de crochê salvos antes disso continuem aparecendo. */
   const esquemas = (todasReceitas ?? []).filter(
-    (r) => r.categoria === 'manta' && r.conteudo.cells && r.conteudo.modelos,
+    (r) =>
+      r.categoria === 'manta' &&
+      !r.arquivado_em &&
+      tecnicaDoEsquema(r.conteudo) === (croche ? 'croche' : 'trico'),
   )
   const esquema = esquemas.find((e) => e.id === esquemaId)
 
-  const grade = croche && origem === 'esquema' && esquema?.conteudo.cells
-    ? { colunas: esquema.conteudo.cells[0]?.length ?? 1, linhas: esquema.conteudo.cells.length }
-    : { colunas, linhas: manta && !croche ? faixaCount : linhas }
+  const modelosDoEsquema = esquema?.conteudo.modelos ?? {}
+  const letrasDoEsquema = Object.keys(modelosDoEsquema)
+  const cellsBase = esquema?.conteudo.cells ?? null
+  const celulas =
+    cellsBase && redim
+      ? redimensionaCelulas(cellsBase, redim.colunas, redim.linhas, letrasDoEsquema)
+      : cellsBase
 
-  const tamanho = manta
-    ? tamanhoManta(croche ? 'manta_croche' : 'manta_trico', grade.colunas, grade.linhas, peca)
-    : null
+  const seqDoEsquema = esquema?.conteudo.seq ?? []
+  const faixasDoEsquema = redim?.linhas ?? esquema?.conteudo.faixas ?? 0
+
+  const grade = croche
+    ? { colunas: celulas?.[0]?.length ?? 0, linhas: celulas?.length ?? 0 }
+    : { colunas: 1, linhas: faixasDoEsquema }
+
+  const tamanho =
+    manta && esquema
+      ? tamanhoManta(croche ? 'manta_croche' : 'manta_trico', grade.colunas, grade.linhas, peca)
+      : null
 
   /* Herda a medida do esquema escolhido enquanto ninguém digitou a sua. */
   useEffect(() => {
@@ -169,40 +164,12 @@ export function ModalProjeto() {
       okLabel: 'Usar esta grade',
     })
     if (!ok) return
-    if (croche) {
-      setOrigem('zero')
-      setColunas(nova.colunas)
-      setLinhas(nova.linhas)
-    } else {
-      setFaixaCount(nova.linhas)
-    }
+    setRedim(nova)
   }
 
   const criar = useMutation({
-    mutationFn: () => {
-      if (croche && origem === 'esquema' && esquema?.conteudo.cells && esquema.conteudo.modelos) {
-        const cells = esquema.conteudo.cells
-        const defs = esquema.conteudo.modelos
-        return criarProjeto({
-          nome: nome.trim(),
-          tipo: 'manta_croche',
-          destino: destino.trim() || null,
-          emoji: '🌸',
-          created_by: profile!.id,
-          colunas: cells[0]?.length ?? 1,
-          linhas: cells.length,
-          pecaLarguraCm: peca.largura,
-          pecaAlturaCm: peca.altura,
-          modelos: Object.entries(defs).map(([letra, d]) => ({
-            letra,
-            nome: `Modelo ${letra}`,
-            cor_borda: d.border,
-            cor_miolo: d.inner,
-          })),
-          celulas: cells,
-        })
-      }
-      return criarProjeto({
+    mutationFn: () =>
+      criarProjeto({
         nome: nome.trim(),
         tipo: manta ? (croche ? 'manta_croche' : 'manta_trico') : 'amigurumi',
         destino: destino.trim() || null,
@@ -210,20 +177,21 @@ export function ModalProjeto() {
         receita_id: !manta && receitaId ? receitaId : null,
         meta: !manta ? meta : null,
         created_by: profile!.id,
-        colunas,
-        linhas,
+        colunas: grade.colunas,
+        linhas: grade.linhas,
         pecaLarguraCm: peca.largura,
         pecaAlturaCm: peca.altura,
-        modelos,
-        celulas: gradePadrao(
-          colunas,
-          linhas,
-          modelos.map((m) => m.letra),
-        ),
-        faixaSeq,
-        faixaCount,
-      })
-    },
+        // o nome que a pessoa deu ao modelo no esquema é o que vai para o mapa
+        modelos: Object.entries(modelosDoEsquema).map(([letra, d]) => ({
+          letra,
+          nome: d.nome ?? `Modelo ${letra}`,
+          cor_borda: d.border,
+          cor_miolo: d.inner,
+        })),
+        celulas: celulas ?? [],
+        faixaSeq: seqDoEsquema,
+        faixaCount: faixasDoEsquema,
+      }),
     onSuccess: (id) => {
       qc.invalidateQueries({ queryKey: ['projetos'] })
       qc.invalidateQueries({ queryKey: ['progresso-geral'] })
@@ -238,19 +206,11 @@ export function ModalProjeto() {
     setErro(null)
     const ok = form.checar({
       nome: nome.trim() ? undefined : 'Dê um nome ao projeto.',
-      manta:
-        croche && origem === 'zero' && modelos.length === 0
-          ? 'A manta precisa de pelo menos um modelo de granny.'
-          : croche && origem === 'esquema' && !esquemaId
-            ? 'Escolha um esquema da biblioteca.'
-            : undefined,
+      manta: manta && !esquemaId ? 'Escolha um esquema da biblioteca.' : undefined,
     })
     if (!ok) return
     criar.mutate()
   }
-
-  const mudarModelo = (i: number, patch: Partial<ModeloNovo>) =>
-    setModelos((ms) => ms.map((m, j) => (j === i ? { ...m, ...patch } : m)))
 
   return (
     <ModalBox maxWidth={600}>
@@ -341,224 +301,76 @@ export function ModalProjeto() {
           </Campo>
         </div>
 
-        {croche && (
+        {manta && (
           <div
             style={{
-              background: 'var(--sand-soft)',
-              border: '1px solid var(--border)',
+              background: croche ? 'var(--sand-soft)' : '#EEF3EA',
+              border: `1px solid ${croche ? 'var(--border)' : '#D8E0D2'}`,
               borderRadius: 12,
               padding: '14px 16px',
               marginBottom: 20,
             }}
           >
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="seg"
-                aria-pressed={origem === 'zero'}
-                onClick={() => setOrigem('zero')}
-                style={
-                  origem === 'zero'
-                    ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }
-                    : undefined
-                }
-              >
-                Começar do zero
-              </button>
-              <button
-                type="button"
-                className="seg"
-                aria-pressed={origem === 'esquema'}
-                onClick={() => setOrigem('esquema')}
-                style={
-                  origem === 'esquema'
-                    ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' }
-                    : undefined
-                }
-              >
-                Usar um esquema salvo
-              </button>
-            </div>
+            <Campo label="ESQUEMA" obrigatorio erro={form.erros.manta}>
+              {() => (
+                <Select
+                  ariaLabel="Esquema de manta"
+                  value={esquemaId}
+                  onChange={(v) => {
+                    setEsquemaId(v)
+                    setRedim(null)
+                    form.aoMudar('manta')
+                  }}
+                  options={[
+                    ['', esquemas.length ? 'Escolher…' : 'Nenhum esquema salvo ainda'],
+                    ...esquemas.map((e) => [e.id, e.nome] as [string, string]),
+                  ]}
+                />
+              )}
+            </Campo>
 
-            {origem === 'zero' ? (
-              <>
-                <div className="grid2" style={{ marginBottom: 14 }}>
-                  <Campo label="COLUNAS">
-                    {() => (
-                      <Stepper
-                        value={colunas}
-                        onChange={setColunas}
-                        min={2}
-                        max={20}
-                        ariaLabel="Colunas"
-                      />
-                    )}
-                  </Campo>
-                  <Campo label="LINHAS">
-                    {() => (
-                      <Stepper
-                        value={linhas}
-                        onChange={setLinhas}
-                        min={2}
-                        max={30}
-                        ariaLabel="Linhas"
-                      />
-                    )}
-                  </Campo>
-                </div>
+            {/* Lista vazia não é beco sem saída: daqui se cria o esquema e o
+                fluxo volta para cá, que é o mesmo ida-e-volta do SeletorCategoria. */}
+            <button
+              type="button"
+              onClick={() => openLayout('projeto')}
+              style={{
+                marginTop: 10,
+                fontSize: 12,
+                fontWeight: 800,
+                color: croche ? 'var(--accent)' : 'var(--green-dark)',
+                cursor: 'pointer',
+                border: 'none',
+                background: 'none',
+                fontFamily: 'inherit',
+                padding: 0,
+              }}
+            >
+              + Criar esquema
+            </button>
 
-                <div className="lbl" style={{ marginBottom: 8 }}>
-                  MODELOS DE GRANNY <span style={{ color: 'var(--accent)' }}>*</span>
-                </div>
-                {modelos.map((m, i) => (
-                  <div
-                    key={m.letra}
-                    style={{
-                      display: 'flex',
-                      gap: 8,
-                      alignItems: 'center',
-                      marginBottom: 8,
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <b style={{ width: 16, flex: 'none' }}>{m.letra}</b>
-                    <input
-                      className="field"
-                      style={{ flex: 1, minWidth: 110 }}
-                      value={m.nome}
-                      aria-label={`Nome do modelo ${m.letra}`}
-                      onChange={(e) => mudarModelo(i, { nome: e.target.value })}
-                    />
-                    <span style={{ width: 124 }}>
-                      <ColorPicker
-                        value={m.cor_borda}
-                        ariaLabel={`Cor da borda do modelo ${m.letra}`}
-                        onChange={(cor_borda) => mudarModelo(i, { cor_borda })}
-                      />
-                    </span>
-                    <span style={{ width: 124 }}>
-                      <ColorPicker
-                        value={m.cor_miolo}
-                        ariaLabel={`Cor do miolo do modelo ${m.letra}`}
-                        onChange={(cor_miolo) => mudarModelo(i, { cor_miolo })}
-                      />
-                    </span>
-                    {modelos.length > 1 && (
-                      <button
-                        type="button"
-                        className="kebab"
-                        aria-label={`Remover modelo ${m.letra}`}
-                        onClick={() => setModelos((ms) => ms.filter((_, j) => j !== i))}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {modelos.length < LETRAS.length && (
-                  <button
-                    type="button"
-                    className="pill ghost"
-                    style={{ padding: '6px 14px', fontSize: 12 }}
-                    onClick={() =>
-                      setModelos((ms) => [
-                        ...ms,
-                        {
-                          letra: LETRAS[ms.length],
-                          nome: `Modelo ${LETRAS[ms.length]}`,
-                          cor_borda: '#B99BC4',
-                          cor_miolo: '#E3C07A',
-                        },
-                      ])
-                    }
-                  >
-                    + Modelo
-                  </button>
-                )}
-                {/* a distribuição diagonal dos modelos é o que a grade vai
-                    receber — dá para conferir antes de criar */}
-                <div className="lbl" style={{ margin: '14px 0 6px' }}>
+            {esquema && (
+              <div style={{ marginTop: 14 }}>
+                <div className="lbl" style={{ marginBottom: 6 }}>
                   PRÉVIA
                 </div>
-                <PreviaGrade
-                  celulas={gradePadrao(colunas, linhas, modelos.map((m) => m.letra))}
-                  cores={Object.fromEntries(
-                    modelos.map((m) => [m.letra, { border: m.cor_borda, inner: m.cor_miolo }]),
-                  )}
-                />
-                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>
-                  {colunas} × {linhas} · {colunas * linhas} squares
-                </div>
-              </>
-            ) : (
-              <>
-                <Campo label="ESQUEMA" obrigatorio erro={form.erros.manta}>
-                  {() => (
-                    <Select
-                      ariaLabel="Esquema de manta"
-                      value={esquemaId}
-                      onChange={(v) => {
-                        setEsquemaId(v)
-                        form.aoMudar('manta')
-                      }}
-                      options={[
-                        ['', esquemas.length ? 'Escolher…' : 'Nenhum esquema salvo ainda'],
-                        ...esquemas.map((e) => [e.id, e.nome] as [string, string]),
-                      ]}
-                    />
-                  )}
-                </Campo>
-                {esquema?.conteudo.cells && (
-                  <div style={{ marginTop: 12 }}>
-                    <div className="lbl" style={{ marginBottom: 6 }}>
-                      PRÉVIA
-                    </div>
-                    <PreviaGrade
-                      celulas={esquema.conteudo.cells}
-                      cores={esquema.conteudo.modelos ?? {}}
-                    />
+                {croche && celulas ? (
+                  <>
+                    <PreviaGrade celulas={celulas} cores={modelosDoEsquema} />
                     <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>
-                      {esquema.conteudo.cells.length} linhas ×{' '}
-                      {esquema.conteudo.cells[0]?.length ?? 0} colunas
+                      {grade.colunas} × {grade.linhas} · {grade.colunas * grade.linhas} squares
                     </div>
-                  </div>
+                  </>
+                ) : (
+                  <>
+                    <PreviaFaixas seq={seqDoEsquema} faixas={grade.linhas} />
+                    <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>
+                      {grade.linhas} faixas · {seqDoEsquema.length} cores
+                    </div>
+                  </>
                 )}
-              </>
-            )}
-          </div>
-        )}
-
-        {manta && !croche && (
-          <div
-            style={{
-              background: '#EEF3EA',
-              border: '1px solid #D8E0D2',
-              borderRadius: 12,
-              padding: '14px 16px',
-              marginBottom: 20,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ flex: 1 }}>
-                <PreviaFaixas seq={faixaSeq} faixas={faixaCount} />
               </div>
-              <button
-                type="button"
-                onClick={() => openFaixa('projeto')}
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  color: 'var(--green-dark)',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  border: 'none',
-                  background: 'none',
-                  fontFamily: 'inherit',
-                }}
-              >
-                + Editar padrão
-              </button>
-            </div>
+            )}
           </div>
         )}
 

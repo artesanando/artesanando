@@ -74,14 +74,22 @@ describe('navegação', () => {
     expect(screen.getByRole('dialog', { name: 'Novo projeto' })).toBeInTheDocument()
   })
 
-  it('a manta de crochê deixa de nascer pronta: dá para escolher tamanho e modelos', async () => {
+  it('a manta nasce de um esquema salvo, e nunca do zero', async () => {
     __login()
     renderAt('/')
     await userEvent.click(await screen.findByRole('button', { name: '+ Novo projeto' }))
-    expect(screen.getByLabelText('Colunas')).toBeInTheDocument()
-    expect(screen.getByLabelText('Linhas')).toBeInTheDocument()
-    expect(screen.getByLabelText('Nome do modelo A')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Usar um esquema salvo' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Esquema de manta')).toBeInTheDocument()
+    // montar cores e tamanho aqui dentro deixava de existir
+    expect(screen.queryByLabelText('Colunas')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Nome do modelo A')).not.toBeInTheDocument()
+  })
+
+  it('sem esquema salvo, o próprio formulário leva ao criador', async () => {
+    __login()
+    renderAt('/')
+    await userEvent.click(await screen.findByRole('button', { name: '+ Novo projeto' }))
+    await userEvent.click(screen.getByRole('button', { name: '+ Criar esquema' }))
+    expect(screen.getByLabelText('Nome do esquema')).toBeInTheDocument()
   })
 
   it('nome vazio no projeto mostra o erro sob o campo', async () => {
