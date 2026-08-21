@@ -166,7 +166,7 @@ export function filtraIntegrantes(integrantes: Profile[], busca: string): Profil
   )
 }
 
-/* Promover ou rebaixar administradora. O banco já autorizava — `guard_profile_update`
+/* Tornar administradora, ou devolver alguém a integrante. O banco já autorizava — `guard_profile_update`
    só barra não-admin —, mas não havia caminho na interface: dava para nascer
    admin no cadastro e nunca mais mudar. O gatilho de auditoria registra a troca. */
 export async function definirPapel(id: string, papel: Papel) {

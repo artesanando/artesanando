@@ -10,7 +10,6 @@ import { ativarSemestre, atualizarSemestre, criarSemestre, fetchSemestres } from
 import { useAuth } from '../../state/auth'
 import { definirPapel } from '../integrantes/api'
 import { fetchPermissoes, togglePermissao, type PermCol } from './api'
-import { IconCadeado } from '../../components/ui/icons'
 import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 import { useOrdenacao } from '../../components/ui/useOrdenacao'
 import { ColunaOrdenavel } from '../../components/ui/CabecalhoOrdenavel'
@@ -120,7 +119,7 @@ function Permissoes() {
     onError: () => toast('Não foi possível alterar o perfil.', 'erro'),
   })
 
-  /* Promover dá acesso total, inclusive a esta tabela — e rebaixar a última
+  /* Promover dá acesso total, inclusive a esta tabela — e tirar a última
      administradora deixaria o app sem quem administra. Nenhuma das duas coisas
      deve acontecer por um clique distraído. */
   const promover = async (id: string, nome: string, admin: boolean) => {
@@ -133,7 +132,7 @@ function Permissoes() {
       titulo: admin
         ? `${nome} deixa de ser administradora?`
         : `Tornar ${nome} administradora?`,
-      okLabel: admin ? 'Rebaixar' : 'Tornar administradora',
+      okLabel: admin ? 'Tornar integrante' : 'Tornar administradora',
       perigo: admin,
     })
     if (ok) papel.mutate({ id, admin: !admin })
@@ -141,26 +140,8 @@ function Permissoes() {
 
   return (
     <>
-      <div className="h" style={{ fontSize: 18, marginBottom: 4 }}>
+      <div className="h" style={{ fontSize: 18, marginBottom: 14 }}>
         Permissões das integrantes
-      </div>
-
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          background: 'var(--chip-soft)',
-          border: '1px solid var(--chip-rose-border)',
-          borderRadius: 10,
-          padding: '9px 13px',
-          fontSize: 12,
-          color: 'var(--primary-dark)',
-          marginBottom: 16,
-        }}
-      >
-        <IconCadeado />
-        Apenas administradoras alteram permissões — o banco recusa qualquer outra escrita.
       </div>
 
       <div style={{ marginBottom: 20 }}>
