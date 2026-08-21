@@ -498,16 +498,31 @@ describe('financeiro é restrito', () => {
 })
 
 describe('atividade de extensão', () => {
-  it('reúne frequência, entregas, chamadas e arquivos num lugar só', async () => {
+  it('reúne créditos, frequência, entregas, chamadas, arquivos e auditoria', async () => {
     __login()
     renderAt('/extensao')
-    expect(await screen.findByText('Frequência por integrante')).toBeInTheDocument()
+    // créditos abre primeiro: é o que trava a validação do projeto de extensão
+    expect(await screen.findByText('Regras do semestre')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Frequência' }))
+    expect(screen.getByText('Frequência por integrante')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Entregas' }))
     expect(screen.getByText('Entregas do semestre')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Chamadas' }))
     expect(screen.getByText('Chamadas do semestre')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Arquivos' }))
     expect(screen.getByText('Arquivos do semestre')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Auditoria' }))
+    expect(screen.getByLabelText('Ação')).toBeInTheDocument()
+  })
+
+  it('a regra do semestre se monta por blocos de alternativas', async () => {
+    __login()
+    renderAt('/extensao')
+    await screen.findByText('Regras do semestre')
+    // dois níveis, cada um com o seu botão de novo bloco
+    expect(screen.getAllByRole('button', { name: '+ Bloco' })).toHaveLength(2)
+    expect(screen.getByText('INICIANTE')).toBeInTheDocument()
+    expect(screen.getByText('EXPERIENTE')).toBeInTheDocument()
   })
 
   it('a chamada de um dia abre com quem esteve presente', async () => {

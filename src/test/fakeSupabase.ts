@@ -156,7 +156,7 @@ const RECEITAS_FAKE = [
 const PROJETOS_FAKE = [
   {
     id: 'p1',
-    semestre_id: null,
+    semestre_id: 'sem1',
     nome: 'Manta Primavera',
     tipo: 'manta_croche',
     destino: 'Hospital Infantil',
@@ -169,7 +169,7 @@ const PROJETOS_FAKE = [
   },
   {
     id: 'p2',
-    semestre_id: null,
+    semestre_id: 'sem1',
     nome: 'Manta Nuvem',
     tipo: 'manta_trico',
     destino: 'Hospital Infantil',
@@ -182,7 +182,7 @@ const PROJETOS_FAKE = [
   },
   {
     id: 'p3',
-    semestre_id: null,
+    semestre_id: 'sem1',
     nome: 'Polvo Rosa',
     tipo: 'amigurumi',
     destino: 'Maternidade',
@@ -271,6 +271,10 @@ const UNIDADES_FAKE = [
   },
 ]
 
+const SEMESTRES_FAKE = [
+  { id: 'sem1', label: '2026.2', inicio: '2026-07-01', fim: '2026-12-15', ativo: true },
+]
+
 const COMENTARIOS_FAKE = [
   {
     id: 'c1',
@@ -310,7 +314,7 @@ const ATIVIDADES_FAKE = [
 const ENCONTROS_FAKE = [
   {
     id: 'en1',
-    semestre_id: null,
+    semestre_id: 'sem1',
     data: '2026-07-07',
     hora: '14:00',
     local: 'Sala 203',
@@ -322,7 +326,7 @@ const ENCONTROS_FAKE = [
   },
   {
     id: 'en2',
-    semestre_id: null,
+    semestre_id: 'sem1',
     data: '2099-07-14',
     hora: '14:00',
     local: 'Sala 203',
@@ -373,7 +377,7 @@ const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
   devolucoes: { single: null, list: [] },
   receitas: { single: RECEITAS_FAKE[0], list: RECEITAS_FAKE },
   permissoes: { single: null, list: [] },
-  semestres: { single: null, list: [] },
+  semestres: { single: SEMESTRES_FAKE[0], list: SEMESTRES_FAKE },
   projetos: { single: PROJETOS_FAKE[0], list: PROJETOS_FAKE },
   manta_modelos: { single: MODELOS_FAKE[0], list: MODELOS_FAKE },
   squares: { single: SQUARES_FAKE[0], list: SQUARES_FAKE },

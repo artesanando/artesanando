@@ -18,6 +18,7 @@ import {
 } from '../../types/database'
 import { atualizarPerfil, fetchMeuRa, salvarRa, subirAvatar } from './api'
 import { RecorteImagem } from '../../components/ui/RecorteImagem'
+import { MinhaMeta } from './MinhaMeta'
 
 const PREFS: [Preferencia, string][] = [
   ['croche', 'Crochê'],
@@ -343,6 +344,8 @@ export function PerfilPage() {
             {() => <Select value={nivel} onChange={setNivel} options={NIVEIS} ariaLabel="Nível" />}
           </Campo>
         </div>
+
+        <MinhaMeta />
 
         <div className="h" style={{ fontSize: 16, marginBottom: 10 }}>
           Segurança

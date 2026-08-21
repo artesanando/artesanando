@@ -2,14 +2,30 @@ import { useState, type CSSProperties, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../state/auth'
 import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
+import { Lbl, Stepper } from '../../components/ui/bits'
 import { Campo, useFormulario } from '../../components/ui/Campo'
 import { DatePicker, MenuKebab, Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
 import { fmtDataCurta, fmtDataLonga, hojeIso } from '../../lib/format'
 import { fetchSemestres, useSemestreAtivo } from '../../lib/semestre'
-import { TURNO_LABEL } from '../../types/database'
+import { NIVEL_LABEL, TURNO_LABEL, type Nivel } from '../../types/database'
 import { entregasDe, fetchEntregasLight, fetchIntegrantes } from '../integrantes/api'
+import { avaliaRegra, textoDaLinha, TIPO_LABEL, type TipoLinha } from './creditos'
+import {
+  ACAO_LABEL,
+  criarBloco,
+  criarLinha,
+  fetchAuditoria,
+  fetchMarcas,
+  fetchRegras,
+  filtraAuditoria,
+  marcarCredito,
+  removerBloco,
+  removerLinha,
+  resumoDaLinha,
+  type AcaoAuditoria,
+} from './creditosApi'
 import {
   contaNaFrequencia,
   encontrosPassados,
@@ -29,14 +45,22 @@ import {
   type TipoArquivo,
 } from './api'
 
-type Secao = 'frequencia' | 'entregas' | 'chamadas' | 'arquivos'
+type Secao = 'creditos' | 'frequencia' | 'entregas' | 'chamadas' | 'arquivos' | 'auditoria'
 
 const SECOES: [Secao, string][] = [
+  ['creditos', 'Créditos'],
   ['frequencia', 'Frequência'],
   ['entregas', 'Entregas'],
   ['chamadas', 'Chamadas'],
   ['arquivos', 'Arquivos'],
+  ['auditoria', 'Auditoria'],
 ]
+
+const NIVEIS: Nivel[] = ['iniciante', 'experiente']
+
+const TIPOS: [TipoLinha, string][] = (
+  ['amigurumi', 'granny', 'faixa', 'frequencia', 'mentoria'] as TipoLinha[]
+).map((t) => [t, TIPO_LABEL[t]])
 
 const item = (on: boolean): CSSProperties => ({
   padding: '9px 12px',
@@ -57,7 +81,7 @@ const item = (on: boolean): CSSProperties => ({
    Não é configuração do app — é o produto do trabalho — e por isso tem tela
    própria em vez de virar mais uma aba de Ajustes. */
 export function ExtensaoPage() {
-  const [secao, setSecao] = useState<Secao>('frequencia')
+  const [secao, setSecao] = useState<Secao>('creditos')
   const ativo = useSemestreAtivo()
   const { data: semestres } = useQuery({ queryKey: ['semestres'], queryFn: fetchSemestres })
 
@@ -95,10 +119,12 @@ export function ExtensaoPage() {
       </div>
 
       <div>
+        {secao === 'creditos' && <Creditos semestreId={semestreId} />}
         {secao === 'frequencia' && <Frequencia semestreId={semestreId} />}
         {secao === 'entregas' && <Entregas semestreId={semestreId} />}
         {secao === 'chamadas' && <Chamadas semestreId={semestreId} />}
         {secao === 'arquivos' && <Arquivos semestreId={semestreId} />}
+        {secao === 'auditoria' && <Auditoria />}
       </div>
     </div>
   )
@@ -642,6 +668,366 @@ function Arquivos({ semestreId }: { semestreId: string | null }) {
               />
             </div>
           ))}
+      </div>
+    </>
+  )
+}
+
+/* ---------- Créditos ---------- */
+
+/* Duas metades: a regra do semestre por nível, e quem cumpriu.
+   A regra é blocos (E) de alternativas (OU) — ver `creditos.ts`. */
+function Creditos({ semestreId }: { semestreId: string | null }) {
+  const { profile } = useAuth()
+  const qc = useQueryClient()
+  const toast = useToast()
+  const hoje = hojeIso()
+
+  const { data: regras } = useQuery({
+    queryKey: ['regras-credito', semestreId],
+    queryFn: () => fetchRegras(semestreId!),
+    enabled: Boolean(semestreId),
+  })
+  const { data: marcas } = useQuery({
+    queryKey: ['credito-marcas', semestreId],
+    queryFn: () => fetchMarcas(semestreId!),
+    enabled: Boolean(semestreId),
+  })
+  const { data: integrantes } = useQuery({ queryKey: ['integrantes'], queryFn: fetchIntegrantes })
+  const { data: encontros } = useQuery({ queryKey: ['encontros'], queryFn: fetchEncontros })
+  const { data: presencas } = useQuery({ queryKey: ['presencas'], queryFn: fetchPresencas })
+  const { data: entregas } = useQuery({ queryKey: ['entregas-light'], queryFn: fetchEntregasLight })
+
+  const invalidar = () => {
+    qc.invalidateQueries({ queryKey: ['regras-credito', semestreId] })
+    qc.invalidateQueries({ queryKey: ['credito-marcas', semestreId] })
+  }
+
+  const mudar = useMutation({
+    mutationFn: (acao: () => Promise<void>) => acao(),
+    onSuccess: invalidar,
+    onError: () => toast('Não foi possível salvar a regra.', 'erro'),
+  })
+
+  const marcar = useMutation({
+    mutationFn: (m: {
+      perfilId: string
+      mentoria: boolean
+      cumprido: boolean
+      motivo: string | null
+    }) => marcarCredito({ ...m, semestreId: semestreId!, por: profile!.id }),
+    onSuccess: () => {
+      invalidar()
+      toast('Marca registrada ✓')
+    },
+    onError: () => toast('Não foi possível marcar.', 'erro'),
+  })
+
+  if (!semestreId) {
+    return <div style={{ fontSize: 13, color: 'var(--muted)' }}>Crie um semestre em Ajustes.</div>
+  }
+
+  const doSem = doSemestre(encontros ?? [], semestreId)
+
+  const linhas = (integrantes ?? []).map((p) => {
+    const freq = frequenciaDe(p.id, doSem, presencas ?? [], hoje, p.turno)
+    const dela = entregas
+      ? entregasDe(p.id, entregas, semestreId)
+      : { amigurumis: 0, faixas: 0, grannies: 0, total: 0 }
+    const marca = marcas?.get(p.id) ?? null
+    return { p, marca, av: avaliaRegra(regras?.[p.nivel] ?? [], dela, freq.total.pct, marca) }
+  })
+
+  return (
+    <>
+      <div className="h" style={{ fontSize: 17, marginBottom: 4 }}>
+        Regras do semestre
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
+        Cada bloco é obrigatório; dentro dele, basta cumprir uma linha.
+      </div>
+
+      <div
+        className="pgrid"
+        style={{ '--cols': '1fr 1fr', '--gap': '18px', marginBottom: 30 } as CSSProperties}
+      >
+        {NIVEIS.map((nivel) => (
+          <div key={nivel}>
+            <Lbl style={{ marginBottom: 8 }}>{NIVEL_LABEL[nivel].toUpperCase()}</Lbl>
+            {(regras?.[nivel] ?? []).map((b, i) => (
+              <div
+                key={b.id}
+                style={{
+                  border: '1px solid var(--field-border)',
+                  borderRadius: 12,
+                  padding: '10px 12px',
+                  marginBottom: 8,
+                  background: 'var(--card)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 8,
+                  }}
+                >
+                  <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--muted)' }}>
+                    BLOCO {i + 1} · BASTA UMA
+                  </span>
+                  <button
+                    type="button"
+                    className="kebab"
+                    aria-label={`Remover o bloco ${i + 1} de ${NIVEL_LABEL[nivel]}`}
+                    onClick={() => mudar.mutate(() => removerBloco(b.id))}
+                  >
+                    ✕
+                  </button>
+                </div>
+                {b.linhas.map((l) => (
+                  <div
+                    key={l.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      fontSize: 12.5,
+                      marginBottom: 5,
+                    }}
+                  >
+                    <span style={{ flex: 1 }}>
+                      {l.tipo === 'mentoria'
+                        ? TIPO_LABEL.mentoria
+                        : `${l.quantidade} ${TIPO_LABEL[l.tipo]}`}
+                    </span>
+                    <button
+                      type="button"
+                      className="kebab"
+                      aria-label={`Remover ${TIPO_LABEL[l.tipo]} do bloco ${i + 1}`}
+                      onClick={() => mudar.mutate(() => removerLinha(l.id))}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <NovaLinha aoAdicionar={(t, q) => mudar.mutate(() => criarLinha(b.id, t, q))} />
+              </div>
+            ))}
+            <button
+              type="button"
+              className="pill ghost"
+              style={{ padding: '6px 14px', fontSize: 12 }}
+              onClick={() =>
+                mudar.mutate(() => criarBloco(semestreId, nivel, (regras?.[nivel] ?? []).length))
+              }
+            >
+              + Bloco
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="h" style={{ fontSize: 17, marginBottom: 12 }}>
+        Quem cumpriu
+      </div>
+      <div className="card" style={{ overflow: 'hidden' }}>
+        {linhas.map(({ p, marca, av }, i) => (
+          <div
+            key={p.id}
+            style={{
+              padding: '12px 14px',
+              borderTop: i > 0 ? '1px solid var(--border)' : undefined,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <AvatarPerfil
+                nome={p.nome}
+                avatarColor={p.avatar_color}
+                avatarUrl={p.avatar_url}
+                size={26}
+                fontSize={10}
+              />
+              <b style={{ fontSize: 13, flex: 1, minWidth: 120 }}>{p.nome}</b>
+              <span style={{ fontSize: 11, color: 'var(--muted)' }}>{NIVEL_LABEL[p.nivel]}</span>
+              <span
+                className="tag"
+                style={
+                  av.cumpriu
+                    ? { background: 'var(--chip-green)', color: 'var(--green-dark)' }
+                    : { background: 'var(--chip-warn)', color: 'var(--gold-dark)' }
+                }
+              >
+                {av.cumpriu ? (av.manual ? 'CUMPRIU · MANUAL' : 'CUMPRIU') : 'FALTA'}
+              </span>
+              <MenuKebab
+                ariaLabel={`Marcas de ${p.nome}`}
+                acoes={[
+                  {
+                    label: marca?.mentoria ? 'Tirar a mentoria' : 'Marcar mentoria',
+                    onSelect: () =>
+                      marcar.mutate({
+                        perfilId: p.id,
+                        mentoria: !marca?.mentoria,
+                        cumprido: marca?.cumprido ?? false,
+                        motivo: marca?.motivo ?? null,
+                      }),
+                  },
+                  {
+                    label: marca?.cumprido ? 'Desfazer o cumprido' : 'Dar como cumprida',
+                    onSelect: () =>
+                      marcar.mutate({
+                        perfilId: p.id,
+                        mentoria: marca?.mentoria ?? false,
+                        cumprido: !marca?.cumprido,
+                        motivo: marca?.cumprido ? null : 'dada como cumprida pela coordenação',
+                      }),
+                  },
+                ]}
+              />
+            </div>
+            {/* todas as alternativas lado a lado: dá para ver quem está quase lá */}
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 7 }}>
+              {av.blocos.length === 0 && (
+                <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+                  Sem regra para {NIVEL_LABEL[p.nivel].toLowerCase()} neste semestre.
+                </span>
+              )}
+              {av.blocos.map((b) => (
+                <span
+                  key={b.id}
+                  style={{
+                    fontSize: 11.5,
+                    color: b.cumpriu ? 'var(--green-dark)' : 'var(--muted)',
+                    fontWeight: b.cumpriu ? 800 : 600,
+                  }}
+                >
+                  {b.linhas.map(textoDaLinha).join(' · ')}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  )
+}
+
+function NovaLinha({
+  aoAdicionar,
+}: {
+  aoAdicionar: (tipo: TipoLinha, quantidade: number) => void
+}) {
+  const [tipo, setTipo] = useState<TipoLinha>('granny')
+  const [qtd, setQtd] = useState(5)
+  // mentoria é marcada à mão pela coordenação, então não tem quantidade
+  const semQuantidade = tipo === 'mentoria'
+
+  return (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+      <span style={{ flex: 1, minWidth: 120 }}>
+        <Select value={tipo} onChange={setTipo} options={TIPOS} ariaLabel="Tipo da alternativa" />
+      </span>
+      {!semQuantidade && (
+        <span style={{ width: 104 }}>
+          <Stepper
+            value={qtd}
+            onChange={setQtd}
+            min={1}
+            max={tipo === 'frequencia' ? 100 : 99}
+            ariaLabel="Quantidade da alternativa"
+          />
+        </span>
+      )}
+      <button
+        type="button"
+        className="pill ghost"
+        style={{ padding: '6px 12px', fontSize: 12 }}
+        onClick={() => aoAdicionar(tipo, semQuantidade ? 1 : qtd)}
+      >
+        + Alternativa
+      </button>
+    </div>
+  )
+}
+
+/* ---------- Auditoria ---------- */
+
+/* Diário do que mexe em quem leva crédito, ou em quem pode dar crédito. As
+   linhas vêm de gatilhos do banco: não há como escrever nelas pela API. */
+function Auditoria() {
+  const [acao, setAcao] = useState<AcaoAuditoria | 'todas'>('todas')
+  const [pessoa, setPessoa] = useState<string>('todas')
+
+  const { data: linhas } = useQuery({ queryKey: ['auditoria'], queryFn: () => fetchAuditoria() })
+  const { data: integrantes } = useQuery({ queryKey: ['integrantes'], queryFn: fetchIntegrantes })
+
+  const lista = filtraAuditoria(linhas ?? [], acao, pessoa)
+
+  return (
+    <>
+      <div className="h" style={{ fontSize: 17, marginBottom: 12 }}>
+        Auditoria
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        <span style={{ width: 160 }}>
+          <Select
+            value={acao}
+            onChange={setAcao}
+            options={[
+              ['todas', 'Todas as ações'],
+              ...(Object.entries(ACAO_LABEL) as [AcaoAuditoria, string][]),
+            ]}
+            ariaLabel="Ação"
+          />
+        </span>
+        <span style={{ width: 200 }}>
+          <Select
+            value={pessoa}
+            onChange={setPessoa}
+            options={[
+              ['todas', 'Todas as pessoas'],
+              ...(integrantes ?? []).map((p) => [p.id, p.nome] as [string, string]),
+            ]}
+            ariaLabel="Pessoa"
+          />
+        </span>
+      </div>
+
+      <div className="card" style={{ overflow: 'hidden' }}>
+        {lista.length === 0 && (
+          <div style={{ padding: '14px 16px', fontSize: 12.5, color: 'var(--muted)' }}>
+            Nada registrado ainda.
+          </div>
+        )}
+        {lista.map((l, i) => (
+          <div
+            key={l.id}
+            style={{
+              display: 'flex',
+              gap: 10,
+              alignItems: 'baseline',
+              padding: '10px 14px',
+              fontSize: 12.5,
+              flexWrap: 'wrap',
+              borderTop: i > 0 ? '1px solid var(--border)' : undefined,
+            }}
+          >
+            <span
+              className="tag"
+              style={{ background: 'var(--chip-soft)', color: 'var(--primary-dark)' }}
+            >
+              {ACAO_LABEL[l.acao]}
+            </span>
+            <b>{l.alvo?.nome ?? '—'}</b>
+            <span style={{ flex: 1, minWidth: 140, color: 'var(--ink-soft)' }}>
+              {resumoDaLinha(l)}
+            </span>
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+              por {l.autor?.nome ?? 'sistema'} · {fmtDataCurta(l.created_at.slice(0, 10))}
+            </span>
+          </div>
+        ))}
       </div>
     </>
   )
