@@ -20,6 +20,8 @@ const sq = (posicao: number, etapa: SquareEtapa, modelo = 'm1', resp: string | n
   posicao,
   etapa,
   responsavel_id: resp,
+  miolo_por: null,
+  borda_por: null,
 })
 
 const modelo = (id: string, letra: string): MantaModelo => ({

@@ -8,6 +8,8 @@ import { separaArquivados } from '../../lib/arquivo'
 import { urlsDasCapas } from '../../lib/capa'
 import type { EstoqueCategoria, EstoqueItem } from '../../types/database'
 import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
+import { useOrdenacao } from '../../components/ui/useOrdenacao'
+import { ColunaOrdenavel } from '../../components/ui/CabecalhoOrdenavel'
 import {
   disponivel,
   emprestadoPorItem,
@@ -22,6 +24,10 @@ export const ESTO_TABS: [EstoqueCategoria, string][] = [
   ['outros', 'Outros'],
   ['feira', 'Itens de feira'],
 ]
+
+/* As quatro colunas mudam de rótulo por aba, mas ordenam sempre o mesmo dado */
+type ChaveEstoque = 'nome' | 'detalhe' | 'disponivel' | 'ultima'
+const CHAVES: ChaveEstoque[] = ['nome', 'detalhe', 'disponivel', 'ultima']
 
 const COLS: Record<EstoqueCategoria, [string, string, string, string]> = {
   novelos: ['MARCA / LINHA', 'COR', 'DISP.', 'EMPR.'],
@@ -65,6 +71,7 @@ export function EstoquePage() {
   const { can } = useAuth()
   const acoesArquivo = useAcoesArquivo()
   const [estoTab, setEstoTab] = useState<EstoqueCategoria>('novelos')
+  const ord = useOrdenacao<ChaveEstoque>('nome')
   const [verArquivados, setVerArquivados] = useState(false)
 
   const {
@@ -85,6 +92,18 @@ export function EstoquePage() {
   const { ativos, arquivados } = separaArquivados(itens ?? [])
   const rows = (verArquivados ? arquivados : ativos).filter((i) => i.categoria === estoTab)
   const count = rows.reduce((s, i) => s + disponivel(i, emprestados.get(i.id) ?? 0), 0)
+
+  const ordenados = ord.ordenar(rows, (i, k) =>
+    k === 'nome'
+      ? i.nome
+      : k === 'detalhe'
+        ? (i.detalhe ?? '')
+        : k === 'disponivel'
+          ? disponivel(i, emprestados.get(i.id) ?? 0)
+          : i.categoria === 'feira'
+            ? i.vendidos
+            : (emprestados.get(i.id) ?? 0),
+  )
 
   const podeMexer = can('devolucoes')
 
@@ -205,10 +224,19 @@ export function EstoquePage() {
             )}
           </div>
 
-          <div className="lbl linha-estoque cabecalho">
-            {COLS[estoTab].map((c) => (
-              <div key={c}>{c}</div>
-            ))}
+          <div className="lbl linha-estoque cabecalho" role="row">
+            {COLS[estoTab].map((c, i) => {
+              const k = CHAVES[i]
+              return (
+                <ColunaOrdenavel
+                  key={c}
+                  rotulo={c}
+                  ativa={ord.coluna === k}
+                  direcao={ord.direcao}
+                  aoClicar={() => ord.alternar(k, k === 'nome' || k === 'detalhe' ? 'asc' : 'desc')}
+                />
+              )
+            })}
             <div />
           </div>
 
@@ -225,7 +253,7 @@ export function EstoquePage() {
               Nada cadastrado nesta categoria ainda.
             </div>
           )}
-          {rows.map(renderRow)}
+          {ordenados.map(renderRow)}
         </div>
 
         <div>

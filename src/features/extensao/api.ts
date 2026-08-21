@@ -76,6 +76,20 @@ export function linhasDoRelatorio(
   linhas: { nome: string; diurno: string; noturno: string; total: string; entregas: number }[],
 ): string {
   const cab = ['Integrante', 'Diurno', 'Noturno', 'Total', 'Entregas'].join('\t')
-  const corpo = linhas.map((l) => [l.nome, l.diurno, l.noturno, l.total, l.entregas].join('\t'))
+  // vírgula decimal: a planilha daqui é pt-BR, e "3.5" entraria como texto
+  const corpo = linhas.map((l) =>
+    [l.nome, l.diurno, l.noturno, l.total, String(l.entregas).replace('.', ',')].join('\t'),
+  )
   return [cab, ...corpo].join('\n')
+}
+
+/* Quem participou de cada semestre. A vista no banco resolve o join
+   presencas → encontros → semestre; aqui é só a leitura. */
+export async function fetchParticipacao(semestreId: string): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from('participacao_semestre')
+    .select('integrante_id')
+    .eq('semestre_id', semestreId)
+  if (error) throw error
+  return new Set(((data ?? []) as { integrante_id: string }[]).map((l) => l.integrante_id))
 }

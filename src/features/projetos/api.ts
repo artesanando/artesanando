@@ -57,6 +57,9 @@ export interface Square {
   posicao: number
   etapa: SquareEtapa
   responsavel_id: string | null
+  /** quem fez cada metade — meio square também é entrega */
+  miolo_por: string | null
+  borda_por: string | null
 }
 
 export interface Faixa {
@@ -333,6 +336,20 @@ export async function inserirAtividade(a: {
 }
 
 /** Registrar produção: marca a etapa (e quem fez) dos squares selecionados no mapa */
+/* Cada metade do square guarda quem a fez. Voltar uma etapa limpa a metade
+   correspondente — senão alguém levaria crédito por trabalho desfeito. */
+function creditoDaEtapa(etapa: SquareEtapa, quem: string | null) {
+  switch (etapa) {
+    case 'afazer':
+      return { miolo_por: null, borda_por: null }
+    case 'miolo':
+    case 'aguardando_borda':
+      return { miolo_por: quem, borda_por: null }
+    default:
+      return { borda_por: quem }
+  }
+}
+
 export async function marcarSquares(opts: {
   projetoId: string
   ids: string[]
@@ -346,7 +363,13 @@ export async function marcarSquares(opts: {
 
   const { error } = await supabase
     .from('squares')
-    .update({ etapa, responsavel_id: etapa === 'afazer' ? null : responsavelId })
+    .update({
+      etapa,
+      responsavel_id: etapa === 'afazer' ? null : responsavelId,
+      // quem fez o miolo não pode ser apagada quando outra pessoa marca a borda:
+      // o normal aqui é o square ser dividido entre duas
+      ...creditoDaEtapa(etapa, responsavelId),
+    })
     .in('id', ids)
   if (error) throw error
 

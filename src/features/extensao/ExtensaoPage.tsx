@@ -7,13 +7,18 @@ import { Campo, useFormulario } from '../../components/ui/Campo'
 import { DatePicker, MenuKebab, Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
-import { fmtDataCurta, fmtDataLonga, hojeIso } from '../../lib/format'
+import { fmtDataCurta, fmtDataLonga, fmtEntrega, hojeIso } from '../../lib/format'
 import { fetchSemestres, useSemestreAtivo } from '../../lib/semestre'
 import { NIVEL_LABEL, TURNO_LABEL, type Nivel } from '../../types/database'
 import { entregasDe, fetchEntregasLight, fetchIntegrantes } from '../integrantes/api'
 import { avaliaRegra, textoDaLinha, TIPO_LABEL, type TipoLinha } from './creditos'
 import { IconX } from '../../components/ui/icons'
 import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
+import { AjudaCabecalho } from '../../components/ui/AjudaCabecalho'
+import { soDoSemestre, useParticipantes } from './useParticipantes'
+import { CampoBusca, filtraLinhas } from './CampoBusca'
+import { ColunaOrdenavel } from '../../components/ui/CabecalhoOrdenavel'
+import { useOrdenacao } from '../../components/ui/useOrdenacao'
 import {
   ACAO_LABEL,
   criarBloco,
@@ -59,6 +64,16 @@ const SECOES: [Secao, string][] = [
 ]
 
 const NIVEIS: Nivel[] = ['iniciante', 'experiente']
+
+/* O que entra em cada coluna. O total não é a soma dos dois turnos, e entrega
+   virou número quebrado quando o square passou a contar por metade — as duas
+   coisas confundiram quem lê o relatório. */
+const AJUDA_TOTAL =
+  'Presenças sobre os encontros do turno dela: quem é só do noturno não leva falta por encontro diurno. Por isso não é a soma de diurno e noturno.'
+const AJUDA_ENTREGAS =
+  'Peças entregues no semestre: cada amigurumi concluído e cada faixa feita valem 1; no granny square, o miolo vale 0,5 e a borda 0,5.'
+const AJUDA_SQUARES =
+  'O square costuma ser dividido: quem faz o miolo leva 0,5 e quem faz a borda leva 0,5. Quem fez as duas metades leva 1.'
 
 const TIPOS: [TipoLinha, string][] = (
   ['amigurumi', 'granny', 'faixa', 'frequencia', 'mentoria'] as TipoLinha[]
@@ -143,6 +158,9 @@ const doSemestre = <T extends { semestre_id: string | null }>(linhas: T[], id: s
 
 function Frequencia({ semestreId }: { semestreId: string | null }) {
   const toast = useToast()
+  const [busca, setBusca] = useState('')
+  const ord = useOrdenacao<'nome' | 'diurno' | 'noturno' | 'total' | 'entregas'>('nome')
+  const participantes = useParticipantes(semestreId)
   const hoje = hojeIso()
   const { data: integrantes } = useQuery({ queryKey: ['integrantes'], queryFn: fetchIntegrantes })
   const { data: encontros } = useQuery({ queryKey: ['encontros'], queryFn: fetchEncontros })
@@ -150,7 +168,7 @@ function Frequencia({ semestreId }: { semestreId: string | null }) {
   const { data: entregas } = useQuery({ queryKey: ['entregas-light'], queryFn: fetchEntregasLight })
 
   const ativos = doSemestre(encontros ?? [], semestreId)
-  const linhas = (integrantes ?? []).map((p) => {
+  const linhas = soDoSemestre(integrantes ?? [], participantes, semestreId).map((p) => {
     const f = frequenciaDe(p.id, ativos, presencas ?? [], hoje, p.turno)
     return {
       id: p.id,
@@ -163,12 +181,22 @@ function Frequencia({ semestreId }: { semestreId: string | null }) {
     }
   })
 
+  const visiveis = ord.ordenar(filtraLinhas(linhas, busca), (l, k) =>
+    k === 'nome'
+      ? l.nome
+      : k === 'entregas'
+        ? l.entregas
+        : k === 'total'
+          ? l.f.total.pct
+          : l.f[k].pct,
+  )
+
   const copiar = async () => {
     const texto = linhasDoRelatorio(
       linhas.map((l) => ({
         nome: l.nome,
-        diurno: `${l.f.diurno.presentes}/${l.f.diurno.total}`,
-        noturno: `${l.f.noturno.presentes}/${l.f.noturno.total}`,
+        diurno: `${l.f.diurno.pct}%`,
+        noturno: `${l.f.noturno.pct}%`,
         total: `${l.f.total.pct}%`,
         entregas: l.entregas,
       })),
@@ -197,20 +225,53 @@ function Frequencia({ semestreId }: { semestreId: string | null }) {
         </button>
       </div>
 
+      <CampoBusca valor={busca} aoMudar={setBusca} />
+
       <div className="card" style={{ borderRadius: 14, overflow: 'hidden' }}>
-        <div className="lbl linha-extensao cabecalho">
-          <div>INTEGRANTE</div>
-          <div style={{ textAlign: 'center' }}>DIURNO</div>
-          <div style={{ textAlign: 'center' }}>NOTURNO</div>
-          <div style={{ textAlign: 'center' }}>TOTAL</div>
-          <div style={{ textAlign: 'center' }}>ENTREGAS</div>
+        <div className="lbl linha-extensao cabecalho" role="row">
+          <ColunaOrdenavel
+            rotulo="INTEGRANTE"
+            ativa={ord.coluna === 'nome'}
+            direcao={ord.direcao}
+            aoClicar={() => ord.alternar('nome')}
+          />
+          <ColunaOrdenavel
+            rotulo="DIURNO"
+            centro
+            ativa={ord.coluna === 'diurno'}
+            direcao={ord.direcao}
+            aoClicar={() => ord.alternar('diurno', 'desc')}
+          />
+          <ColunaOrdenavel
+            rotulo="NOTURNO"
+            centro
+            ativa={ord.coluna === 'noturno'}
+            direcao={ord.direcao}
+            aoClicar={() => ord.alternar('noturno', 'desc')}
+          />
+          <ColunaOrdenavel
+            rotulo="TOTAL"
+            centro
+            ativa={ord.coluna === 'total'}
+            direcao={ord.direcao}
+            aoClicar={() => ord.alternar('total', 'desc')}
+            extra={<AjudaCabecalho texto={AJUDA_TOTAL} />}
+          />
+          <ColunaOrdenavel
+            rotulo="ENTREGAS"
+            centro
+            ativa={ord.coluna === 'entregas'}
+            direcao={ord.direcao}
+            aoClicar={() => ord.alternar('entregas', 'desc')}
+            extra={<AjudaCabecalho texto={AJUDA_ENTREGAS} />}
+          />
         </div>
-        {linhas.length === 0 && (
+        {visiveis.length === 0 && (
           <div style={{ padding: 18, fontSize: 13, color: 'var(--muted)' }}>
-            Nenhuma integrante cadastrada ainda.
+            {busca ? 'Ninguém com esse nome.' : 'Nenhuma integrante neste semestre ainda.'}
           </div>
         )}
-        {linhas.map((l) => (
+        {visiveis.map((l) => (
           <div key={l.id} className="linha-extensao">
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
               <AvatarPerfil
@@ -225,10 +286,24 @@ function Frequencia({ semestreId }: { semestreId: string | null }) {
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>{TURNO_LABEL[l.turno]}</div>
               </div>
             </div>
-            <Celula rotulo="DIURNO" valor={`${l.f.diurno.presentes}/${l.f.diurno.total}`} />
-            <Celula rotulo="NOTURNO" valor={`${l.f.noturno.presentes}/${l.f.noturno.total}`} />
-            <Celula rotulo="TOTAL" valor={`${l.f.total.pct}%`} destaque />
-            <Celula rotulo="ENTREGAS" valor={String(l.entregas)} />
+            {/* os três em %, com a fração no title de quem quiser conferir */}
+            <Celula
+              rotulo="DIURNO"
+              valor={`${l.f.diurno.pct}%`}
+              titulo={`${l.f.diurno.presentes} de ${l.f.diurno.total} encontros diurnos`}
+            />
+            <Celula
+              rotulo="NOTURNO"
+              valor={`${l.f.noturno.pct}%`}
+              titulo={`${l.f.noturno.presentes} de ${l.f.noturno.total} encontros noturnos`}
+            />
+            <Celula
+              rotulo="TOTAL"
+              valor={`${l.f.total.pct}%`}
+              titulo={`${l.f.total.presentes} de ${l.f.total.total} encontros`}
+              destaque
+            />
+            <Celula rotulo="ENTREGAS" valor={fmtEntrega(l.entregas)} />
           </div>
         ))}
       </div>
@@ -240,13 +315,15 @@ function Celula({
   rotulo,
   valor,
   destaque,
+  titulo,
 }: {
   rotulo: string
   valor: string
   destaque?: boolean
+  titulo?: string
 }) {
   return (
-    <div className="cel-extensao">
+    <div className="cel-extensao" title={titulo}>
       <span className="rotulo-extensao">{rotulo}</span>
       <b style={{ fontSize: 13, color: destaque ? 'var(--accent)' : 'var(--ink-soft)' }}>{valor}</b>
     </div>
@@ -256,19 +333,21 @@ function Celula({
 /* ---------- Entregas ---------- */
 
 function Entregas({ semestreId }: { semestreId: string | null }) {
+  const [busca, setBusca] = useState('')
+  const ord = useOrdenacao<'nome' | 'amigurumis' | 'faixas' | 'grannies' | 'total'>('total', 'desc')
+  const participantes = useParticipantes(semestreId)
   const { data: integrantes } = useQuery({ queryKey: ['integrantes'], queryFn: fetchIntegrantes })
   const { data: entregas } = useQuery({ queryKey: ['entregas-light'], queryFn: fetchEntregasLight })
 
-  const linhas = (integrantes ?? [])
-    .map((p) => ({
-      id: p.id,
-      nome: p.nome,
-      ...(entregas
-        ? entregasDe(p.id, entregas, semestreId)
-        : { amigurumis: 0, faixas: 0, grannies: 0, total: 0 }),
-    }))
-    .sort((a, b) => b.total - a.total)
+  const linhas = soDoSemestre(integrantes ?? [], participantes, semestreId).map((p) => ({
+    id: p.id,
+    nome: p.nome,
+    ...(entregas
+      ? entregasDe(p.id, entregas, semestreId)
+      : { amigurumis: 0, faixas: 0, grannies: 0, total: 0 }),
+  }))
 
+  const visiveis = ord.ordenar(filtraLinhas(linhas, busca), (l, k) => (k === 'nome' ? l.nome : l[k]))
   const soma = linhas.reduce((s, l) => s + l.total, 0)
 
   return (
@@ -277,24 +356,45 @@ function Entregas({ semestreId }: { semestreId: string | null }) {
         Entregas do semestre
       </div>
       <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 16 }}>
-        {soma} peças entregues no total
+        {fmtEntrega(soma)} peças entregues no total
       </div>
 
+      <CampoBusca valor={busca} aoMudar={setBusca} />
+
       <div className="card" style={{ borderRadius: 14, overflow: 'hidden' }}>
-        <div className="lbl linha-extensao cabecalho">
-          <div>INTEGRANTE</div>
-          <div style={{ textAlign: 'center' }}>AMIGURUMIS</div>
-          <div style={{ textAlign: 'center' }}>FAIXAS</div>
-          <div style={{ textAlign: 'center' }}>SQUARES</div>
-          <div style={{ textAlign: 'center' }}>TOTAL</div>
+        <div className="lbl linha-extensao cabecalho" role="row">
+          <ColunaOrdenavel
+            rotulo="INTEGRANTE"
+            ativa={ord.coluna === 'nome'}
+            direcao={ord.direcao}
+            aoClicar={() => ord.alternar('nome')}
+          />
+          {(
+            [
+              ['amigurumis', 'AMIGURUMIS'],
+              ['faixas', 'FAIXAS'],
+              ['grannies', 'SQUARES'],
+              ['total', 'TOTAL'],
+            ] as const
+          ).map(([k, rotulo]) => (
+            <ColunaOrdenavel
+              key={k}
+              rotulo={rotulo}
+              centro
+              ativa={ord.coluna === k}
+              direcao={ord.direcao}
+              aoClicar={() => ord.alternar(k, 'desc')}
+              extra={k === 'grannies' ? <AjudaCabecalho texto={AJUDA_SQUARES} /> : undefined}
+            />
+          ))}
         </div>
-        {linhas.map((l) => (
+        {visiveis.map((l) => (
           <div key={l.id} className="linha-extensao">
             <b style={{ fontSize: 13 }}>{l.nome}</b>
             <Celula rotulo="AMIGURUMIS" valor={String(l.amigurumis)} />
             <Celula rotulo="FAIXAS" valor={String(l.faixas)} />
-            <Celula rotulo="SQUARES" valor={String(l.grannies)} />
-            <Celula rotulo="TOTAL" valor={String(l.total)} destaque />
+            <Celula rotulo="SQUARES" valor={fmtEntrega(l.grannies)} />
+            <Celula rotulo="TOTAL" valor={fmtEntrega(l.total)} destaque />
           </div>
         ))}
       </div>
@@ -683,6 +783,8 @@ function Arquivos({ semestreId }: { semestreId: string | null }) {
    A regra é blocos (E) de alternativas (OU) — ver `creditos.ts`. */
 function Creditos({ semestreId }: { semestreId: string | null }) {
   const { profile } = useAuth()
+  const [busca, setBusca] = useState('')
+  const participantes = useParticipantes(semestreId)
   const qc = useQueryClient()
   const toast = useToast()
   const hoje = hojeIso()
@@ -733,7 +835,7 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
 
   const doSem = doSemestre(encontros ?? [], semestreId)
 
-  const linhas = (integrantes ?? []).map((p) => {
+  const linhas = soDoSemestre(integrantes ?? [], participantes, semestreId).map((p) => {
     const freq = frequenciaDe(p.id, doSem, presencas ?? [], hoje, p.turno)
     const dela = entregas
       ? entregasDe(p.id, entregas, semestreId)
@@ -835,8 +937,12 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
       <div className="h" style={{ fontSize: 17, marginBottom: 12 }}>
         Quem cumpriu
       </div>
+      <CampoBusca valor={busca} aoMudar={setBusca} />
       <div className="card" style={{ overflow: 'hidden' }}>
-        {linhas.map(({ p, marca, av }, i) => (
+        {filtraLinhas(
+          linhas.map((l) => ({ ...l, nome: l.p.nome })),
+          busca,
+        ).map(({ p, marca, av }, i) => (
           <div
             key={p.id}
             style={{

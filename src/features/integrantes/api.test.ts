@@ -19,11 +19,13 @@ describe('entregasDe', () => {
       { ...s1, responsavel_id: 'a', status: 'feita' },
       { ...s1, responsavel_id: 'a', status: 'afazer' },
     ],
+    /* Square guarda as duas metades: 'a' fez os dois inteiros (2,0) e o miolo de
+       um terceiro (0,5); 'c' fez a borda desse mesmo terceiro (0,5). */
     squares: [
-      { ...s1, responsavel_id: 'a', etapa: 'pronto' },
-      { ...s1, responsavel_id: 'a', etapa: 'pronto' },
-      { ...s1, responsavel_id: 'a', etapa: 'borda' },
-      { ...s1, responsavel_id: 'c', etapa: 'pronto' },
+      { ...s1, responsavel_id: 'a', etapa: 'pronto', miolo_por: 'a', borda_por: 'a' },
+      { ...s1, responsavel_id: 'a', etapa: 'pronto', miolo_por: 'a', borda_por: 'a' },
+      { ...s1, responsavel_id: 'c', etapa: 'pronto', miolo_por: 'a', borda_por: 'c' },
+      { ...s1, responsavel_id: 'b', etapa: 'afazer', miolo_por: null, borda_por: null },
     ],
   }
 
@@ -32,17 +34,22 @@ describe('entregasDe', () => {
     expect(entregasDe('a', dados)).toEqual({
       amigurumis: 2,
       faixas: 1,
-      grannies: 2,
-      total: 5,
+      grannies: 2.5,
+      total: 5.5,
     })
+  })
+
+  it('meio square conta como meia entrega', () => {
+    // 'c' só fez a borda de um square
+    expect(entregasDe('c', dados).grannies).toBe(0.5)
   })
 
   it('com semestre, só conta peça de projeto daquele semestre', () => {
     expect(entregasDe('a', dados, 's1')).toEqual({
       amigurumis: 1,
       faixas: 1,
-      grannies: 2,
-      total: 4,
+      grannies: 2.5,
+      total: 4.5,
     })
     expect(entregasDe('a', dados, 's2')).toEqual({
       amigurumis: 1,
@@ -56,12 +63,12 @@ describe('entregasDe', () => {
     expect(entregasDe('c', dados)).toEqual({
       amigurumis: 0,
       faixas: 0,
-      grannies: 1,
-      total: 1,
+      grannies: 0.5,
+      total: 0.5,
     })
   })
 
-  it('square que ainda não está pronto não conta como entrega', () => {
+  it('square que ninguém começou não conta para ninguém', () => {
     expect(entregasDe('b', dados).grannies).toBe(0)
   })
 })

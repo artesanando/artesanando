@@ -368,6 +368,15 @@ describe('configurações', () => {
     expect(screen.queryByRole('button', { name: 'Encontros' })).not.toBeInTheDocument()
   })
 
+  it('a tabela ordena ao clicar no cabeçalho', async () => {
+    __login()
+    renderAt('/configuracoes')
+    const cab = await screen.findByRole('columnheader', { name: /INTEGRANTE/ })
+    expect(cab).toHaveAttribute('aria-sort', 'ascending')
+    await userEvent.click(screen.getByRole('button', { name: 'INTEGRANTE' }))
+    expect(cab).toHaveAttribute('aria-sort', 'descending')
+  })
+
   it('a permissão de presença entra na tabela, e a de moderação sai', async () => {
     __login()
     renderAt('/configuracoes')
@@ -552,6 +561,16 @@ describe('atividade de extensão', () => {
     expect(linha).toHaveAttribute('aria-expanded', 'true')
     // a ata do dia lista os nomes de quem esteve presente
     expect(screen.getAllByText(/Cândida Nunes/).length).toBeGreaterThan(1)
+  })
+
+  it('a frequência tem busca por nome e explica as colunas', async () => {
+    __login()
+    renderAt('/extensao')
+    await userEvent.click(await screen.findByRole('button', { name: 'Frequência' }))
+    expect(screen.getByLabelText('Buscar integrante')).toBeInTheDocument()
+    // o total não é a soma dos turnos, e a entrega virou fracionária
+    expect(screen.getByRole('button', { name: /não é a soma de diurno e noturno/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /o miolo vale 0,5 e a borda 0,5/ })).toBeInTheDocument()
   })
 
   it('integrante não entra na área de extensão', async () => {

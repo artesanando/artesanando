@@ -12,6 +12,8 @@ import { definirPapel } from '../integrantes/api'
 import { fetchPermissoes, togglePermissao, type PermCol } from './api'
 import { IconCadeado } from '../../components/ui/icons'
 import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
+import { useOrdenacao } from '../../components/ui/useOrdenacao'
+import { ColunaOrdenavel } from '../../components/ui/CabecalhoOrdenavel'
 
 type Secao = 'permissoes' | 'projeto'
 
@@ -90,6 +92,15 @@ function Permissoes() {
 
   // a grade da tabela conta as colunas de permissão mais a de administradora
   const colunas = { '--n-col': COLS.length + 1 } as CSSProperties
+  const ord = useOrdenacao<PermCol | 'nome' | 'papel'>('nome')
+
+  /* Admin conta como ligada em tudo: é o que a tabela mostra, então é o que ela
+     tem que ordenar. */
+  const ordenados = ord.ordenar(rows ?? [], (p, k) => {
+    if (k === 'nome') return p.nome
+    if (k === 'papel') return p.papel === 'admin' ? 1 : 0
+    return p.papel === 'admin' || (p.permissoes?.[k] ?? false) ? 1 : 0
+  })
 
   const toggle = useMutation({
     mutationFn: ({ id, col, value }: { id: string; col: PermCol; value: boolean }) =>
@@ -161,14 +172,30 @@ function Permissoes() {
       </div>
 
       <div className="card" style={{ borderRadius: 14, overflow: 'hidden' }}>
-        <div className="lbl linha-perm cabecalho" style={colunas}>
-          <div>INTEGRANTE</div>
-          {COLS.map(([, label]) => (
-            <div key={label} style={{ textAlign: 'center' }}>
-              {label}
-            </div>
+        <div className="lbl linha-perm cabecalho" style={colunas} role="row">
+          <ColunaOrdenavel
+            rotulo="INTEGRANTE"
+            ativa={ord.coluna === 'nome'}
+            direcao={ord.direcao}
+            aoClicar={() => ord.alternar('nome')}
+          />
+          {COLS.map(([col, label]) => (
+            <ColunaOrdenavel
+              key={label}
+              rotulo={label}
+              centro
+              ativa={ord.coluna === col}
+              direcao={ord.direcao}
+              aoClicar={() => ord.alternar(col, 'desc')}
+            />
           ))}
-          <div style={{ textAlign: 'center' }}>{COL_ADMIN}</div>
+          <ColunaOrdenavel
+            rotulo={COL_ADMIN}
+            centro
+            ativa={ord.coluna === 'papel'}
+            direcao={ord.direcao}
+            aoClicar={() => ord.alternar('papel', 'desc')}
+          />
         </div>
         {isLoading && (
           <div style={{ padding: 18, fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>
@@ -183,7 +210,7 @@ function Permissoes() {
             Nenhuma integrante cadastrada ainda.
           </div>
         )}
-        {rows?.map((p) => {
+        {ordenados.map((p) => {
           const admin = p.papel === 'admin'
           return (
           <div key={p.id} className="linha-perm" style={colunas}>

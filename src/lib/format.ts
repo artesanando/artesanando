@@ -72,3 +72,8 @@ export function hojeIso(): string {
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
+
+/* Entrega pode ser fracionária: meio square é meia entrega. Mostra "3,5" e
+   "4", nunca "4,0" — o zero à direita só polui a tabela. */
+export const fmtEntrega = (n: number) =>
+  Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.', ',')

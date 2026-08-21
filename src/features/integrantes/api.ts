@@ -35,10 +35,13 @@ interface Peca {
   projetos: { semestre_id: string | null } | null
 }
 
+/** O square guarda as duas metades separadas — ver `MEIO_SQUARE` */
+export type PecaSquare = Peca & { etapa: string; miolo_por: string | null; borda_por: string | null }
+
 export interface EntregasLight {
   unidades: (Peca & { status: string })[]
   faixas: (Peca & { status: string })[]
-  squares: (Peca & { etapa: string })[]
+  squares: PecaSquare[]
 }
 
 export async function fetchEntregasLight(): Promise<EntregasLight> {
@@ -46,7 +49,7 @@ export async function fetchEntregasLight(): Promise<EntregasLight> {
   const [un, fx, sq] = await Promise.all([
     supabase.from('unidades').select(`responsavel_id, status, ${projeto}`),
     supabase.from('faixas').select(`responsavel_id, status, ${projeto}`),
-    supabase.from('squares').select(`responsavel_id, etapa, ${projeto}`),
+    supabase.from('squares').select(`responsavel_id, etapa, miolo_por, borda_por, ${projeto}`),
   ])
   if (un.error || fx.error || sq.error) throw un.error ?? fx.error ?? sq.error
   return {
@@ -124,8 +127,28 @@ export function entregasDe(
 
   const amigurumis = dados.unidades.filter((u) => dela(u) && u.status === 'concluida').length
   const faixas = dados.faixas.filter((f) => dela(f) && f.status === 'feita').length
-  const grannies = dados.squares.filter((s) => dela(s) && s.etapa === 'pronto').length
+  const grannies = grannyDe(integranteId, dados.squares, semestreId)
   return { amigurumis, faixas, grannies, total: amigurumis + faixas + grannies }
+}
+
+/** Miolo e borda valem metade cada; square inteiro, um */
+export const MEIO_SQUARE = 0.5
+
+/* Um square é quase sempre feito por duas pessoas: uma faz o miolo, outra a
+   borda. Contar só quem terminou dava a entrega inteira para a segunda e nada
+   para a primeira. Quem fez as duas metades leva o square inteiro. */
+export function grannyDe(
+  integranteId: string,
+  squares: PecaSquare[],
+  semestreId: string | null = null,
+): number {
+  let total = 0
+  for (const s of squares) {
+    if (semestreId && s.projetos?.semestre_id !== semestreId) continue
+    if (s.miolo_por === integranteId) total += MEIO_SQUARE
+    if (s.borda_por === integranteId) total += MEIO_SQUARE
+  }
+  return total
 }
 
 /** Itens que a integrante ainda tem em casa (saldo dos empréstimos ativos) */
