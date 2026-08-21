@@ -21,6 +21,7 @@ import { PerfilPage } from './features/perfil/PerfilPage'
 import { ConfigPage } from './features/config/ConfigPage'
 import { ExtensaoPage } from './features/extensao/ExtensaoPage'
 import { NotFoundPage } from './features/NotFoundPage'
+import { MuralPage } from './features/mural/MuralPage'
 
 function Splash() {
   return (
@@ -110,6 +111,7 @@ function AppRoutes() {
             }
           >
             <Route path="/" element={<InicioPage />} />
+            <Route path="/mural" element={<MuralPage />} />
             <Route path="/projetos" element={<ProjetosPage />} />
             <Route path="/projetos/:id" element={<ProjetoDetalhePage />} />
             <Route path="/integrantes" element={<IntegrantesPage />} />

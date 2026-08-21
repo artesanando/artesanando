@@ -328,6 +328,23 @@ describe('presença (M4)', () => {
   })
 })
 
+describe('mural', () => {
+  it('qualquer integrante vê o mural e os álbuns', async () => {
+    __login(INTEGRANTE_PROFILE)
+    renderAt('/mural')
+    // "Mural" aparece no menu e no título — o botão é o que prova que a página abriu
+    expect(await screen.findByRole('button', { name: '+ Subir fotos' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^Feira de junho/ })).toBeInTheDocument()
+  })
+
+  it('a lateral conta as fotos de cada álbum', async () => {
+    __login()
+    renderAt('/mural')
+    // duas fotos ao todo, uma delas fora de álbum
+    expect(await screen.findByText(/2 fotos · 1 fora de álbum/)).toBeInTheDocument()
+  })
+})
+
 describe('integrantes (M4)', () => {
   it('lista integrantes reais e mostra o painel derivado', async () => {
     __login()

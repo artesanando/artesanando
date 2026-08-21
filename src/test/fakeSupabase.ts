@@ -274,6 +274,36 @@ const UNIDADES_FAKE = [
   },
 ]
 
+const MURAL_ALBUNS_FAKE = [
+  { id: 'al1', nome: 'Feira de junho', criado_por: 'u2', created_at: '2026-06-30T12:00:00Z' },
+]
+
+const MURAL_FOTOS_FAKE = [
+  {
+    id: 'mf1',
+    path: 'mf1.jpg',
+    album_id: 'al1',
+    autor_id: 'u2',
+    created_at: '2026-07-14T12:00:00Z',
+    autor: { nome: 'Ada Lovelace' },
+  },
+  {
+    id: 'mf2',
+    path: 'mf2.jpg',
+    album_id: null,
+    autor_id: 'u1',
+    created_at: '2026-07-15T12:00:00Z',
+    autor: { nome: 'Cândida Nunes' },
+  },
+]
+
+/* quem apareceu em chamada do semestre — a vista `participacao_semestre` */
+const PARTICIPACAO_FAKE = [
+  { semestre_id: 'sem1', integrante_id: 'u1' },
+  { semestre_id: 'sem1', integrante_id: 'u2' },
+  { semestre_id: 'sem1', integrante_id: 'u7' },
+]
+
 const SEMESTRES_FAKE = [
   { id: 'sem1', label: '2026.2', inicio: '2026-07-01', fim: '2026-12-15', ativo: true },
 ]
@@ -381,6 +411,10 @@ const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
   receitas: { single: RECEITAS_FAKE[0], list: RECEITAS_FAKE },
   permissoes: { single: null, list: [] },
   semestres: { single: SEMESTRES_FAKE[0], list: SEMESTRES_FAKE },
+  mural_albuns: { single: MURAL_ALBUNS_FAKE[0], list: MURAL_ALBUNS_FAKE },
+  mural_fotos: { single: MURAL_FOTOS_FAKE[0], list: MURAL_FOTOS_FAKE },
+  participacao_semestre: { single: null, list: PARTICIPACAO_FAKE },
+  perfis_academico: { single: null, list: [] },
   projetos: { single: PROJETOS_FAKE[0], list: PROJETOS_FAKE },
   manta_modelos: { single: MODELOS_FAKE[0], list: MODELOS_FAKE },
   squares: { single: SQUARES_FAKE[0], list: SQUARES_FAKE },

@@ -8,6 +8,7 @@ import {
   IconSeta,
   IconBib,
   IconDash,
+  IconGaleria,
   IconEst,
   IconFin,
   IconInt,
@@ -19,6 +20,7 @@ import {
    assunto de todo mundo, e um item que sempre leva a um aviso é ruído. */
 const ITEMS: { to: string; label: string; Icon: () => ReactElement; perm?: Perm }[] = [
   { to: '/', label: 'Início', Icon: IconDash },
+  { to: '/mural', label: 'Mural', Icon: IconGaleria },
   { to: '/projetos', label: 'Projetos', Icon: IconProj },
   { to: '/integrantes', label: 'Integrantes', Icon: IconInt },
   { to: '/estoque', label: 'Estoque', Icon: IconEst },
