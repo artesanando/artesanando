@@ -433,7 +433,11 @@ textarea.field::placeholder {
   padding: 5px 9px;
   border-radius: 7px;
   pointer-events: none;
-  white-space: nowrap;
+  /* texto de ajuda de coluna passa dos 100 caracteres: nowrap virava uma faixa
+     atravessando a tela inteira */
+  max-width: 260px;
+  white-space: normal;
+  line-height: 1.4;
   animation: pop-entra var(--dur-rapida) var(--ease-entrada);
 }
 

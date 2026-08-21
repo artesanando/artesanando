@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Popover, useGatilho } from './Popover'
 import { PALETTE } from '../../lib/paleta'
@@ -601,30 +601,88 @@ export function MenuKebab({ acoes, ariaLabel = 'Ações' }: { acoes: AcaoMenu[];
 
 /* ---------- Dica (tooltip) ---------- */
 
+interface Caixa {
+  top: number
+  left: number
+  right: number
+  altura: number
+}
+
+const MARGEM = 10
+const BORDA = 8
+
 export function Dica({ texto, children }: { texto: string; children: ReactNode }) {
   const alvo = useRef<HTMLSpanElement>(null)
+  const balao = useRef<HTMLSpanElement>(null)
+  const [caixa, setCaixa] = useState<Caixa | null>(null)
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
 
-  const mostrar = () => {
-    const r = alvo.current?.getBoundingClientRect()
-    if (r) setPos({ top: r.top + r.height / 2 - 12, left: r.right + 10 })
+  /* O invólucro é `display: contents` para não entrar no layout de quem chama —
+     e elemento assim não gera caixa nenhuma: `getBoundingClientRect()` devolve
+     tudo zero, e a dica ia parar no canto de cima da janela. Quem tem caixa é o
+     filho, que é o botão de verdade. */
+  const mostrar = (ponteiro?: { clientX: number; clientY: number }) => {
+    const el = alvo.current?.firstElementChild ?? alvo.current
+    const r = el?.getBoundingClientRect()
+    if (r && (r.width > 0 || r.height > 0)) {
+      setCaixa({ top: r.top, left: r.left, right: r.right, altura: r.height })
+    } else if (ponteiro) {
+      setCaixa({
+        top: ponteiro.clientY,
+        left: ponteiro.clientX,
+        right: ponteiro.clientX,
+        altura: 0,
+      })
+    } else if (r) {
+      setCaixa({ top: r.top, left: r.left, right: r.right, altura: r.height })
+    }
   }
+
+  const esconder = () => {
+    setCaixa(null)
+    setPos(null)
+  }
+
+  /* A posição depende do tamanho do balão, que só se sabe depois de desenhado —
+     por isso ele nasce invisível e só ganha lugar aqui. */
+  useLayoutEffect(() => {
+    if (!caixa) return
+    const b = balao.current?.getBoundingClientRect()
+    const largura = b?.width ?? 0
+    const altura = b?.height ?? 0
+    const cabeADireita = caixa.right + MARGEM + largura <= window.innerWidth - BORDA
+    const left = cabeADireita
+      ? caixa.right + MARGEM
+      : Math.max(BORDA, caixa.left - MARGEM - largura)
+    const teto = Math.max(BORDA, window.innerHeight - altura - BORDA)
+    const top = Math.min(Math.max(BORDA, caixa.top + caixa.altura / 2 - altura / 2), teto)
+    setPos({ top, left })
+  }, [caixa])
 
   return (
     <>
       <span
         ref={alvo}
-        onPointerEnter={mostrar}
-        onPointerLeave={() => setPos(null)}
-        onFocus={mostrar}
-        onBlur={() => setPos(null)}
+        onPointerEnter={(e) => mostrar(e)}
+        onPointerLeave={esconder}
+        onFocus={() => mostrar()}
+        onBlur={esconder}
         style={{ display: 'contents' }}
       >
         {children}
       </span>
-      {pos &&
+      {caixa &&
         createPortal(
-          <span role="tooltip" className="dica" style={{ top: pos.top, left: pos.left }}>
+          <span
+            ref={balao}
+            role="tooltip"
+            className="dica"
+            style={{
+              top: pos?.top ?? 0,
+              left: pos?.left ?? 0,
+              visibility: pos ? 'visible' : 'hidden',
+            }}
+          >
             {texto}
           </span>,
           document.body,
