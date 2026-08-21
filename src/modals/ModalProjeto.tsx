@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
+import { useState, type CSSProperties, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../state/store'
@@ -138,11 +138,27 @@ export function ModalProjeto() {
       ? tamanhoManta(croche ? 'manta_croche' : 'manta_trico', grade.colunas, grade.linhas, peca)
       : null
 
-  /* Herda a medida do esquema escolhido enquanto ninguém digitou a sua. */
-  useEffect(() => {
-    if (!esquema || peca.largura || peca.altura) return
-    setPeca({ largura: esquema.largura_cm, altura: esquema.altura_cm })
-  }, [esquema, peca.largura, peca.altura])
+  /* Trocar de esquema reescreve a medida com a que está salva na biblioteca.
+     Antes ela era herdada só na primeira escolha, então quem trocasse de
+     esquema seguia com o tamanho do anterior — e a manta saía do tamanho
+     errado. Depois de herdada dá para ajustar à mão: a mesma receita rende
+     tamanhos diferentes conforme o fio e a mão. */
+  const escolherEsquema = (id: string) => {
+    const novo = esquemas.find((e) => e.id === id)
+    setEsquemaId(id)
+    setRedim(null)
+    setPeca({ largura: novo?.largura_cm ?? null, altura: novo?.altura_cm ?? null })
+    setAlvo({ largura: null, altura: null })
+    form.aoMudar('manta')
+  }
+
+  /* Os esquemas são de uma técnica só: trocar de técnica solta o que estava
+     escolhido junto com a medida que veio dele. */
+  const trocarTecnica = (t: 'croche' | 'trico') => {
+    if (t === projTec) return
+    setProjTec(t)
+    escolherEsquema('')
+  }
 
   /* Tamanho final editado à mão: recalcula a grade pela mais próxima e mostra o
      que deu antes de aplicar — o número quase nunca fecha redondo. */
@@ -258,14 +274,14 @@ export function ModalProjeto() {
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button
                     type="button"
-                    onClick={() => setProjTec('croche')}
+                    onClick={() => trocarTecnica('croche')}
                     style={tec(projTec === 'croche', 'var(--primary)')}
                   >
                     Crochê
                   </button>
                   <button
                     type="button"
-                    onClick={() => setProjTec('trico')}
+                    onClick={() => trocarTecnica('trico')}
                     style={tec(projTec === 'trico', 'var(--green-dark)')}
                   >
                     Tricô
@@ -316,11 +332,7 @@ export function ModalProjeto() {
                 <Select
                   ariaLabel="Esquema de manta"
                   value={esquemaId}
-                  onChange={(v) => {
-                    setEsquemaId(v)
-                    setRedim(null)
-                    form.aoMudar('manta')
-                  }}
+                  onChange={escolherEsquema}
                   options={[
                     ['', esquemas.length ? 'Escolher…' : 'Nenhum esquema salvo ainda'],
                     ...esquemas.map((e) => [e.id, e.nome] as [string, string]),
@@ -390,6 +402,13 @@ export function ModalProjeto() {
               rotuloAltura={croche ? 'ALTURA DO SQUARE (CM)' : 'ALTURA DA FAIXA (CM)'}
               aoMudar={(patch) => setPeca((m) => ({ ...m, ...patch }))}
             />
+            {esquema && (
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+                {esquema.largura_cm && esquema.altura_cm
+                  ? `medida de ${esquema.nome}; mudar aqui vale só para este projeto`
+                  : `${esquema.nome} não tem tamanho salvo na biblioteca`}
+              </div>
+            )}
             <div
               style={{
                 display: 'flex',
