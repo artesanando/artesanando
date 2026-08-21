@@ -83,6 +83,23 @@ export function linhasDoRelatorio(
   return [cab, ...corpo].join('\n')
 }
 
+/* O RA de todo mundo, para a área de extensão mostrar ao lado do nome. A policy
+   de `perfis_academico` só responde a lista inteira para administradora — e esta
+   área inteira é dela. */
+export async function fetchRas(): Promise<Map<string, string>> {
+  const { data, error } = await supabase.from('perfis_academico').select('profile_id, ra')
+  if (error) throw error
+  const mapa = new Map<string, string>()
+  for (const l of (data ?? []) as { profile_id: string; ra: string | null }[]) {
+    if (l.ra) mapa.set(l.profile_id, l.ra)
+  }
+  return mapa
+}
+
+/** RA da pessoa, ou o travessão de quem ainda não preencheu */
+export const raOuTraco = (ras: Map<string, string> | undefined, id: string) =>
+  ras?.get(id) ?? '—'
+
 /* Quem participou de cada semestre. A vista no banco resolve o join
    presencas → encontros → semestre; aqui é só a leitura. */
 export async function fetchParticipacao(semestreId: string): Promise<Set<string>> {

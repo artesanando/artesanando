@@ -89,7 +89,7 @@ export function PerfilPage() {
     const ok = form.checar({
       nome: nome.trim() ? undefined : 'O nome não pode ficar vazio.',
       usuario: usuario.trim() ? undefined : 'O usuário não pode ficar vazio.',
-      ra: !raAtual || RA_VALIDO.test(raAtual) ? undefined : 'O RA tem seis números.',
+      ra: RA_VALIDO.test(raAtual) ? undefined : 'O RA tem seis números.',
     })
     if (!ok) return
     setSalvando(true)
@@ -325,7 +325,7 @@ export function PerfilPage() {
         </div>
 
         <div className="grid2" style={{ marginBottom: 24 }}>
-          <Campo label="RA" erro={form.erros.ra}>
+          <Campo label="RA" obrigatorio erro={form.erros.ra}>
             {(p) => (
               <input
                 {...p}

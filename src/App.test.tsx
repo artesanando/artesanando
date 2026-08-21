@@ -559,6 +559,18 @@ describe('atividade de extensão', () => {
     expect(screen.getByLabelText('Ação')).toBeInTheDocument()
   })
 
+  it('o RA aparece ao lado do nome nas guias, e quem não tem mostra travessão', async () => {
+    __login()
+    renderAt('/extensao')
+    await userEvent.click(await screen.findByRole('button', { name: 'Frequência' }))
+    // a Cândida preencheu; a Ada ainda não
+    expect(await screen.findByText(/100100 ·/)).toBeInTheDocument()
+    expect(screen.getByText(/— ·/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Entregas' }))
+    expect(await screen.findByText('100100')).toBeInTheDocument()
+  })
+
   it('a regra do semestre se monta por blocos de alternativas', async () => {
     __login()
     renderAt('/extensao')

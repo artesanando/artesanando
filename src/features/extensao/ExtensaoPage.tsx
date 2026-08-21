@@ -15,6 +15,7 @@ import { avaliaRegra, textoDaLinha, TIPO_LABEL, type TipoLinha } from './credito
 import { IconX } from '../../components/ui/icons'
 import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 import { AjudaCabecalho } from '../../components/ui/AjudaCabecalho'
+import { fetchRas, raOuTraco } from './api'
 import { soDoSemestre, useParticipantes } from './useParticipantes'
 import { CampoBusca, filtraLinhas } from './CampoBusca'
 import { ColunaOrdenavel } from '../../components/ui/CabecalhoOrdenavel'
@@ -166,6 +167,7 @@ function Frequencia({ semestreId }: { semestreId: string | null }) {
   const { data: encontros } = useQuery({ queryKey: ['encontros'], queryFn: fetchEncontros })
   const { data: presencas } = useQuery({ queryKey: ['presencas'], queryFn: fetchPresencas })
   const { data: entregas } = useQuery({ queryKey: ['entregas-light'], queryFn: fetchEntregasLight })
+  const { data: ras } = useQuery({ queryKey: ['ras'], queryFn: fetchRas })
 
   const ativos = doSemestre(encontros ?? [], semestreId)
   const linhas = soDoSemestre(integrantes ?? [], participantes, semestreId).map((p) => {
@@ -283,7 +285,9 @@ function Frequencia({ semestreId }: { semestreId: string | null }) {
               />
               <div style={{ minWidth: 0 }}>
                 <b style={{ fontSize: 13 }}>{l.nome}</b>
-                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{TURNO_LABEL[l.turno]}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                  {raOuTraco(ras, l.id)} · {TURNO_LABEL[l.turno]}
+                </div>
               </div>
             </div>
             {/* os três em %, com a fração no title de quem quiser conferir */}
@@ -338,6 +342,7 @@ function Entregas({ semestreId }: { semestreId: string | null }) {
   const participantes = useParticipantes(semestreId)
   const { data: integrantes } = useQuery({ queryKey: ['integrantes'], queryFn: fetchIntegrantes })
   const { data: entregas } = useQuery({ queryKey: ['entregas-light'], queryFn: fetchEntregasLight })
+  const { data: ras } = useQuery({ queryKey: ['ras'], queryFn: fetchRas })
 
   const linhas = soDoSemestre(integrantes ?? [], participantes, semestreId).map((p) => ({
     id: p.id,
@@ -390,7 +395,10 @@ function Entregas({ semestreId }: { semestreId: string | null }) {
         </div>
         {visiveis.map((l) => (
           <div key={l.id} className="linha-extensao">
-            <b style={{ fontSize: 13 }}>{l.nome}</b>
+            <div style={{ minWidth: 0 }}>
+              <b style={{ fontSize: 13 }}>{l.nome}</b>
+              <div style={{ fontSize: 11, color: 'var(--faint)' }}>{raOuTraco(ras, l.id)}</div>
+            </div>
             <Celula rotulo="AMIGURUMIS" valor={String(l.amigurumis)} />
             <Celula rotulo="FAIXAS" valor={String(l.faixas)} />
             <Celula rotulo="SQUARES" valor={fmtEntrega(l.grannies)} />
@@ -410,15 +418,18 @@ function Chamadas({ semestreId }: { semestreId: string | null }) {
   const { data: encontros } = useQuery({ queryKey: ['encontros'], queryFn: fetchEncontros })
   const { data: presencas } = useQuery({ queryKey: ['presencas'], queryFn: fetchPresencas })
   const { data: integrantes } = useQuery({ queryKey: ['integrantes'], queryFn: fetchIntegrantes })
+  const { data: ras } = useQuery({ queryKey: ['ras'], queryFn: fetchRas })
 
   const ativos = doSemestre(encontros ?? [], semestreId)
   const lista = encontrosPassados(ativos, hoje)
   const nomePor = new Map((integrantes ?? []).map((p) => [p.id, p.nome]))
 
+  /* O RA vem entre parênteses: a lista já usa ' · ' para separar as pessoas, e
+     um segundo separador ali viraria uma fila de números soltos. */
   const presentesDoDia = (encontroId: string) =>
     (presencas ?? [])
       .filter((p) => p.encontro_id === encontroId && p.presente)
-      .map((p) => nomePor.get(p.integrante_id) ?? '—')
+      .map((p) => `${nomePor.get(p.integrante_id) ?? '—'} (${raOuTraco(ras, p.integrante_id)})`)
       .sort((a, b) => a.localeCompare(b))
 
   return (
@@ -803,6 +814,7 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
   const { data: encontros } = useQuery({ queryKey: ['encontros'], queryFn: fetchEncontros })
   const { data: presencas } = useQuery({ queryKey: ['presencas'], queryFn: fetchPresencas })
   const { data: entregas } = useQuery({ queryKey: ['entregas-light'], queryFn: fetchEntregasLight })
+  const { data: ras } = useQuery({ queryKey: ['ras'], queryFn: fetchRas })
 
   const invalidar = () => {
     qc.invalidateQueries({ queryKey: ['regras-credito', semestreId] })
@@ -958,7 +970,10 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
                 size={26}
                 fontSize={10}
               />
-              <b style={{ fontSize: 13, flex: 1, minWidth: 120 }}>{p.nome}</b>
+              <div style={{ flex: 1, minWidth: 120 }}>
+                <b style={{ fontSize: 13 }}>{p.nome}</b>
+                <div style={{ fontSize: 11, color: 'var(--faint)' }}>{raOuTraco(ras, p.id)}</div>
+              </div>
               <span style={{ fontSize: 11, color: 'var(--muted)' }}>{NIVEL_LABEL[p.nivel]}</span>
               <span
                 className="tag"

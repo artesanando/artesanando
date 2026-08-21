@@ -304,6 +304,12 @@ const PARTICIPACAO_FAKE = [
   { semestre_id: 'sem1', integrante_id: 'u7' },
 ]
 
+/* o RA mora em `perfis_academico`; a Ada é a que ainda não preencheu */
+const RAS_FAKE = [
+  { profile_id: 'u1', ra: '100100' },
+  { profile_id: 'u7', ra: '700700' },
+]
+
 const SEMESTRES_FAKE = [
   { id: 'sem1', label: '2026.2', inicio: '2026-07-01', fim: '2026-12-15', ativo: true },
 ]
@@ -414,7 +420,7 @@ const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
   mural_albuns: { single: MURAL_ALBUNS_FAKE[0], list: MURAL_ALBUNS_FAKE },
   mural_fotos: { single: MURAL_FOTOS_FAKE[0], list: MURAL_FOTOS_FAKE },
   participacao_semestre: { single: null, list: PARTICIPACAO_FAKE },
-  perfis_academico: { single: null, list: [] },
+  perfis_academico: { single: null, list: RAS_FAKE },
   projetos: { single: PROJETOS_FAKE[0], list: PROJETOS_FAKE },
   manta_modelos: { single: MODELOS_FAKE[0], list: MODELOS_FAKE },
   squares: { single: SQUARES_FAKE[0], list: SQUARES_FAKE },
