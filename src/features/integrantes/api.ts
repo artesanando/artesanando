@@ -21,23 +21,32 @@ function normalizaPerfis(data: unknown): Profile[] {
   }))
 }
 
+/* A peça não guarda data de conclusão; quem tem semestre é o projeto. Então a
+   entrega conta no semestre em que o projeto foi criado, e por isso cada linha
+   traz o `semestre_id` dele junto. */
+interface Peca {
+  responsavel_id: string | null
+  projetos: { semestre_id: string | null } | null
+}
+
 export interface EntregasLight {
-  unidades: { responsavel_id: string | null; status: string }[]
-  faixas: { responsavel_id: string | null; status: string }[]
-  squares: { responsavel_id: string | null; etapa: string }[]
+  unidades: (Peca & { status: string })[]
+  faixas: (Peca & { status: string })[]
+  squares: (Peca & { etapa: string })[]
 }
 
 export async function fetchEntregasLight(): Promise<EntregasLight> {
+  const projeto = 'projetos!inner(semestre_id)'
   const [un, fx, sq] = await Promise.all([
-    supabase.from('unidades').select('responsavel_id, status'),
-    supabase.from('faixas').select('responsavel_id, status'),
-    supabase.from('squares').select('responsavel_id, etapa'),
+    supabase.from('unidades').select(`responsavel_id, status, ${projeto}`),
+    supabase.from('faixas').select(`responsavel_id, status, ${projeto}`),
+    supabase.from('squares').select(`responsavel_id, etapa, ${projeto}`),
   ])
   if (un.error || fx.error || sq.error) throw un.error ?? fx.error ?? sq.error
   return {
-    unidades: (un.data ?? []) as EntregasLight['unidades'],
-    faixas: (fx.data ?? []) as EntregasLight['faixas'],
-    squares: (sq.data ?? []) as EntregasLight['squares'],
+    unidades: (un.data ?? []) as unknown as EntregasLight['unidades'],
+    faixas: (fx.data ?? []) as unknown as EntregasLight['faixas'],
+    squares: (sq.data ?? []) as unknown as EntregasLight['squares'],
   }
 }
 
@@ -87,18 +96,29 @@ export async function fetchRas(): Promise<Map<string, string>> {
 
 /* ---------- Derivados (unit-testados) ---------- */
 
+export interface Entregas {
+  amigurumis: number
+  faixas: number
+  grannies: number
+  total: number
+}
+
 /* Granny squares entram na conta desde que o square passou a guardar quem o fez
-   — antes disso, quem só fazia manta de crochê aparecia com zero entregas. */
-export function entregasDe(integranteId: string, dados: EntregasLight) {
-  const amigurumis = dados.unidades.filter(
-    (u) => u.responsavel_id === integranteId && u.status === 'concluida',
-  ).length
-  const faixas = dados.faixas.filter(
-    (f) => f.responsavel_id === integranteId && f.status === 'feita',
-  ).length
-  const grannies = dados.squares.filter(
-    (s) => s.responsavel_id === integranteId && s.etapa === 'pronto',
-  ).length
+   — antes disso, quem só fazia manta de crochê aparecia com zero entregas.
+   `semestreId` nulo conta tudo; com semestre, conta só as peças de projetos
+   daquele semestre, que é o recorte que o relatório de extensão pede. */
+export function entregasDe(
+  integranteId: string,
+  dados: EntregasLight,
+  semestreId: string | null = null,
+): Entregas {
+  const dela = (p: Peca) =>
+    p.responsavel_id === integranteId &&
+    (!semestreId || p.projetos?.semestre_id === semestreId)
+
+  const amigurumis = dados.unidades.filter((u) => dela(u) && u.status === 'concluida').length
+  const faixas = dados.faixas.filter((f) => dela(f) && f.status === 'feita').length
+  const grannies = dados.squares.filter((s) => dela(s) && s.etapa === 'pronto').length
   return { amigurumis, faixas, grannies, total: amigurumis + faixas + grannies }
 }
 

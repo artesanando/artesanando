@@ -9,6 +9,7 @@ import { MenuKebab, Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
 import { hojeIso } from '../../lib/format'
+import { useSemestreAtivo } from '../../lib/semestre'
 import { fetchEmprestimosAtivos } from '../estoque/api'
 import { fetchEncontros, fetchPresencas, frequenciaDe } from '../presenca/api'
 import {
@@ -72,17 +73,23 @@ export function IntegrantesPage() {
   const { data: entregas } = useQuery({ queryKey: ['entregas-light'], queryFn: fetchEntregasLight })
   // a policy decide o que vem: admin recebe todas as linhas, as demais só a própria
   const { data: ras } = useQuery({ queryKey: ['ras'], queryFn: fetchRas })
+  const semestre = useSemestreAtivo()
+
+  /* Frequência e entregas passam a ser do semestre ativo. Antes somavam desde o
+     começo do app, e a ficha dizia "no semestre" mostrando o acumulado de anos. */
+  const doSemestre = (encontros ?? []).filter(
+    (e) => !semestre || e.semestre_id === semestre.id,
+  )
 
   const lista = filtraIntegrantes(integrantes ?? [], busca)
   const sel = (integrantes ?? []).find((p) => p.id === id) ?? lista[0]
 
-  const freqDe = (p: Profile) =>
-    frequenciaDe(p.id, encontros ?? [], presencas ?? [], hoje, p.turno)
+  const freqDe = (p: Profile) => frequenciaDe(p.id, doSemestre, presencas ?? [], hoje, p.turno)
 
   const selFreq = sel ? freqDe(sel) : null
   const selEntregas =
     sel && entregas
-      ? entregasDe(sel.id, entregas)
+      ? entregasDe(sel.id, entregas, semestre?.id ?? null)
       : { amigurumis: 0, faixas: 0, grannies: 0, total: 0 }
   const selEmprestados = sel ? emprestadosDe(sel.id, loans ?? []) : 0
   const vista = vistaFreq === 'ambos' ? 'total' : vistaFreq

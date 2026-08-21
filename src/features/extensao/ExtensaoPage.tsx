@@ -7,7 +7,7 @@ import { DatePicker, MenuKebab, Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
 import { fmtDataCurta, fmtDataLonga, hojeIso } from '../../lib/format'
-import { useSemestreAtivo } from '../../lib/semestre'
+import { fetchSemestres, useSemestreAtivo } from '../../lib/semestre'
 import { TURNO_LABEL } from '../../types/database'
 import { entregasDe, fetchEntregasLight, fetchIntegrantes } from '../integrantes/api'
 import {
@@ -58,7 +58,13 @@ const item = (on: boolean): CSSProperties => ({
    própria em vez de virar mais uma aba de Ajustes. */
 export function ExtensaoPage() {
   const [secao, setSecao] = useState<Secao>('frequencia')
-  const semestre = useSemestreAtivo()
+  const ativo = useSemestreAtivo()
+  const { data: semestres } = useQuery({ queryKey: ['semestres'], queryFn: fetchSemestres })
+
+  /* Lente de leitura, não troca de semestre ativo: dá para conferir o semestre
+     passado sem mexer no que Projetos e Financeiro estão mostrando. */
+  const [escolhido, setEscolhido] = useState<string | null>(null)
+  const semestreId = escolhido ?? ativo?.id ?? null
 
   return (
     <div
@@ -69,8 +75,17 @@ export function ExtensaoPage() {
         <div className="h titulo-pagina" style={{ marginBottom: 2 }}>
           Atividade de extensão
         </div>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
-          {semestre?.label ?? 'sem semestre ativo'}
+        <div style={{ marginBottom: 12 }}>
+          {(semestres ?? []).length > 0 ? (
+            <Select
+              value={semestreId ?? ''}
+              onChange={setEscolhido}
+              options={(semestres ?? []).map((s) => [s.id, s.label] as [string, string])}
+              ariaLabel="Semestre"
+            />
+          ) : (
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>sem semestre ativo</span>
+          )}
         </div>
         {SECOES.map(([k, label]) => (
           <button key={k} style={item(secao === k)} onClick={() => setSecao(k)}>
@@ -80,10 +95,10 @@ export function ExtensaoPage() {
       </div>
 
       <div>
-        {secao === 'frequencia' && <Frequencia />}
-        {secao === 'entregas' && <Entregas />}
-        {secao === 'chamadas' && <Chamadas />}
-        {secao === 'arquivos' && <Arquivos />}
+        {secao === 'frequencia' && <Frequencia semestreId={semestreId} />}
+        {secao === 'entregas' && <Entregas semestreId={semestreId} />}
+        {secao === 'chamadas' && <Chamadas semestreId={semestreId} />}
+        {secao === 'arquivos' && <Arquivos semestreId={semestreId} />}
       </div>
     </div>
   )
@@ -91,7 +106,12 @@ export function ExtensaoPage() {
 
 /* ---------- Frequência ---------- */
 
-function Frequencia() {
+/* Encontros do semestre escolhido. Antes as três primeiras seções somavam tudo
+   desde o começo do app, apesar de o título dizer "do semestre". */
+const doSemestre = <T extends { semestre_id: string | null }>(linhas: T[], id: string | null) =>
+  id ? linhas.filter((l) => l.semestre_id === id) : linhas
+
+function Frequencia({ semestreId }: { semestreId: string | null }) {
   const toast = useToast()
   const hoje = hojeIso()
   const { data: integrantes } = useQuery({ queryKey: ['integrantes'], queryFn: fetchIntegrantes })
@@ -99,7 +119,7 @@ function Frequencia() {
   const { data: presencas } = useQuery({ queryKey: ['presencas'], queryFn: fetchPresencas })
   const { data: entregas } = useQuery({ queryKey: ['entregas-light'], queryFn: fetchEntregasLight })
 
-  const ativos = encontros ?? []
+  const ativos = doSemestre(encontros ?? [], semestreId)
   const linhas = (integrantes ?? []).map((p) => {
     const f = frequenciaDe(p.id, ativos, presencas ?? [], hoje, p.turno)
     return {
@@ -109,7 +129,7 @@ function Frequencia() {
       avatarColor: p.avatar_color,
       avatarUrl: p.avatar_url,
       f,
-      entregas: entregas ? entregasDe(p.id, entregas).total : 0,
+      entregas: entregas ? entregasDe(p.id, entregas, semestreId).total : 0,
     }
   })
 
@@ -205,7 +225,7 @@ function Celula({
 
 /* ---------- Entregas ---------- */
 
-function Entregas() {
+function Entregas({ semestreId }: { semestreId: string | null }) {
   const { data: integrantes } = useQuery({ queryKey: ['integrantes'], queryFn: fetchIntegrantes })
   const { data: entregas } = useQuery({ queryKey: ['entregas-light'], queryFn: fetchEntregasLight })
 
@@ -214,7 +234,7 @@ function Entregas() {
       id: p.id,
       nome: p.nome,
       ...(entregas
-        ? entregasDe(p.id, entregas)
+        ? entregasDe(p.id, entregas, semestreId)
         : { amigurumis: 0, faixas: 0, grannies: 0, total: 0 }),
     }))
     .sort((a, b) => b.total - a.total)
@@ -254,14 +274,14 @@ function Entregas() {
 
 /* ---------- Chamadas ---------- */
 
-function Chamadas() {
+function Chamadas({ semestreId }: { semestreId: string | null }) {
   const hoje = hojeIso()
   const [aberto, setAberto] = useState<string | null>(null)
   const { data: encontros } = useQuery({ queryKey: ['encontros'], queryFn: fetchEncontros })
   const { data: presencas } = useQuery({ queryKey: ['presencas'], queryFn: fetchPresencas })
   const { data: integrantes } = useQuery({ queryKey: ['integrantes'], queryFn: fetchIntegrantes })
 
-  const ativos = encontros ?? []
+  const ativos = doSemestre(encontros ?? [], semestreId)
   const lista = encontrosPassados(ativos, hoje)
   const nomePor = new Map((integrantes ?? []).map((p) => [p.id, p.nome]))
 
@@ -347,12 +367,11 @@ function Chamadas() {
 
 /* ---------- Arquivos ---------- */
 
-function Arquivos() {
+function Arquivos({ semestreId }: { semestreId: string | null }) {
   const { profile } = useAuth()
   const qc = useQueryClient()
   const toast = useToast()
   const confirmar = useConfirmar()
-  const semestre = useSemestreAtivo()
   const form = useFormulario<'titulo' | 'arquivo'>()
 
   const [titulo, setTitulo] = useState('')
@@ -361,8 +380,8 @@ function Arquivos() {
   const [arquivo, setArquivo] = useState<File | null>(null)
 
   const { data: arquivos } = useQuery({
-    queryKey: ['arquivos-extensao', semestre?.id ?? null],
-    queryFn: () => fetchArquivos(semestre?.id ?? null),
+    queryKey: ['arquivos-extensao', semestreId],
+    queryFn: () => fetchArquivos(semestreId),
   })
 
   const fotos = (arquivos ?? []).filter((a) => a.tipo === 'foto')
@@ -380,7 +399,7 @@ function Arquivos() {
         titulo: titulo.trim(),
         tipo,
         data,
-        semestreId: semestre?.id ?? null,
+        semestreId: semestreId,
         criadoPor: profile!.id,
       }),
     onSuccess: () => {

@@ -4,30 +4,51 @@ import type { EmprestimoAtivo } from '../estoque/api'
 import type { Profile } from '../../types/database'
 
 describe('entregasDe', () => {
+  // a peça herda o semestre do projeto a que pertence
+  const s1 = { projetos: { semestre_id: 's1' } }
+  const s2 = { projetos: { semestre_id: 's2' } }
+
   const dados = {
     unidades: [
-      { responsavel_id: 'a', status: 'concluida' },
-      { responsavel_id: 'a', status: 'em_producao' },
-      { responsavel_id: 'b', status: 'concluida' },
+      { ...s1, responsavel_id: 'a', status: 'concluida' },
+      { ...s1, responsavel_id: 'a', status: 'em_producao' },
+      { ...s1, responsavel_id: 'b', status: 'concluida' },
+      { ...s2, responsavel_id: 'a', status: 'concluida' },
     ],
     faixas: [
-      { responsavel_id: 'a', status: 'feita' },
-      { responsavel_id: 'a', status: 'afazer' },
+      { ...s1, responsavel_id: 'a', status: 'feita' },
+      { ...s1, responsavel_id: 'a', status: 'afazer' },
     ],
     squares: [
-      { responsavel_id: 'a', etapa: 'pronto' },
-      { responsavel_id: 'a', etapa: 'pronto' },
-      { responsavel_id: 'a', etapa: 'borda' },
-      { responsavel_id: 'c', etapa: 'pronto' },
+      { ...s1, responsavel_id: 'a', etapa: 'pronto' },
+      { ...s1, responsavel_id: 'a', etapa: 'pronto' },
+      { ...s1, responsavel_id: 'a', etapa: 'borda' },
+      { ...s1, responsavel_id: 'c', etapa: 'pronto' },
     ],
   }
 
   it('conta amigurumis concluídos, faixas feitas e granny squares prontos', () => {
+    // sem semestre, é o acumulado de sempre — os dois amigurumis dela
     expect(entregasDe('a', dados)).toEqual({
+      amigurumis: 2,
+      faixas: 1,
+      grannies: 2,
+      total: 5,
+    })
+  })
+
+  it('com semestre, só conta peça de projeto daquele semestre', () => {
+    expect(entregasDe('a', dados, 's1')).toEqual({
       amigurumis: 1,
       faixas: 1,
       grannies: 2,
       total: 4,
+    })
+    expect(entregasDe('a', dados, 's2')).toEqual({
+      amigurumis: 1,
+      faixas: 0,
+      grannies: 0,
+      total: 1,
     })
   })
 
