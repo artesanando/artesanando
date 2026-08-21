@@ -8,7 +8,6 @@ import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
 import { fmtDataCurta, fmtDataLonga, hojeIso } from '../../lib/format'
 import { useSemestreAtivo } from '../../lib/semestre'
-import { separaArquivados } from '../../lib/arquivo'
 import { TURNO_LABEL } from '../../types/database'
 import { entregasDe, fetchEntregasLight, fetchIntegrantes } from '../integrantes/api'
 import {
@@ -100,7 +99,7 @@ function Frequencia() {
   const { data: presencas } = useQuery({ queryKey: ['presencas'], queryFn: fetchPresencas })
   const { data: entregas } = useQuery({ queryKey: ['entregas-light'], queryFn: fetchEntregasLight })
 
-  const { ativos } = separaArquivados(encontros ?? [])
+  const ativos = encontros ?? []
   const linhas = (integrantes ?? []).map((p) => {
     const f = frequenciaDe(p.id, ativos, presencas ?? [], hoje, p.turno)
     return {
@@ -262,7 +261,7 @@ function Chamadas() {
   const { data: presencas } = useQuery({ queryKey: ['presencas'], queryFn: fetchPresencas })
   const { data: integrantes } = useQuery({ queryKey: ['integrantes'], queryFn: fetchIntegrantes })
 
-  const { ativos } = separaArquivados(encontros ?? [])
+  const ativos = encontros ?? []
   const lista = encontrosPassados(ativos, hoje)
   const nomePor = new Map((integrantes ?? []).map((p) => [p.id, p.nome]))
 

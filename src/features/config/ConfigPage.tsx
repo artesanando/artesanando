@@ -2,25 +2,14 @@ import { useState, type CSSProperties } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
 import { Campo, useFormulario } from '../../components/ui/Campo'
-import { DatePicker, MenuKebab } from '../../components/ui/controles'
+import { DatePicker } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
-import { useAcoesArquivo } from '../../components/ui/useAcoesItem'
-import { useStore } from '../../state/store'
-import { separaArquivados } from '../../lib/arquivo'
-import { fmtDataCurta, hojeIso } from '../../lib/format'
+import { hojeIso } from '../../lib/format'
 import { ativarSemestre, atualizarSemestre, criarSemestre, fetchSemestres } from '../../lib/semestre'
-import {
-  definirCancelado,
-  encontrosPassados,
-  fetchEncontros,
-  proximoEncontro,
-  type Encontro,
-} from '../presenca/api'
-import { TURNO_LABEL } from '../../types/database'
 import { fetchPermissoes, togglePermissao, type PermCol } from './api'
 
-type Secao = 'permissoes' | 'projeto' | 'encontros'
+type Secao = 'permissoes' | 'projeto'
 
 /* O alcance de cada chave cresceu quando as ações que antes não existiam
    ganharam caminho no app — este texto é o que a admin lê para decidir. */
@@ -31,7 +20,8 @@ const COLS: [PermCol, string, string][] = [
     'marcar etapa e responsável dos squares, redesenhar a manta, pegar e concluir faixas, mexer nas unidades de amigurumi',
   ],
   ['devolucoes', 'MATERIAIS', 'registrar empréstimo e devolução, cadastrar e repor material'],
-  ['comentarios', 'COMENTÁRIOS', 'escrever nos projetos'],
+  ['presenca', 'PRESENÇA', 'marcar a chamada, agendar encontro e cancelar encontro'],
+  ['comentarios', 'MODERAÇÃO', 'apagar comentário de outra integrante'],
   ['financeiro', 'FINANCEIRO', 'lançar entradas e saídas do caixa'],
 ]
 
@@ -65,15 +55,11 @@ export function ConfigPage() {
         <button style={item(secao === 'projeto')} onClick={() => setSecao('projeto')}>
           Semestre
         </button>
-        <button style={item(secao === 'encontros')} onClick={() => setSecao('encontros')}>
-          Encontros
-        </button>
       </div>
 
       <div>
         {secao === 'permissoes' && <Permissoes />}
         {secao === 'projeto' && <SecaoProjeto />}
-        {secao === 'encontros' && <SecaoEncontros />}
       </div>
     </div>
   )
@@ -365,150 +351,6 @@ function SecaoProjeto() {
           {criar.isPending ? 'Criando…' : 'Criar'}
         </button>
       </form>
-    </>
-  )
-}
-
-/* ---------- Encontros ---------- */
-
-function SecaoEncontros() {
-  const { open, openEncontro } = useStore()
-  const acoesArquivo = useAcoesArquivo()
-  const qc = useQueryClient()
-  const toast = useToast()
-  const hoje = hojeIso()
-
-  const { data: encontros, isLoading } = useQuery({
-    queryKey: ['encontros'],
-    queryFn: fetchEncontros,
-  })
-
-  const cancelar = useMutation({
-    mutationFn: ({ id, valor }: { id: string; valor: boolean }) => definirCancelado(id, valor),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['encontros'] }),
-    onError: () => toast('Não foi possível mudar o encontro.', 'erro'),
-  })
-
-  const { ativos, arquivados } = separaArquivados(encontros ?? [])
-  const proximo = proximoEncontro(ativos, hoje)
-  const passados = encontrosPassados(ativos, hoje)
-
-  const linha = (e: Encontro, arquivado: boolean) => (
-    <div
-      key={e.id}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '13px 18px',
-        borderTop: '1px solid var(--divider)',
-        fontSize: 13,
-      }}
-    >
-      <b
-        style={{
-          width: 74,
-          flex: 'none',
-          textDecoration: e.cancelado_em ? 'line-through' : undefined,
-        }}
-      >
-        {fmtDataCurta(e.data)}
-      </b>
-      <span
-        style={{
-          color: 'var(--muted)',
-          flex: 1,
-          minWidth: 0,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {TURNO_LABEL[e.turno]}
-        {e.hora ? ` · ${e.hora.slice(0, 5)}h` : ''}
-        {e.local ? ` · ${e.local}` : ''}
-        {e.pauta ? ` · ${e.pauta}` : ''}
-        {e.cancelado_em ? ' · cancelado' : ''}
-      </span>
-      <MenuKebab
-        ariaLabel={`Ações do encontro de ${fmtDataCurta(e.data)}`}
-        acoes={[
-          { label: 'Editar encontro', onSelect: () => openEncontro(e.id) },
-          {
-            label: e.cancelado_em ? 'Reabrir encontro' : 'Cancelar encontro',
-            onSelect: () => cancelar.mutate({ id: e.id, valor: !e.cancelado_em }),
-          },
-          ...acoesArquivo({
-            tabela: 'encontros',
-            id: e.id,
-            nome: `o encontro de ${fmtDataCurta(e.data)}`,
-            motivoHistorico: 'A chamada já feita',
-            arquivado,
-            invalidar: ['encontros', 'presencas'],
-          }),
-        ]}
-      />
-    </div>
-  )
-
-  return (
-    <>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-end',
-          gap: 12,
-          marginBottom: 4,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div className="h" style={{ fontSize: 18 }}>
-          Encontros do semestre
-        </div>
-        <button className="pill" onClick={() => open('encontro')}>
-          + Novo encontro
-        </button>
-      </div>
-      <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 18 }}>
-        A chamada de cada um fica na tela de Presença.
-      </div>
-
-      {isLoading && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>}
-
-      {proximo && (
-        <>
-          <div className="lbl" style={{ marginBottom: 8 }}>
-            PRÓXIMO
-          </div>
-          <div className="card" style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 20 }}>
-            {linha(proximo, false)}
-          </div>
-        </>
-      )}
-
-      <div className="lbl" style={{ marginBottom: 8 }}>
-        JÁ ACONTECERAM
-      </div>
-      <div className="card" style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 20 }}>
-        {passados.length === 0 && !isLoading && (
-          <div style={{ padding: 18, fontSize: 13, color: 'var(--muted)' }}>
-            Nenhum encontro registrado ainda.
-          </div>
-        )}
-        {passados.map((e) => linha(e, false))}
-      </div>
-
-      {arquivados.length > 0 && (
-        <>
-          <div className="lbl" style={{ marginBottom: 8 }}>
-            ARQUIVADOS
-          </div>
-          <div className="card" style={{ borderRadius: 14, overflow: 'hidden' }}>
-            {arquivados.map((e) => linha(e, true))}
-          </div>
-        </>
-      )}
     </>
   )
 }

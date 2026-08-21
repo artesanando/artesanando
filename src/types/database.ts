@@ -66,6 +66,8 @@ export interface Permissoes {
   devolucoes: boolean
   comentarios: boolean
   financeiro: boolean
+  /** marcar chamada e mexer no calendário de encontros */
+  presenca: boolean
 }
 
 export interface Semestre {
@@ -174,10 +176,11 @@ export interface Receita {
   arquivado_em: string | null
 }
 
-/** Tabelas que o app arquiva em vez de apagar — chave usada em `pode_excluir` */
+/* Tabelas que o app arquiva em vez de apagar — chave usada em `pode_excluir`.
+   Encontro saiu da lista: cancelar já tira das contas e mantém o dia visível,
+   que é o que a coordenação precisa para conferir semestre passado. */
 export type Arquivavel =
   | 'projetos'
-  | 'encontros'
   | 'receitas'
   | 'estoque_itens'
   | 'movimentacoes'

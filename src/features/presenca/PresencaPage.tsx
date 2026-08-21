@@ -6,21 +6,21 @@ import { useAuth } from '../../state/auth'
 import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
 import { Calendario, MenuKebab, type MarcaDia } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
-import { useAcoesArquivo } from '../../components/ui/useAcoesItem'
-import { separaArquivados } from '../../lib/arquivo'
 import { fmtDataCurta, fmtDataLonga, hojeIso } from '../../lib/format'
 import { TURNO_LABEL } from '../../types/database'
 import {
   contaNaFrequencia,
   criarIntegranteSemConta,
   definirCancelado,
+  encontrosPassados,
   fetchEncontros,
   fetchIntegrantesAtivas,
   fetchPresencas,
   marcarPresenca,
   mediaPresentes,
   presentesDe,
-  proximosEncontros,
+  proximosVisiveis,
+  ultimoAMarcar,
   type Encontro,
 } from './api'
 
@@ -29,14 +29,17 @@ import {
 const COR_TURNO = { diurno: 'var(--gold-dark)', noturno: 'var(--blue-dark)' } as const
 
 export function PresencaPage() {
-  const { isAdmin, open, openEncontro } = useStore()
-  const { profile } = useAuth()
+  const { open, openEncontro } = useStore()
+  const { profile, can } = useAuth()
   const navigate = useNavigate()
   const { encontroId } = useParams()
   const qc = useQueryClient()
   const toast = useToast()
-  const acoesArquivo = useAcoesArquivo()
   const hoje = hojeIso()
+
+  /* Ver a chamada é de todas; escrever nela pede a permissão. Antes isso era
+     `isAdmin` puro, e nem existia chave para delegar. */
+  const podeChamada = can('presenca')
 
   const [novoNome, setNovoNome] = useState('')
   const [addAberto, setAddAberto] = useState(false)
@@ -51,14 +54,18 @@ export function PresencaPage() {
     queryFn: fetchIntegrantesAtivas,
   })
 
-  const { ativos } = separaArquivados(encontros ?? [])
-  const passados = ativos.filter((e) => e.data <= hoje).sort((a, b) => b.data.localeCompare(a.data))
-  const proximos = proximosEncontros(ativos, hoje)
-  const selecionado = ativos.find((e) => e.id === encontroId) ?? passados[0] ?? proximos[0]
+  const todos = encontros ?? []
+  const passados = encontrosPassados(todos, hoje)
+  const proximos = proximosVisiveis(todos, hoje)
+
+  /* A chamada só existe com um dia escolhido. Antes ela caía sozinha no último
+     encontro passado, o que fazia parecer que a chamada de hoje já estava
+     aberta quando na verdade era a da semana retrasada. */
+  const selecionado = todos.find((e) => e.id === encontroId)
   const cancelado = Boolean(selecionado?.cancelado_em)
 
   const marcas: Record<string, MarcaDia> = {}
-  for (const e of ativos) {
+  for (const e of todos) {
     marcas[e.data] = { cor: COR_TURNO[e.turno], riscado: Boolean(e.cancelado_em) }
   }
 
@@ -121,21 +128,18 @@ export function PresencaPage() {
   )
   const presentesSel = selecionado ? presentesDe(presencas ?? [], selecionado.id) : 0
 
+  /* Não há arquivar encontro: cancelar já resolve, e o dia cancelado segue no
+     calendário para quem for conferir a frequência de um semestre passado. */
   const acoesDoEncontro = (e: Encontro) => [
     { label: 'Editar encontro', onSelect: () => openEncontro(e.id) },
     {
       label: e.cancelado_em ? 'Reabrir encontro' : 'Cancelar encontro',
       onSelect: () => cancelar.mutate({ id: e.id, valor: !e.cancelado_em }),
     },
-    ...acoesArquivo({
-      tabela: 'encontros' as const,
-      id: e.id,
-      nome: `o encontro de ${fmtDataCurta(e.data)}`,
-      motivoHistorico: 'A chamada já feita',
-      arquivado: Boolean(e.arquivado_em),
-      invalidar: ['encontros', 'presencas'],
-    }),
   ]
+
+  const quemMarcou = selecionado ? ultimoAMarcar(presencas ?? [], selecionado.id) : null
+  const nomeQuemMarcou = (integrantes ?? []).find((p) => p.id === quemMarcou)?.nome
 
   return (
     <div className="pagina">
@@ -153,10 +157,10 @@ export function PresencaPage() {
           <div className="h titulo-pagina">Presença</div>
           <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
             {passados.filter(contaNaFrequencia).length} encontros no semestre · média de{' '}
-            {mediaPresentes(ativos, presencas ?? [], hoje)} presentes
+            {mediaPresentes(todos, presencas ?? [], hoje)} presentes
           </div>
         </div>
-        {isAdmin && (
+        {podeChamada && (
           <button className="pill" onClick={() => open('encontro')}>
             + Novo encontro
           </button>
@@ -174,7 +178,7 @@ export function PresencaPage() {
               valor={selecionado?.data ?? hoje}
               marcas={marcas}
               onChange={(dia) => {
-                const achado = ativos.find((e) => e.data === dia)
+                const achado = todos.find((e) => e.data === dia)
                 if (achado) navigate(`/presenca/${achado.id}`)
                 else toast('Nenhum encontro neste dia.')
               }}
@@ -263,7 +267,7 @@ export function PresencaPage() {
                     {e.cancelado_em ? ' · cancelado' : ''}
                   </span>
                 </button>
-                {isAdmin && (
+                {podeChamada && (
                   <MenuKebab
                     ariaLabel={`Ações do encontro de ${fmtDataCurta(e.data)}`}
                     acoes={acoesDoEncontro(e)}
@@ -294,7 +298,7 @@ export function PresencaPage() {
                   <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>
                     {presentesSel}/{daChamada.length} presentes
                   </span>
-                  {isAdmin && (
+                  {podeChamada && (
                     <MenuKebab
                       ariaLabel={`Ações do encontro de ${fmtDataCurta(selecionado.data)}`}
                       acoes={acoesDoEncontro(selecionado)}
@@ -363,7 +367,7 @@ export function PresencaPage() {
                             type="button"
                             aria-label={`Marcar presença de ${p.nome}`}
                             aria-pressed={presente}
-                            disabled={!isAdmin}
+                            disabled={!podeChamada}
                             onClick={() =>
                               marcar.mutate({ integranteId: p.id, presente: !presente })
                             }
@@ -371,7 +375,7 @@ export function PresencaPage() {
                               width: 30,
                               height: 30,
                               borderRadius: '50%',
-                              cursor: isAdmin ? 'pointer' : 'default',
+                              cursor: podeChamada ? 'pointer' : 'default',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -396,7 +400,7 @@ export function PresencaPage() {
                     })}
                   </div>
 
-                  {isAdmin && (
+                  {podeChamada && (
                     <div style={{ marginTop: 14 }}>
                       {!addAberto ? (
                         <button
@@ -430,13 +434,21 @@ export function PresencaPage() {
                       )}
                     </div>
                   )}
+
+                  {nomeQuemMarcou && (
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 14 }}>
+                      Preenchida por {nomeQuemMarcou}
+                    </div>
+                  )}
                 </>
               )}
             </>
           ) : (
             !isLoading && (
               <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-                Crie o primeiro encontro para abrir a chamada.
+                {todos.length === 0
+                  ? 'Crie o primeiro encontro para abrir a chamada.'
+                  : 'Escolha um dia no calendário.'}
               </div>
             )
           )}

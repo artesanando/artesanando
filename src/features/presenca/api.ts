@@ -165,8 +165,32 @@ export function datasSemanais(inicio: string, fim: string | null, limite = 40): 
   return datas.length > 0 ? datas : [inicio]
 }
 
-/** Encontro que conta para frequência: não cancelado e não arquivado */
-export const contaNaFrequencia = (e: Encontro) => !e.cancelado_em && !e.arquivado_em
+/* Encontro que conta para frequência. Arquivar encontro deixou de existir:
+   cancelar já dá conta — o dia continua visível, riscado, e fora das contas. */
+export const contaNaFrequencia = (e: Encontro) => !e.cancelado_em
+
+/** Dias inteiros entre uma data ISO (ou timestamp) e um dia `YYYY-MM-DD` */
+const diasAte = (de: string, ate: string) =>
+  Math.round(
+    (Date.parse(`${ate}T12:00:00`) - Date.parse(`${de.slice(0, 10)}T12:00:00`)) / 86_400_000,
+  )
+
+/* O cancelamento é aviso: quem ia no dia precisa ver que caiu. Passada a
+   semana, o aviso já cumpriu o papel e só atrapalha a lista — o calendário
+   segue mostrando o dia riscado para sempre. */
+export const AVISO_CANCELADO_DIAS = 7
+
+export function proximosVisiveis(encontros: Encontro[], hoje: string): Encontro[] {
+  return proximosEncontros(encontros, hoje).filter(
+    (e) => !e.cancelado_em || diasAte(e.cancelado_em, hoje) <= AVISO_CANCELADO_DIAS,
+  )
+}
+
+/** Quem preencheu a chamada daquele encontro, por último */
+export function ultimoAMarcar(presencas: Presenca[], encontroId: string): string | null {
+  const marcou = presencas.filter((p) => p.encontro_id === encontroId && p.marcado_por)
+  return marcou.length > 0 ? marcou[marcou.length - 1].marcado_por : null
+}
 
 export function encontrosPassados(encontros: Encontro[], hoje: string): Encontro[] {
   return encontros.filter((e) => e.data <= hoje).sort((a, b) => b.data.localeCompare(a.data))

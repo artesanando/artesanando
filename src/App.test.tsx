@@ -255,11 +255,20 @@ describe('financeiro (M4)', () => {
 })
 
 describe('presença (M4)', () => {
-  it('mostra os próximos encontros e a chamada do último', async () => {
+  it('sem dia escolhido, o calendário aparece e a chamada não', async () => {
     __login()
     renderAt('/presenca')
     expect(await screen.findByText('Próximos encontros')).toBeInTheDocument()
+    expect(await screen.findByText('Escolha um dia no calendário.')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Marcar presença de Cândida Nunes')).not.toBeInTheDocument()
+  })
+
+  it('a chamada abre no encontro do dia escolhido', async () => {
+    __login()
+    renderAt('/presenca/en1')
     expect(await screen.findByLabelText('Marcar presença de Cândida Nunes')).toBeInTheDocument()
+    // o pé diz quem preencheu — é o que a auditoria mostra em detalhe
+    expect(screen.getByText(/Preenchida por/)).toBeInTheDocument()
   })
 
   it('o encontro futuro traz o turno junto da data', async () => {
@@ -268,13 +277,20 @@ describe('presença (M4)', () => {
     expect(await screen.findByText(/Noturno/)).toBeInTheDocument()
   })
 
-  it('dá para editar, cancelar e arquivar um encontro', async () => {
+  it('dá para editar e cancelar um encontro, e arquivar deixou de existir', async () => {
     __login()
-    renderAt('/presenca')
+    renderAt('/presenca/en1')
     await userEvent.click(await screen.findByRole('button', { name: /Ações do encontro de 07 jul/ }))
     expect(screen.getByRole('menuitem', { name: 'Editar encontro' })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: 'Cancelar encontro' })).toBeInTheDocument()
-    expect(screen.getByRole('menuitem', { name: 'Arquivar' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Arquivar' })).not.toBeInTheDocument()
+  })
+
+  it('sem a permissão de presença, vê a chamada mas não marca', async () => {
+    __login(INTEGRANTE_PROFILE)
+    renderAt('/presenca/en1')
+    expect(await screen.findByLabelText('Marcar presença de Cândida Nunes')).toBeDisabled()
+    expect(screen.queryByRole('button', { name: '+ Novo encontro' })).not.toBeInTheDocument()
   })
 
   it('o encontro novo escolhe o turno e pode repetir toda semana', async () => {
@@ -287,14 +303,14 @@ describe('presença (M4)', () => {
 
   it('quem só entrou na chamada aparece marcada como sem perfil', async () => {
     __login()
-    renderAt('/presenca')
+    renderAt('/presenca/en1')
     expect(await screen.findByText('Hedy Lamarr')).toBeInTheDocument()
     expect(screen.getByText('SEM PERFIL')).toBeInTheDocument()
   })
 
   it('admin pode anotar alguém que ainda não tem perfil', async () => {
     __login()
-    renderAt('/presenca')
+    renderAt('/presenca/en1')
     expect(
       await screen.findByRole('button', { name: '+ Alguém que ainda não tem perfil' }),
     ).toBeInTheDocument()
@@ -329,13 +345,20 @@ describe('integrantes (M4)', () => {
 })
 
 describe('configurações', () => {
-  it('as abas Semestre e Encontros deixaram de ser placeholder', async () => {
+  it('sobraram Permissões e Semestre — encontros são assunto da Presença', async () => {
     __login()
     renderAt('/configuracoes')
     await userEvent.click(await screen.findByRole('button', { name: 'Semestre' }))
     expect(screen.getByText('Semestre do projeto')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Encontros' }))
-    expect(screen.getByText('Encontros do semestre')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Encontros' })).not.toBeInTheDocument()
+  })
+
+  it('a permissão de presença entra na tabela', async () => {
+    __login()
+    renderAt('/configuracoes')
+    expect(
+      await screen.findByRole('switch', { name: 'PRESENÇA de Ada Lovelace' }),
+    ).toBeInTheDocument()
   })
 
   it('administradora aparece na tabela de permissões, mas travada', async () => {
