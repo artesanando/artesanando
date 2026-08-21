@@ -8,6 +8,7 @@ import { useAcoesProjeto } from './useAcoesProjeto'
 import { separaArquivados } from '../../lib/arquivo'
 import { useLabelSemestre } from '../../lib/semestre'
 import { IconAmigurumi, IconCroche, IconTrico } from '../../components/ui/icons'
+import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 import {
   fetchProgressoGeral,
   fetchProjetos,
@@ -63,44 +64,17 @@ export function ProjetosPage() {
 
   return (
     <div className="pagina">
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          marginBottom: 20,
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div className="h titulo-pagina">
-              Projetos
-            </div>
-            <div
-              className="field"
-              style={{
-                borderRadius: 99,
-                padding: '6px 14px',
-                fontWeight: 800,
-                fontSize: 12.5,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              {semestre}
-            </div>
-          </div>
-          <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
-            {mantas.length} mantas · {amigurumis.length} tipos de amigurumi
-          </div>
-        </div>
-        {isAdmin && (
-          <button className="pill" onClick={() => open('projeto')}>
-            + Novo projeto
-          </button>
-        )}
-      </div>
+      <CabecalhoPagina
+        titulo="Projetos"
+        sub={`${semestre} · ${mantas.length} mantas · ${amigurumis.length} tipos de amigurumi`}
+        acoes={
+          isAdmin && (
+            <button className="pill" onClick={() => open('projeto')}>
+              + Novo projeto
+            </button>
+          )
+        }
+      />
       <div
         style={{
           display: 'flex',

@@ -7,6 +7,7 @@ import { useAcoesArquivo } from '../../components/ui/useAcoesItem'
 import { separaArquivados } from '../../lib/arquivo'
 import { urlsDasCapas } from '../../lib/capa'
 import type { EstoqueCategoria, EstoqueItem } from '../../types/database'
+import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 import {
   disponivel,
   emprestadoPorItem,
@@ -150,23 +151,11 @@ export function EstoquePage() {
 
   return (
     <div className="pagina">
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          marginBottom: 22,
-          gap: 14,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div>
-          <div className="h titulo-pagina">
-            Estoque
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {podeMexer && (
+      <CabecalhoPagina
+        titulo="Estoque"
+        sub={`${ativos.length} materiais cadastrados`}
+        acoes={
+          podeMexer && (
             <>
               <button className="pill ghost" onClick={() => openMaterial(null)}>
                 + Material
@@ -178,9 +167,9 @@ export function EstoquePage() {
                 + Empréstimo
               </button>
             </>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {ESTO_TABS.map(([k, label]) => (

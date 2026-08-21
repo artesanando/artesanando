@@ -11,6 +11,7 @@ import { useAuth } from '../../state/auth'
 import { definirPapel } from '../integrantes/api'
 import { fetchPermissoes, togglePermissao, type PermCol } from './api'
 import { IconCadeado } from '../../components/ui/icons'
+import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 
 type Secao = 'permissoes' | 'projeto'
 
@@ -52,11 +53,10 @@ export function ConfigPage() {
   const [secao, setSecao] = useState<Secao>('permissoes')
 
   return (
-    <div className="pagina pgrid" style={{ '--cols': '180px 1fr', '--gap': '34px' } as CSSProperties}>
+    <div className="pagina">
+      <CabecalhoPagina titulo="Ajustes" sub="Permissões e semestre" />
+      <div className="pgrid" style={{ '--cols': '180px 1fr', '--gap': '34px' } as CSSProperties}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <div className="h titulo-pagina" style={{ marginBottom: 12 }}>
-          Ajustes
-        </div>
         <button style={item(secao === 'permissoes')} onClick={() => setSecao('permissoes')}>
           Permissões
         </button>
@@ -68,6 +68,7 @@ export function ConfigPage() {
       <div>
         {secao === 'permissoes' && <Permissoes />}
         {secao === 'projeto' && <SecaoProjeto />}
+      </div>
       </div>
     </div>
   )

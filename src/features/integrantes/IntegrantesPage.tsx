@@ -12,6 +12,7 @@ import { hojeIso } from '../../lib/format'
 import { useSemestreAtivo } from '../../lib/semestre'
 import { fetchEmprestimosAtivos } from '../estoque/api'
 import { fetchEncontros, fetchPresencas, frequenciaDe } from '../presenca/api'
+import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 import {
   definirAtivo,
   definirNivel,
@@ -133,35 +134,23 @@ export function IntegrantesPage() {
   })
 
   return (
-    <div
-      className="pagina pgrid"
-      style={{ '--cols': '1.1fr 1fr', '--gap': '40px' } as React.CSSProperties}
-    >
-      <div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'space-between',
-            marginBottom: 16,
-          }}
-        >
-          <div className="h titulo-pagina">
-            Integrantes{' '}
-            <span style={{ fontSize: 15, color: 'var(--faint)' }}>
-              {(integrantes ?? []).length}
-            </span>
-          </div>
-          {isAdmin && (
-            <button
-              className="pill"
-              style={{ padding: '8px 16px' }}
-              onClick={() => openIntegrante(null)}
-            >
+    <div className="pagina">
+      <CabecalhoPagina
+        titulo="Integrantes"
+        sub={`${(integrantes ?? []).length} cadastradas`}
+        acoes={
+          isAdmin && (
+            <button className="pill" onClick={() => openIntegrante(null)}>
               + Cadastrar
             </button>
-          )}
-        </div>
+          )
+        }
+      />
+      <div
+        className="pgrid"
+        style={{ '--cols': '1.1fr 1fr', '--gap': '40px' } as React.CSSProperties}
+      >
+      <div>
         <input
           className="field"
           style={{ borderRadius: 99, marginBottom: 14 }}
@@ -582,6 +571,7 @@ export function IntegrantesPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

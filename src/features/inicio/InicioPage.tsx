@@ -14,6 +14,7 @@ import {
   type Projeto,
 } from '../projetos/api'
 import { fetchEncontros, proximoEncontro } from '../presenca/api'
+import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 import {
   fetchAtividadesRecentes,
   fetchTotalIntegrantes,
@@ -71,19 +72,10 @@ export function InicioPage() {
 
   return (
     <div className="pagina">
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          marginBottom: 26,
-        }}
-      >
-        <div>
-          <div className="h titulo-pagina">
-            {saudacao(new Date().getHours())}, {primeiroNome(profile?.nome ?? '')}
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
+      <CabecalhoPagina
+        titulo={`${saudacao(new Date().getHours())}, ${primeiroNome(profile?.nome ?? '')}`}
+        sub={
+          <>
             {fmtDataLonga(hoje)}
             {proximo && (
               <>
@@ -99,14 +91,16 @@ export function InicioPage() {
                 </b>
               </>
             )}
-          </div>
-        </div>
-        {isAdmin && (
-          <button className="pill" onClick={() => open('projeto')}>
-            + Novo projeto
-          </button>
-        )}
-      </div>
+          </>
+        }
+        acoes={
+          isAdmin && (
+            <button className="pill" onClick={() => open('projeto')}>
+              + Novo projeto
+            </button>
+          )
+        }
+      />
       <div
         style={{
           display: 'flex',

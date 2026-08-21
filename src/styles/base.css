@@ -991,3 +991,24 @@ textarea.field::placeholder {
   }
 
 }
+
+/* cabeçalho de página — ver CabecalhoPagina.tsx */
+.cabecalho-pagina {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.sub-pagina {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 4px;
+  min-height: 17px;
+}
+.acoes-pagina {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}

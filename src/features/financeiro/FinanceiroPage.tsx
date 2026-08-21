@@ -9,6 +9,7 @@ import { separaArquivados } from '../../lib/arquivo'
 import { useSemestreAtivo } from '../../lib/semestre'
 import { fmtCentavos, fmtDataCurta, hojeIso } from '../../lib/format'
 import { IconSetaLonga } from '../../components/ui/icons'
+import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 import {
   fetchMovimentacoes,
   filtraPeriodo,
@@ -125,35 +126,22 @@ export function FinanceiroPage() {
 
   return (
     <div className="pagina">
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          marginBottom: 24,
-          gap: 14,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div>
-          <div className="h titulo-pagina">
-            Financeiro
-          </div>
-          <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
-            Caixa do projeto · semestre {semestre?.label ?? '—'}
-          </div>
-        </div>
-        {can('financeiro') && (
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button className="pill ghost" onClick={() => openFin('saida')}>
-              <IconSetaLonga size={12} para="baixo" /> Saída
-            </button>
-            <button className="pill" onClick={() => openFin('entrada')}>
-              <IconSetaLonga size={12} para="cima" /> Entrada
-            </button>
-          </div>
-        )}
-      </div>
+      <CabecalhoPagina
+        titulo="Financeiro"
+        sub={`Caixa do projeto · semestre ${semestre?.label ?? '—'}`}
+        acoes={
+          can('financeiro') && (
+            <>
+              <button className="pill ghost" onClick={() => openFin('saida')}>
+                <IconSetaLonga size={12} para="baixo" /> Saída
+              </button>
+              <button className="pill" onClick={() => openFin('entrada')}>
+                <IconSetaLonga size={12} para="cima" /> Entrada
+              </button>
+            </>
+          )
+        }
+      />
 
       <div
         style={{

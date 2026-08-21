@@ -12,6 +12,7 @@ import { useAcoesArquivo } from '../../components/ui/useAcoesItem'
 import { separaArquivados } from '../../lib/arquivo'
 import { urlsDasCapas } from '../../lib/capa'
 import { fmtMedida } from '../../lib/medida'
+import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 
 const CHIPS: [ReceitaCategoria | 'todos', string][] = [
   ['todos', 'Todos'],
@@ -60,23 +61,17 @@ export function BibliotecaPage() {
 
   return (
     <div className="pagina">
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          marginBottom: 20,
-        }}
-      >
-        <div className="h titulo-pagina">
-          Biblioteca
-        </div>
-        {isAdmin && (
-          <button className="pill" style={{ whiteSpace: 'nowrap' }} onClick={abrirCriador}>
-            + Adicionar
-          </button>
-        )}
-      </div>
+      <CabecalhoPagina
+        titulo="Biblioteca"
+        sub={`${ativos.length} receitas e padrões`}
+        acoes={
+          isAdmin && (
+            <button className="pill" style={{ whiteSpace: 'nowrap' }} onClick={abrirCriador}>
+              + Adicionar
+            </button>
+          )
+        }
+      />
       <div style={{ display: 'flex', gap: 10, marginBottom: 22, alignItems: 'center' }}>
         <input
           className="field"

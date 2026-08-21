@@ -13,6 +13,7 @@ import { NIVEL_LABEL, TURNO_LABEL, type Nivel } from '../../types/database'
 import { entregasDe, fetchEntregasLight, fetchIntegrantes } from '../integrantes/api'
 import { avaliaRegra, textoDaLinha, TIPO_LABEL, type TipoLinha } from './creditos'
 import { IconX } from '../../components/ui/icons'
+import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 import {
   ACAO_LABEL,
   criarBloco,
@@ -92,26 +93,27 @@ export function ExtensaoPage() {
   const semestreId = escolhido ?? ativo?.id ?? null
 
   return (
-    <div
-      className="pagina pgrid"
-      style={{ '--cols': '180px 1fr', '--gap': '34px' } as CSSProperties}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <div className="h titulo-pagina" style={{ marginBottom: 2 }}>
-          Atividade de extensão
-        </div>
-        <div style={{ marginBottom: 12 }}>
-          {(semestres ?? []).length > 0 ? (
-            <Select
-              value={semestreId ?? ''}
-              onChange={setEscolhido}
-              options={(semestres ?? []).map((s) => [s.id, s.label] as [string, string])}
-              ariaLabel="Semestre"
-            />
+    <div className="pagina">
+      <CabecalhoPagina
+        titulo="Atividade de extensão"
+        sub="Créditos, frequência, entregas e comprovação do semestre"
+        acoes={
+          (semestres ?? []).length > 0 ? (
+            <span style={{ width: 150 }}>
+              <Select
+                value={semestreId ?? ''}
+                onChange={setEscolhido}
+                options={(semestres ?? []).map((s) => [s.id, s.label] as [string, string])}
+                ariaLabel="Semestre"
+              />
+            </span>
           ) : (
             <span style={{ fontSize: 12, color: 'var(--muted)' }}>sem semestre ativo</span>
-          )}
-        </div>
+          )
+        }
+      />
+      <div className="pgrid" style={{ '--cols': '180px 1fr', '--gap': '34px' } as CSSProperties}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {SECOES.map(([k, label]) => (
           <button key={k} style={item(secao === k)} onClick={() => setSecao(k)}>
             {label}
@@ -126,6 +128,7 @@ export function ExtensaoPage() {
         {secao === 'chamadas' && <Chamadas semestreId={semestreId} />}
         {secao === 'arquivos' && <Arquivos semestreId={semestreId} />}
         {secao === 'auditoria' && <Auditoria />}
+      </div>
       </div>
     </div>
   )

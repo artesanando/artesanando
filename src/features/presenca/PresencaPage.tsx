@@ -9,6 +9,7 @@ import { useToast } from '../../components/ui/Toast'
 import { fmtDataCurta, fmtDataLonga, hojeIso } from '../../lib/format'
 import { TURNO_LABEL } from '../../types/database'
 import { IconCheck } from '../../components/ui/icons'
+import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 import {
   contaNaFrequencia,
   criarIntegranteSemConta,
@@ -144,29 +145,17 @@ export function PresencaPage() {
 
   return (
     <div className="pagina">
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          marginBottom: 22,
-          gap: 14,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div>
-          <div className="h titulo-pagina">Presença</div>
-          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
-            {passados.filter(contaNaFrequencia).length} encontros no semestre · média de{' '}
-            {mediaPresentes(todos, presencas ?? [], hoje)} presentes
-          </div>
-        </div>
-        {podeChamada && (
-          <button className="pill" onClick={() => open('encontro')}>
-            + Novo encontro
-          </button>
-        )}
-      </div>
+      <CabecalhoPagina
+        titulo="Presença"
+        sub={`${passados.filter(contaNaFrequencia).length} encontros no semestre · média de ${mediaPresentes(todos, presencas ?? [], hoje)} presentes`}
+        acoes={
+          podeChamada && (
+            <button className="pill" onClick={() => open('encontro')}>
+              + Novo encontro
+            </button>
+          )
+        }
+      />
 
       {isLoading && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>}
 
