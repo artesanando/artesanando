@@ -5,12 +5,12 @@
 -- Preserva: profiles (com RA e nível), permissoes, semestres e as regras de
 --           crédito do semestre.
 -- Apaga: projetos e produção, encontros e chamada, estoque e empréstimos,
---        biblioteca, caixa, arquivos da extensão, marcas de crédito, o diário
---        de auditoria e o feed de atividades.
+--        biblioteca, caixa, arquivos da extensão, marcas de crédito, o mural,
+--        o diário de auditoria e o feed de atividades.
 --
 -- ATENÇÃO: os arquivos nos buckets `receitas`, `avatares`, `capas`,
--- `comentarios` e `extensao` NÃO saem daqui. Apague-os pelo Storage se quiser
--- limpeza completa.
+-- `comentarios`, `extensao` e `mural` NÃO saem daqui. Apague-os pelo Storage se
+-- quiser limpeza completa.
 
 begin;
 
@@ -32,6 +32,8 @@ truncate table
   public.arquivos_extensao,
   public.credito_marcas,
   public.auditoria,
+  public.mural_fotos,
+  public.mural_albuns,
   public.movimentacoes
   restart identity cascade;
 
