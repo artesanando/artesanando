@@ -160,8 +160,12 @@ export interface ReceitaConteudo {
   esquema?: string[][]
   faixas?: number
   cells?: string[][]
-  /** `receita_id` liga o modelo ao padrão de granny que o originou */
-  modelos?: Record<string, { border: string; inner: string; nome?: string; receita_id?: string }>
+  /* `cores` traz todas as carreiras; `border`/`inner` seguem como fallback do
+     que foi salvo quando o modelo só sabia duas. `receita_id` liga ao granny. */
+  modelos?: Record<
+    string,
+    { border: string; inner: string; cores?: string[]; nome?: string; receita_id?: string }
+  >
 }
 
 export const tecnicaDoEsquema = (c: ReceitaConteudo): Tecnica =>

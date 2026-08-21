@@ -1,3 +1,5 @@
+import { SquareGranny } from './SquareGranny'
+
 /* Prévia da manta de crochê: grade reta, sem deslocamento nenhum. O que segue a
    diagonal é a POSIÇÃO dos modelos — `gradePadrao` avança uma letra por coluna e
    por linha, então a mesma cor sobe em diagonal. Mesmo desenho na biblioteca, no
@@ -8,7 +10,8 @@ export function PreviaGrade({
   celula = 14,
 }: {
   celulas: string[][]
-  cores: Record<string, { border: string; inner: string }>
+  /** `cores` traz todas as carreiras quando o modelo veio de um granny salvo */
+  cores: Record<string, { border: string; inner: string; cores?: string[] }>
   celula?: number
 }) {
   const colunas = celulas[0]?.length ?? 1
@@ -27,27 +30,13 @@ export function PreviaGrade({
         {celulas.flatMap((linha, l) =>
           linha.map((letra, c) => {
             const d = cores[letra]
+            const aneis = d
+              ? d.cores && d.cores.length > 0
+                ? d.cores
+                : [d.inner, d.border]
+              : ['#eee', '#ccc']
             return (
-              <span
-                key={`${l}-${c}`}
-                style={{
-                  width: celula,
-                  height: celula,
-                  background: d?.border ?? '#ccc',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 1,
-                }}
-              >
-                <span
-                  style={{
-                    width: Math.round(celula * 0.5),
-                    height: Math.round(celula * 0.5),
-                    background: d?.inner ?? '#eee',
-                  }}
-                />
-              </span>
+              <SquareGranny key={`${l}-${c}`} cores={aneis} tamanho={celula} radius={1} />
             )
           }),
         )}

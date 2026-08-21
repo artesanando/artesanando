@@ -18,6 +18,7 @@ import { fmtMedida, tamanhoManta } from '../lib/medida'
 import type { Tecnica } from '../types/database'
 import type { ModeloNovo } from '../features/projetos/api'
 import { IconX } from '../components/ui/icons'
+import { SquareGranny } from '../components/ui/SquareGranny'
 
 const LETRAS = 'ABCDEFGH'.split('')
 const MIN = 2
@@ -31,6 +32,10 @@ const MODELOS_INICIAIS: ModeloNovo[] = (['A', 'B', 'C'] as const).map((k) => ({
 }))
 
 const SEQ_INICIAL = PALETTE.slice(0, 3).map(([c]) => c)
+
+/** Carreiras do modelo, com as duas cores antigas como fallback */
+const carreiras = (m: ModeloNovo): string[] =>
+  m.cores && m.cores.length > 0 ? m.cores : [m.cor_miolo, m.cor_borda]
 
 const TECNICAS: [Tecnica, string][] = [
   ['croche', 'Crochê'],
@@ -106,11 +111,34 @@ export function ModalLayout() {
     if (!r || !cores) return
     mudarModelo(i, {
       nome: r.nome,
-      cor_borda: cores.border,
-      cor_miolo: cores.inner,
+      cores,
+      cor_miolo: cores[0],
+      cor_borda: cores[cores.length - 1],
       receita_id: r.id,
+      ajustado: false,
     })
   }
+
+  /* Mexer numa cor não desfaz o vínculo em silêncio: o modelo continua sendo
+     "a partir de X", só que ajustado — foi o que confundiu no uso. */
+  const mudarCarreira = (i: number, j: number, cor: string) => {
+    const atual = carreiras(modelos[i])
+    const novas = atual.map((c, k) => (k === j ? cor : c))
+    mudarModelo(i, {
+      cores: novas,
+      cor_miolo: novas[0],
+      cor_borda: novas[novas.length - 1],
+      ajustado: Boolean(modelos[i].receita_id),
+    })
+  }
+
+  const mudarCarreiras = (i: number, novas: string[]) =>
+    mudarModelo(i, {
+      cores: novas,
+      cor_miolo: novas[0],
+      cor_borda: novas[novas.length - 1],
+      ajustado: Boolean(modelos[i].receita_id),
+    })
 
   const puxarFaixa = (receitaId: string) => {
     const r = padroesFaixa.find((x) => x.id === receitaId)
@@ -239,6 +267,7 @@ export function ModalLayout() {
                   {
                     border: m.cor_borda,
                     inner: m.cor_miolo,
+                    cores: carreiras(m),
                     nome: m.nome,
                     ...(m.receita_id ? { receita_id: m.receita_id } : {}),
                   },
@@ -319,20 +348,7 @@ export function ModalLayout() {
                 boxShadow: m.letra === pincel ? '0 0 0 2px var(--ink)' : undefined,
               }}
             >
-              <span
-                style={{
-                  width: 22,
-                  height: 22,
-                  background: m.cor_borda,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flex: 'none',
-                  borderRadius: 3,
-                }}
-              >
-                <span style={{ width: 11, height: 11, background: m.cor_miolo }} />
-              </span>
+              <SquareGranny cores={carreiras(m)} tamanho={22} radius={3} style={{ flex: 'none' }} />
               <span style={{ fontSize: 12, fontWeight: 700 }}>{m.letra}</span>
             </button>
           ))}
@@ -375,7 +391,7 @@ export function ModalLayout() {
                       padding: 0,
                       border: 'none',
                       borderRadius: 2,
-                      background: m?.cor_borda ?? '#ccc',
+                      background: 'var(--sand)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -388,13 +404,7 @@ export function ModalLayout() {
                       transition: 'transform var(--dur-media) var(--ease-mola)',
                     }}
                   >
-                    <span
-                      style={{
-                        width: Math.round(zoom.celula * 0.46),
-                        height: Math.round(zoom.celula * 0.46),
-                        background: m?.cor_miolo ?? '#eee',
-                      }}
-                    />
+                    {m && <SquareGranny cores={carreiras(m)} tamanho={zoom.celula} />}
                   </button>
                 )
               })}
@@ -476,31 +486,77 @@ export function ModalLayout() {
                   </button>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: 6, marginBottom: grannies.length > 0 ? 7 : 0 }}>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <ColorPicker
-                    value={m.cor_borda}
-                    ariaLabel={`Cor da borda do modelo ${m.letra}`}
-                    onChange={(cor_borda) => mudarModelo(i, { cor_borda, receita_id: undefined })}
-                  />
-                </span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <ColorPicker
-                    value={m.cor_miolo}
-                    ariaLabel={`Cor do miolo do modelo ${m.letra}`}
-                    onChange={(cor_miolo) => mudarModelo(i, { cor_miolo, receita_id: undefined })}
-                  />
-                </span>
-              </div>
+              {/* O padrão vem primeiro: é dele que as carreiras nascem. Antes o
+                  dropdown ficava embaixo de duas cores soltas, e não dava para
+                  entender que uma coisa preenchia a outra. */}
               {grannies.length > 0 && (
-                <Select
-                  value={m.receita_id ?? ''}
-                  onChange={(id) => puxarGranny(i, id)}
-                  options={grannies.map((r) => [r.id, r.nome] as [string, string])}
-                  ariaLabel={`Padrão do modelo ${m.letra}`}
-                  placeholder="Puxar da biblioteca…"
-                />
+                <div style={{ marginBottom: 8 }}>
+                  <Select
+                    value={m.receita_id ?? ''}
+                    onChange={(id) => puxarGranny(i, id)}
+                    options={grannies.map((r) => [r.id, r.nome] as [string, string])}
+                    ariaLabel={`Padrão do modelo ${m.letra}`}
+                    placeholder="Padrão da biblioteca…"
+                  />
+                  {m.receita_id && (
+                    <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 4 }}>
+                      {m.ajustado
+                        ? `ajustado a partir de ${grannies.find((r) => r.id === m.receita_id)?.nome ?? 'um padrão'}`
+                        : 'as carreiras vieram deste padrão'}
+                    </div>
+                  )}
+                </div>
               )}
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <SquareGranny cores={carreiras(m)} tamanho={30} style={{ flex: 'none' }} />
+                <span className="lbl">CARREIRAS</span>
+              </div>
+              {carreiras(m).map((c, j) => (
+                <div
+                  key={j}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}
+                >
+                  <span style={{ fontSize: 10.5, color: 'var(--muted)', width: 34 }}>
+                    {j === 0 ? 'miolo' : j === carreiras(m).length - 1 ? 'borda' : `${j + 1}ª`}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <ColorPicker
+                      value={c}
+                      ariaLabel={`Carreira ${j + 1} do modelo ${m.letra}`}
+                      onChange={(cor) => mudarCarreira(i, j, cor)}
+                    />
+                  </span>
+                  {carreiras(m).length > 2 && (
+                    <button
+                      type="button"
+                      className="kebab"
+                      aria-label={`Remover a carreira ${j + 1} do modelo ${m.letra}`}
+                      onClick={() =>
+                        mudarCarreiras(
+                          i,
+                          carreiras(m).filter((_, k) => k !== j),
+                        )
+                      }
+                    >
+                      <IconX size={11} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                className="pill ghost"
+                style={{ padding: '5px 12px', fontSize: 11.5 }}
+                onClick={() =>
+                  mudarCarreiras(i, [
+                    ...carreiras(m),
+                    PALETTE[carreiras(m).length % PALETTE.length][0],
+                  ])
+                }
+              >
+                + Carreira
+              </button>
             </div>
           ))}
           {modelos.length < LETRAS.length && (

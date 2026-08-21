@@ -43,6 +43,8 @@ export interface MantaModelo {
   nome: string
   cor_borda: string
   cor_miolo: string
+  /** todas as carreiras, do miolo para fora; nulo no que foi criado com duas cores */
+  cores: string[] | null
   responsavel_id: string | null
   total: number
   responsavel?: { nome: string } | null
@@ -530,11 +532,16 @@ export async function urlsDasFotos(caminhos: string[]): Promise<Map<string, stri
 export interface ModeloNovo {
   letra: string
   nome: string
+  /* Continuam sendo o primeiro e o último anel: são `not null` no banco e o
+     fallback de tudo que foi criado quando o modelo só tinha duas cores. */
   cor_borda: string
   cor_miolo: string
-  /* De qual padrão de granny da biblioteca este modelo veio. Guardado só no
-     esquema — a RPC que cria o projeto não recebe isso. */
+  /** todas as carreiras, do miolo para fora */
+  cores?: string[]
+  /** de qual granny da biblioteca este modelo veio */
   receita_id?: string
+  /** as cores foram mexidas depois de puxar o padrão */
+  ajustado?: boolean
 }
 
 export interface NovoProjeto {

@@ -143,6 +143,8 @@ const RECEITAS_FAKE = [
     conteudo: {
       rings: [
         { c: '#E3C07A', name: 'Amarelo', n: 1, role: 'miolo' },
+        { c: '#DFA2AC', name: 'Rosé', n: 1, role: 'meio' },
+        { c: '#B99BC4', name: 'Lilás', n: 1, role: 'meio' },
         { c: '#7D9B76', name: 'Sálvia', n: 1, role: 'borda' },
       ],
     },
@@ -203,6 +205,7 @@ const MODELOS_FAKE = [
     nome: 'Modelo A — Flor de Maio',
     cor_borda: '#C4798A',
     cor_miolo: '#DFA2AC',
+    cores: null,
     responsavel_id: null,
     total: 4,
     responsavel: null,

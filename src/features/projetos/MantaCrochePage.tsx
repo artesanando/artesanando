@@ -11,6 +11,7 @@ import { coordenada } from '../../lib/grade'
 import { fmtMedida, tamanhoManta } from '../../lib/medida'
 import { Comentarios, Historico } from './Comentarios'
 import { IconChevron } from '../../components/ui/icons'
+import { SquareGranny, coresDoModelo } from '../../components/ui/SquareGranny'
 import {
   ETAPAS,
   ETAPA_LABEL,
@@ -186,20 +187,7 @@ function Mapa({
                 boxShadow: m.id === pincel ? '0 0 0 2px var(--ink)' : undefined,
               }}
             >
-              <span
-                style={{
-                  width: 22,
-                  height: 22,
-                  background: m.cor_borda,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 3,
-                  flex: 'none',
-                }}
-              >
-                <span style={{ width: 11, height: 11, background: m.cor_miolo }} />
-              </span>
+              <SquareGranny cores={coresDoModelo(m)} tamanho={22} radius={3} style={{ flex: 'none' }} />
               <span style={{ fontSize: 12, fontWeight: 700 }}>{m.letra}</span>
             </button>
           ))}
@@ -247,7 +235,7 @@ function Mapa({
                     height: zoom.celula,
                     padding: 0,
                     border: 'none',
-                    background: m?.cor_borda ?? 'var(--sand)',
+                    background: 'var(--sand)',
                     opacity: ehArrastado ? 0.35 : feito ? 1 : 0.42,
                     display: 'flex',
                     alignItems: 'center',
@@ -266,13 +254,7 @@ function Mapa({
                       'transform var(--dur-media) var(--ease-mola), opacity var(--dur-rapida)',
                   }}
                 >
-                  <span
-                    style={{
-                      width: '53%',
-                      height: '53%',
-                      background: m?.cor_miolo ?? 'var(--card)',
-                    }}
-                  />
+                  {m && <SquareGranny cores={coresDoModelo(m)} tamanho={zoom.celula} />}
                 </button>
               )
             })}
@@ -300,9 +282,7 @@ function Mapa({
                   }}
                 >
                   <span style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span
-                      style={{ width: 10, height: 10, borderRadius: 2, background: m.cor_borda }}
-                    />
+                    <SquareGranny cores={coresDoModelo(m)} tamanho={12} />
                     {m.nome.split('—')[0].trim()}
                   </span>
                   <span
@@ -323,19 +303,11 @@ function Mapa({
                 {coordenada(selecionado.posicao, colunas).coluna}
               </Lbl>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    background: modeloSel.cor_borda,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flex: 'none',
-                  }}
-                >
-                  <div style={{ width: 22, height: 22, background: modeloSel.cor_miolo }} />
-                </div>
+                <SquareGranny
+                  cores={coresDoModelo(modeloSel)}
+                  tamanho={40}
+                  style={{ flex: 'none' }}
+                />
                 <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
                   <b>{modeloSel.nome}</b>
                   <br />

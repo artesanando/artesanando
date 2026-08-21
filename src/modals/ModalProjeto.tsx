@@ -185,6 +185,8 @@ export function ModalProjeto() {
           nome: d.nome ?? `Modelo ${letra}`,
           cor_borda: d.border,
           cor_miolo: d.inner,
+          // as carreiras do meio só chegam ao mapa se forem junto daqui
+          cores: d.cores && d.cores.length > 0 ? d.cores : [d.inner, d.border],
         })),
         celulas: celulas ?? [],
         faixaSeq: seqDoEsquema,

@@ -1,12 +1,12 @@
 import type { Receita } from '../types/database'
 
-/* Cores de um padrão de granny salvo na biblioteca, na forma que o modelo do
-   esquema usa. O anel de fora é a borda que se vê na manta montada; o primeiro
-   é o miolo. Padrão de um anel só usa a mesma cor nos dois. */
-export function coresDoGranny(r: Receita): { border: string; inner: string } | null {
+/* Carreiras de um granny salvo na biblioteca, do miolo para fora.
+   Antes daqui saíam só duas cores — a primeira e a última —, e um granny de
+   quatro carreiras perdia as duas do meio ao virar modelo do esquema. */
+export function coresDoGranny(r: Receita): string[] | null {
   const rings = r.conteudo.rings
   if (!rings || rings.length === 0) return null
-  return { inner: rings[0].c, border: rings[rings.length - 1].c }
+  return rings.map((a) => a.c)
 }
 
 /** Sequência de cores de um padrão de faixa salvo */

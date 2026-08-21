@@ -29,6 +29,7 @@ const modelo = (id: string, letra: string): MantaModelo => ({
   nome: `Modelo ${letra}`,
   cor_borda: '#000',
   cor_miolo: '#fff',
+  cores: null,
   responsavel_id: null,
   total: 0,
 })
