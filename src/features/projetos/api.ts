@@ -24,7 +24,6 @@ export interface Projeto {
   nome: string
   tipo: ProjetoTipo
   destino: string | null
-  emoji: string | null
   receita_id: string | null
   meta: number | null
   colunas: number | null
@@ -542,7 +541,6 @@ export interface NovoProjeto {
   nome: string
   tipo: ProjetoTipo
   destino: string | null
-  emoji: string | null
   receita_id?: string | null
   meta?: number | null
   created_by: string
@@ -570,7 +568,7 @@ export async function criarProjeto(novo: NovoProjeto): Promise<string> {
     const { data, error } = await supabase.rpc('criar_projeto_manta', {
       p_nome: novo.nome,
       p_destino: novo.destino,
-      p_emoji: novo.emoji,
+      p_emoji: null,
       p_colunas: colunas,
       p_linhas: linhas,
       p_modelos: modelos,
@@ -594,7 +592,6 @@ export async function criarProjeto(novo: NovoProjeto): Promise<string> {
       nome: novo.nome,
       tipo: novo.tipo,
       destino: novo.destino,
-      emoji: novo.emoji,
       receita_id: novo.receita_id ?? null,
       meta: novo.meta ?? null,
       peca_largura_cm: novo.pecaLarguraCm ?? null,
@@ -632,7 +629,7 @@ export async function criarProjeto(novo: NovoProjeto): Promise<string> {
 
 export async function atualizarProjeto(
   id: string,
-  patch: Partial<Pick<Projeto, 'nome' | 'destino' | 'emoji' | 'meta' | 'receita_id' | 'status'>>,
+  patch: Partial<Pick<Projeto, 'nome' | 'destino' | 'meta' | 'receita_id' | 'status'>>,
 ) {
   const { error } = await supabase.from('projetos').update(patch).eq('id', id)
   if (error) throw error

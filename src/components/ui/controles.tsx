@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Popover, useGatilho } from './Popover'
 import { PALETTE } from '../../lib/paleta'
 import { dataLocal, fmtDataBarra } from '../../lib/format'
+import { IconCheck } from './icons'
 
 /* Substitutos dos controles nativos: o <select>, o <input type=date|time|color>
    e o window.confirm abrem janelas do sistema, que não seguem a estética do app
@@ -93,7 +94,7 @@ export function Select<T extends string>({
               className="opcao"
               onClick={() => escolher(v)}
             >
-              <span style={{ width: 12, flex: 'none' }}>{v === value ? '✓' : ''}</span>
+              <span style={{ width: 12, flex: 'none' }}>{v === value && <IconCheck size={12} />}</span>
               {label}
             </button>
           ))}
@@ -340,7 +341,7 @@ export function TimePicker({
                 g.fechar()
               }}
             >
-              <span style={{ width: 12, flex: 'none' }}>{h === value ? '✓' : ''}</span>
+              <span style={{ width: 12, flex: 'none' }}>{h === value && <IconCheck size={12} />}</span>
               {h}
             </button>
           ))}

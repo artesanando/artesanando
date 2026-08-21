@@ -59,7 +59,7 @@ export function ModalMaterial() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['estoque'] })
-      toast(editando ? 'Material atualizado ✓' : 'Material adicionado ✓')
+      toast(editando ? 'Material atualizado' : 'Material adicionado')
       close()
     },
     onError: () => toast('Não foi possível salvar o material.', 'erro'),
@@ -220,7 +220,7 @@ export function ModalMovimentoEstoque() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['estoque'] })
       qc.invalidateQueries({ queryKey: ['estoque-movimentos', estoqueItemId] })
-      toast('Estoque atualizado ✓')
+      toast('Estoque atualizado')
       close()
     },
     onError: () => toast('Não foi possível lançar — confira se a saída cabe no estoque.', 'erro'),

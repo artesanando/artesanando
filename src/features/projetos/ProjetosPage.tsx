@@ -7,6 +7,7 @@ import { MenuKebab } from '../../components/ui/controles'
 import { useAcoesProjeto } from './useAcoesProjeto'
 import { separaArquivados } from '../../lib/arquivo'
 import { useLabelSemestre } from '../../lib/semestre'
+import { IconAmigurumi, IconCroche, IconTrico } from '../../components/ui/icons'
 import {
   fetchProgressoGeral,
   fetchProjetos,
@@ -14,6 +15,7 @@ import {
   progressoSquares,
   progressoUnidades,
   type Projeto,
+  type ProjetoTipo,
 } from './api'
 
 type Aba = 'todos' | 'mantas' | 'amigurumis' | 'arquivados'
@@ -229,10 +231,10 @@ export function ProjetosPage() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: 17,
+                        color: 'var(--accent)',
                       }}
                     >
-                      {p.emoji ?? '🧶'}
+                      {iconeDoTipo(p.tipo)}
                     </div>
                     <div>
                       <div style={{ fontWeight: 800, fontSize: 15 }}>{p.nome}</div>
@@ -279,3 +281,6 @@ export function ProjetosPage() {
     </div>
   )
 }
+
+const iconeDoTipo = (tipo: ProjetoTipo) =>
+  tipo === 'manta_croche' ? <IconCroche /> : tipo === 'manta_trico' ? <IconTrico /> : <IconAmigurumi />

@@ -8,6 +8,7 @@ import { useConfirmar } from '../../components/ui/Confirm'
 import { hojeIso } from '../../lib/format'
 import { ativarSemestre, atualizarSemestre, criarSemestre, fetchSemestres } from '../../lib/semestre'
 import { fetchPermissoes, togglePermissao, type PermCol } from './api'
+import { IconCadeado } from '../../components/ui/icons'
 
 type Secao = 'permissoes' | 'projeto'
 
@@ -103,7 +104,8 @@ function Permissoes() {
           marginBottom: 16,
         }}
       >
-        🔒 Apenas administradoras alteram permissões — o banco recusa qualquer outra escrita.
+        <IconCadeado />
+        Apenas administradoras alteram permissões — o banco recusa qualquer outra escrita.
       </div>
 
       <div style={{ marginBottom: 20 }}>
@@ -222,7 +224,7 @@ function SecaoProjeto() {
     onSuccess: () => {
       setLabel('')
       invalidar()
-      toast('Semestre criado ✓')
+      toast('Semestre criado')
     },
     onError: () => toast('Não foi possível criar — o rótulo já existe?', 'erro'),
   })
@@ -231,7 +233,7 @@ function SecaoProjeto() {
     mutationFn: (id: string) => ativarSemestre(id),
     onSuccess: () => {
       invalidar()
-      toast('Semestre ativo trocado ✓')
+      toast('Semestre ativo trocado')
     },
     onError: () => toast('Não foi possível ativar.', 'erro'),
   })

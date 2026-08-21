@@ -99,7 +99,7 @@ export function IntegrantesPage() {
     mutationFn: ({ id: alvo, nivel }: { id: string; nivel: Nivel }) => definirNivel(alvo, nivel),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['integrantes'] })
-      toast('Nível atualizado ✓')
+      toast('Nível atualizado')
     },
     onError: () => toast('Não foi possível mudar o nível.', 'erro'),
   })
@@ -118,7 +118,7 @@ export function IntegrantesPage() {
       qc.invalidateQueries({ queryKey: ['integrantes'] })
       qc.invalidateQueries({ queryKey: ['presencas'] })
       qc.invalidateQueries({ queryKey: ['entregas-light'] })
-      toast('Fichas juntadas ✓')
+      toast('Fichas juntadas')
     },
     onError: () => toast('Não foi possível juntar as fichas.', 'erro'),
   })
@@ -127,7 +127,7 @@ export function IntegrantesPage() {
     mutationFn: ({ pid, ativo }: { pid: string; ativo: boolean }) => definirAtivo(pid, ativo),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['integrantes'] })
-      toast('Integrante atualizada ✓')
+      toast('Integrante atualizada')
     },
     onError: () => toast('Não foi possível atualizar.', 'erro'),
   })
@@ -165,7 +165,7 @@ export function IntegrantesPage() {
         <input
           className="field"
           style={{ borderRadius: 99, marginBottom: 14 }}
-          placeholder="🔍 Buscar integrante…"
+          placeholder="Buscar integrante…"
           aria-label="Buscar integrante"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
@@ -405,7 +405,7 @@ export function IntegrantesPage() {
                             setTimeout(() => setCopiadoSenha(false), 2500)
                           }}
                         >
-                          {copiadoSenha ? 'Copiado ✓' : 'Copiar'}
+                          {copiadoSenha ? 'Copiado' : 'Copiar'}
                         </button>
                         <button
                           type="button"
@@ -533,7 +533,7 @@ export function IntegrantesPage() {
                 marginBottom: 16,
               }}
             >
-              🧶 {selEmprestados} {selEmprestados === 1 ? 'item emprestado' : 'itens emprestados'}{' '}
+              {selEmprestados} {selEmprestados === 1 ? 'item emprestado' : 'itens emprestados'}{' '}
               em casa — veja no Estoque.
             </div>
           )}

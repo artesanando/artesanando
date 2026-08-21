@@ -107,7 +107,7 @@ function Mapa({
     onSuccess: () => {
       setSel(new Set())
       invalidar()
-      toast('Progresso registrado ✓')
+      toast('Progresso registrado')
     },
     onError: () => toast('Não foi possível registrar.', 'erro'),
   })
@@ -308,7 +308,7 @@ function Mapa({
                     style={{ fontWeight: 800, color: full ? 'var(--green-dark)' : 'var(--accent)' }}
                   >
                     {done}/{doModelo.length}
-                    {full ? ' ✓' : ''}
+                    {full ? '' : ''}
                   </span>
                 </div>
               )

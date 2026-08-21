@@ -8,6 +8,7 @@ import { Calendario, MenuKebab, type MarcaDia } from '../../components/ui/contro
 import { useToast } from '../../components/ui/Toast'
 import { fmtDataCurta, fmtDataLonga, hojeIso } from '../../lib/format'
 import { TURNO_LABEL } from '../../types/database'
+import { IconCheck } from '../../components/ui/icons'
 import {
   contaNaFrequencia,
   criarIntegranteSemConta,
@@ -85,7 +86,7 @@ export function PresencaPage() {
     mutationFn: ({ id, valor }: { id: string; valor: boolean }) => definirCancelado(id, valor),
     onSuccess: (_, { valor }) => {
       qc.invalidateQueries({ queryKey: ['encontros'] })
-      toast(valor ? 'Encontro cancelado ✓' : 'Encontro reaberto ✓')
+      toast(valor ? 'Encontro cancelado' : 'Encontro reaberto')
     },
     onError: () => toast('Não foi possível mudar o encontro.', 'erro'),
   })
@@ -111,7 +112,7 @@ export function PresencaPage() {
       qc.invalidateQueries({ queryKey: ['presencas'] })
       qc.invalidateQueries({ queryKey: ['integrantes-chamada'] })
       qc.invalidateQueries({ queryKey: ['integrantes'] })
-      toast('Adicionada à chamada ✓')
+      toast('Adicionada à chamada')
     },
     onError: () => toast('Não foi possível adicionar.', 'erro'),
   })
@@ -393,7 +394,7 @@ export function PresencaPage() {
                                   }),
                             }}
                           >
-                            ✓
+                            {presente && <IconCheck size={14} />}
                           </button>
                         </div>
                       )

@@ -78,7 +78,7 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
       setRespId('')
       setQuantas(1)
       invalidar()
-      toast('Unidades adicionadas ✓')
+      toast('Unidades adicionadas')
     },
     onError: () => toast('Não foi possível adicionar as unidades.', 'erro'),
   })
@@ -89,7 +89,7 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
       setReatribuindo(null)
       setNovoResp('')
       invalidar()
-      toast('Unidades reatribuídas ✓')
+      toast('Unidades reatribuídas')
     },
     onError: () => toast('Não foi possível reatribuir.', 'erro'),
   })
@@ -98,7 +98,7 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
     mutationFn: (ids: string[]) => removerUnidades(ids),
     onSuccess: () => {
       invalidar()
-      toast('Unidades removidas ✓')
+      toast('Unidades removidas')
     },
     onError: () => toast('Não foi possível remover.', 'erro'),
   })
@@ -107,7 +107,7 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
     mutationFn: (ids: string[]) => reabrirUnidades(ids),
     onSuccess: () => {
       invalidar()
-      toast('Unidades reabertas ✓')
+      toast('Unidades reabertas')
     },
     onError: () => toast('Não foi possível reabrir.', 'erro'),
   })
@@ -128,7 +128,7 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
       setConcluindo(null)
       setQuantasProntas(1)
       invalidar()
-      toast('Unidades concluídas ✓')
+      toast('Unidades concluídas')
     },
     onError: () => toast('Não foi possível concluir.', 'erro'),
   })
@@ -206,7 +206,7 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
                             padding: 0,
                           }}
                         >
-                          Concluir ✓
+                          Concluir
                         </button>
                       )}
                       <span

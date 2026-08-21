@@ -10,6 +10,7 @@ import { ini } from '../../lib/format'
 import { nomeDaCor, PALETTE } from '../../lib/paleta'
 import { fmtMedida, tamanhoManta } from '../../lib/medida'
 import { Comentarios, Historico } from './Comentarios'
+import { IconCheck } from '../../components/ui/icons'
 import {
   adicionarFaixa,
   fetchFaixas,
@@ -77,7 +78,7 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
       ),
     onSuccess: () => {
       invalidar()
-      toast('Ordem salva ✓')
+      toast('Ordem salva')
     },
     onError: () => toast('Não foi possível salvar.', 'erro'),
   })
@@ -189,7 +190,7 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
                   }}
                 >
                   F{f.ordem}
-                  {f.status === 'feita' && '✓'}
+                  {f.status === 'feita' && <IconCheck size={11} />}
                 </span>
                 {cores.map((c, j) => (
                   <span key={j} style={{ flex: 1, background: c }} />
@@ -298,7 +299,7 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
                 disabled={status.isPending}
                 onClick={() => status.mutate('feita')}
               >
-                Concluir ✓
+                Concluir
               </button>
             )}
             {feita && podeReabrir && (

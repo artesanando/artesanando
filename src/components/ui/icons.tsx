@@ -205,3 +205,25 @@ export const IconAjuda = ({ size = 13 }: { size?: number }) => (
     <circle cx="12" cy="16.6" r=".9" fill="currentColor" stroke="none" />
   </svg>
 )
+
+/* Identifica o tipo de projeto no cartão — antes isso era um emoji que a pessoa
+   digitava, o que dava uma salada de figurinha e nenhuma informação confiável. */
+export const IconCroche = ({ size = 19 }: { size?: number }) => (
+  <svg {...acao(size)}>
+    <rect x="4" y="4" width="16" height="16" rx="2.5" />
+    <rect x="9" y="9" width="6" height="6" rx="1" />
+  </svg>
+)
+
+export const IconTrico = ({ size = 19 }: { size?: number }) => (
+  <svg {...acao(size)} strokeLinecap="round">
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </svg>
+)
+
+export const IconAmigurumi = ({ size = 19 }: { size?: number }) => (
+  <svg {...acao(size)}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M6.5 20a5.5 5.5 0 0 1 11 0z" />
+  </svg>
+)

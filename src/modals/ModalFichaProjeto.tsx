@@ -13,7 +13,7 @@ import {
   type Projeto,
 } from '../features/projetos/api'
 
-/* Editar a ficha depois de criado — nome, destino, emoji, meta e receita.
+/* Editar a ficha depois de criado — nome, destino, meta e receita.
    Antes, tudo isso era decidido na criação e ficava assim para sempre. */
 export function ModalFichaProjeto() {
   const { projetoId } = useStore()
@@ -43,7 +43,6 @@ function Form({ projeto }: { projeto: Projeto }) {
 
   const [nome, setNome] = useState(projeto.nome)
   const [destino, setDestino] = useState(projeto.destino ?? '')
-  const [emoji, setEmoji] = useState(projeto.emoji ?? '🧶')
   const [meta, setMeta] = useState(projeto.meta ?? 12)
   const [receitaId, setReceitaId] = useState(projeto.receita_id ?? '')
 
@@ -52,14 +51,13 @@ function Form({ projeto }: { projeto: Projeto }) {
       atualizarProjeto(projeto.id, {
         nome: nome.trim(),
         destino: destino.trim() || null,
-        emoji: emoji || null,
         meta: amigurumi ? meta : null,
         receita_id: amigurumi && receitaId ? receitaId : null,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['projetos'] })
       qc.invalidateQueries({ queryKey: ['projeto', projeto.id] })
-      toast('Ficha atualizada ✓')
+      toast('Ficha atualizada')
       close()
     },
     onError: () => toast('Não foi possível salvar a ficha.', 'erro'),
@@ -98,17 +96,6 @@ function Form({ projeto }: { projeto: Projeto }) {
                 value={destino}
                 onChange={(e) => setDestino(e.target.value)}
                 placeholder="Hospital Infantil"
-              />
-            )}
-          </Campo>
-          <Campo label="EMOJI">
-            {(p) => (
-              <input
-                {...p}
-                className="field"
-                value={emoji}
-                onChange={(e) => setEmoji(e.target.value)}
-                maxLength={4}
               />
             )}
           </Campo>

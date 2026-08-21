@@ -170,7 +170,7 @@ function Frequencia({ semestreId }: { semestreId: string | null }) {
       })),
     )
     await navigator.clipboard?.writeText(texto)
-    toast('Tabela copiada ✓')
+    toast('Tabela copiada')
   }
 
   return (
@@ -432,7 +432,7 @@ function Arquivos({ semestreId }: { semestreId: string | null }) {
       setTitulo('')
       setArquivo(null)
       invalidar()
-      toast('Arquivo enviado ✓')
+      toast('Arquivo enviado')
     },
     onError: () => toast('Não foi possível enviar o arquivo.', 'erro'),
   })
@@ -441,7 +441,7 @@ function Arquivos({ semestreId }: { semestreId: string | null }) {
     mutationFn: (a: ArquivoExtensao) => removerArquivo(a),
     onSuccess: () => {
       invalidar()
-      toast('Arquivo removido ✓')
+      toast('Arquivo removido')
     },
     onError: () => toast('Não foi possível remover.', 'erro'),
   })
@@ -718,7 +718,7 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
     }) => marcarCredito({ ...m, semestreId: semestreId!, por: profile!.id }),
     onSuccess: () => {
       invalidar()
-      toast('Marca registrada ✓')
+      toast('Marca registrada')
     },
     onError: () => toast('Não foi possível marcar.', 'erro'),
   })

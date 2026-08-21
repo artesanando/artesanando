@@ -36,7 +36,7 @@ export function useAcoesArquivo() {
             try {
               await desarquivar(tabela, id)
               revalidar()
-              toast('Restaurado ✓')
+              toast('Restaurado')
             } catch {
               toast('Não foi possível restaurar.', 'erro')
             }
@@ -53,7 +53,7 @@ export function useAcoesArquivo() {
             try {
               await arquivar(tabela, id)
               revalidar()
-              toast('Arquivado ✓')
+              toast('Arquivado')
             } catch {
               toast('Não foi possível arquivar.', 'erro')
             }
@@ -82,7 +82,7 @@ export function useAcoesArquivo() {
         try {
           await excluir(tabela, id)
           revalidar()
-          toast('Excluído ✓')
+          toast('Excluído')
         } catch {
           toast('Não foi possível excluir.', 'erro')
         }

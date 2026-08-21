@@ -19,6 +19,7 @@ import {
 import { atualizarPerfil, fetchMeuRa, salvarRa, subirAvatar } from './api'
 import { RecorteImagem } from '../../components/ui/RecorteImagem'
 import { MinhaMeta } from './MinhaMeta'
+import { IconCadeado } from '../../components/ui/icons'
 
 const PREFS: [Preferencia, string][] = [
   ['croche', 'Crochê'],
@@ -106,7 +107,7 @@ export function PerfilPage() {
         qc.invalidateQueries({ queryKey: ['meu-ra', profile.id] })
       }
       await refreshProfile()
-      toast('Alterações salvas ✓')
+      toast('Alterações salvas')
     } catch (e) {
       // 23505 = unique violation: o usuário escolhido já é de outra integrante
       const codigo = (e as { code?: string } | null)?.code
@@ -129,7 +130,7 @@ export function PerfilPage() {
       await refreshProfile()
       qc.invalidateQueries({ queryKey: ['avatar'] })
       qc.invalidateQueries({ queryKey: ['integrantes'] })
-      toast('Foto atualizada ✓')
+      toast('Foto atualizada')
     } catch {
       toast('Não foi possível enviar a foto.', 'erro')
     } finally {
@@ -142,7 +143,7 @@ export function PerfilPage() {
       await atualizarPerfil(profile.id, { avatar_url: null })
       await refreshProfile()
       qc.invalidateQueries({ queryKey: ['avatar'] })
-      toast('Foto removida ✓')
+      toast('Foto removida')
     } catch {
       toast('Não foi possível remover a foto.', 'erro')
     }
@@ -158,7 +159,7 @@ export function PerfilPage() {
       await updatePassword(novaSenha)
       setNovaSenha('')
       setSenhaAberta(false)
-      toast('Senha alterada ✓')
+      toast('Senha alterada')
     } catch {
       setSenhaMsg('Não foi possível alterar a senha.')
     }
@@ -290,7 +291,7 @@ export function PerfilPage() {
                 >
                   {email}
                 </span>
-                <span style={{ fontSize: 11 }}>🔒</span>
+                <IconCadeado size={12} />
               </div>
             )}
           </Campo>

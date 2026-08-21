@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../state/auth'
 import { Lbl, PasswordField } from '../../components/ui/bits'
 import { AuthShell } from './AuthShell'
+import { IconCheck } from '../../components/ui/icons'
 
 export function LoginPage() {
   const { session, login } = useAuth()
@@ -89,7 +90,7 @@ export function LoginPage() {
               flex: 'none',
             }}
           >
-            {manter ? '✓' : ''}
+            {manter && <IconCheck size={12} />}
           </span>
           Manter conectada
         </label>

@@ -7,6 +7,7 @@ import { entregasDe, fetchEntregasLight } from '../integrantes/api'
 import { fetchEncontros, fetchPresencas, frequenciaDe } from '../presenca/api'
 import { avaliaRegra, textoDaLinha } from '../extensao/creditos'
 import { fetchMarcas, fetchRegras } from '../extensao/creditosApi'
+import { IconCheck } from '../../components/ui/icons'
 
 /* O que falta para ela fechar o semestre. A regra é de leitura geral — não é
    segredo —, mas a marca e o progresso das outras não aparecem aqui: a policy
@@ -85,7 +86,7 @@ export function MinhaMeta() {
               color: b.cumpriu ? 'var(--green-dark)' : 'var(--ink-soft)',
             }}
           >
-            <span style={{ flex: 'none', fontWeight: 800 }}>{b.cumpriu ? '✓' : '·'}</span>
+            <span style={{ flex: 'none', fontWeight: 800 }}>{b.cumpriu ? <IconCheck size={12} /> : '·'}</span>
             <span>{b.linhas.map(textoDaLinha).join('  ou  ')}</span>
           </div>
         ))}

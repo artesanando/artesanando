@@ -108,7 +108,7 @@ export function ModalIntegrante() {
               marginBottom: 16,
             }}
           >
-            ✓ Convite criado para <b>{email}</b>.
+            Convite criado para <b>{email}</b>.
           </div>
 
           {/* O email só sai se o SMTP estiver configurado no Supabase. Com o link
@@ -128,7 +128,7 @@ export function ModalIntegrante() {
                   style={{ flex: 1, minWidth: 180, fontSize: 12 }}
                 />
                 <button type="button" className="pill" onClick={copiar}>
-                  {copiado ? 'Copiado ✓' : 'Copiar'}
+                  {copiado ? 'Copiado' : 'Copiar'}
                 </button>
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--gold-dark)', marginBottom: 20 }}>

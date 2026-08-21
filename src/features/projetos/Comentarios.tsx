@@ -6,6 +6,7 @@ import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
 import { MenuKebab } from '../../components/ui/controles'
 import { tempoRelativo } from '../../lib/format'
+import { IconCamera } from '../../components/ui/icons'
 import {
   apagarComentario,
   chaveComentarios,
@@ -73,7 +74,7 @@ export function Comentarios(alvo: AlvoComentario) {
     mutationFn: (id: string) => apagarComentario(id),
     onSuccess: () => {
       invalidar()
-      toast('Comentário apagado ✓')
+      toast('Comentário apagado')
     },
     onError: () => toast('Não foi possível apagar o comentário.', 'erro'),
   })
@@ -226,7 +227,7 @@ export function Comentarios(alvo: AlvoComentario) {
             onClick={() => inputFoto.current?.click()}
             style={{ flex: 'none' }}
           >
-            📷
+            <IconCamera />
           </button>
           {/* antes só dava para enviar com Enter — no celular o botão é o caminho */}
           <button

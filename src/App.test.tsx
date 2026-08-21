@@ -166,7 +166,7 @@ describe('projetos (M3)', () => {
   it('concluir amigurumi abre o contador de quantas ficaram prontas', async () => {
     __login()
     renderAt('/projetos/p3')
-    await userEvent.click(await screen.findByRole('button', { name: 'Concluir ✓' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Concluir' }))
     const contador = screen.getByRole('spinbutton', {
       name: /Quantas unidades de Grace Hopper ficaram prontas/,
     })

@@ -81,7 +81,7 @@ export function BibliotecaPage() {
         <input
           className="field"
           style={{ flex: 1, borderRadius: 99 }}
-          placeholder="🔍 Buscar receita ou padrão…"
+          placeholder="Buscar receita ou padrão…"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           aria-label="Buscar receita ou padrão"

@@ -72,7 +72,6 @@ export function ModalProjeto() {
 
   const [nome, setNome] = useState('')
   const [destino, setDestino] = useState('')
-  const [emoji, setEmoji] = useState('🧶')
   const [receitaId, setReceitaId] = useState('')
   const [meta, setMeta] = useState(12)
   const [erro, setErro] = useState<string | null>(null)
@@ -173,7 +172,6 @@ export function ModalProjeto() {
         nome: nome.trim(),
         tipo: manta ? (croche ? 'manta_croche' : 'manta_trico') : 'amigurumi',
         destino: destino.trim() || null,
-        emoji: manta ? (croche ? '🌸' : '☁️') : emoji,
         receita_id: !manta && receitaId ? receitaId : null,
         meta: !manta ? meta : null,
         created_by: profile!.id,
@@ -441,17 +439,6 @@ export function ModalProjeto() {
           <div className="grid2" style={{ marginBottom: 20 }}>
             <Campo label="META DE UNIDADES">
               {() => <Stepper value={meta} onChange={setMeta} min={1} max={999} ariaLabel="Meta" />}
-            </Campo>
-            <Campo label="EMOJI">
-              {(p) => (
-                <input
-                  {...p}
-                  className="field"
-                  value={emoji}
-                  onChange={(e) => setEmoji(e.target.value)}
-                  maxLength={4}
-                />
-              )}
             </Campo>
           </div>
         )}

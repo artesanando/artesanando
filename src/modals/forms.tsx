@@ -31,6 +31,7 @@ import { useSemestreAtivo } from '../lib/semestre'
 import { TURNO_LABEL, type TurnoEncontro } from '../types/database'
 import { hojeIso } from '../lib/format'
 import { useAuth } from '../state/auth'
+import { IconCheck, IconPdf } from '../components/ui/icons'
 
 function ErroBox({ children }: { children: ReactNode }) {
   return (
@@ -197,7 +198,8 @@ function FormReceita({ atual, editando }: { atual?: Receita; editando: boolean }
               marginBottom: 18,
             }}
           >
-            {pdf ? `📄 ${pdf.name}` : '📄 Anexar PDF'}
+            <IconPdf />
+            {pdf ? pdf.name : 'Anexar PDF'}
             <input
               type="file"
               accept="application/pdf"
@@ -485,7 +487,7 @@ export function ModalDevolucao() {
                       flex: 'none',
                     }}
                   >
-                    ✓
+                    <IconCheck size={12} />
                   </span>
                 ) : (
                   <span
@@ -576,7 +578,7 @@ function FormEncontro({ encontro }: { encontro?: Encontro }) {
     },
     onSuccess: (criados) => {
       qc.invalidateQueries({ queryKey: ['encontros'] })
-      if (criados > 1) toast(`${criados} encontros criados ✓`)
+      if (criados > 1) toast(`${criados} encontros criados`)
       close()
     },
     onError: () => setErro('Não foi possível salvar o encontro.'),
