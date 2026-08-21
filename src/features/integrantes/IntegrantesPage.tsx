@@ -297,9 +297,10 @@ export function IntegrantesPage() {
                   gap: 12,
                   padding: '12px 8px',
                   cursor: 'pointer',
-                  ...(selected
-                    ? { background: 'var(--chip-rose)', borderRadius: 10, margin: '6px 0' }
-                    : { borderBottom: '1px solid var(--border)' }),
+                  /* a divisória e a altura não mudam com a seleção: trocar a
+                     borda por margem fazia a linha crescer e a lista pular */
+                  borderBottom: '1px solid var(--border)',
+                  background: selected ? 'var(--chip-rose)' : undefined,
                 }}
               >
                 <AvatarPerfil
