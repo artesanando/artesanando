@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../state/store'
 import { useAuth } from '../state/auth'
 import { Lbl } from '../components/ui/bits'
+import { ColorPicker } from '../components/ui/controles'
 import { CampoMedida } from '../components/ui/CampoMedida'
 import { PreviaFaixas } from '../components/ui/PreviaFaixas'
 import { ModalBox, ModalHeader } from './shared'
@@ -10,9 +11,28 @@ import { SeletorCategoria } from './SeletorCategoria'
 import { criarReceita } from '../features/biblioteca/api'
 import { fmtMedida, tamanhoManta } from '../lib/medida'
 
+const botaoContador = (cor: string) => ({
+  border: 'none',
+  background: 'none',
+  fontFamily: 'inherit',
+  fontWeight: 800,
+  fontSize: 15,
+  cursor: 'pointer',
+  color: cor,
+  padding: 0,
+})
+
 export function ModalFaixa() {
-  const { faixaSeq, faixaCount, faixaCycle, faixaAdd, faixaDrop, incFaixa, decFaixa, backToProjeto } =
-    useStore()
+  const {
+    faixaSeq,
+    faixaCount,
+    faixaSetColor,
+    faixaAdd,
+    faixaDrop,
+    incFaixa,
+    decFaixa,
+    backToProjeto,
+  } = useStore()
   const { profile } = useAuth()
   const qc = useQueryClient()
   const [nome, setNome] = useState('Novo padrão de faixa')
@@ -62,47 +82,51 @@ export function ModalFaixa() {
         onChange={(e) => setNome(e.target.value)}
       />
       <Lbl style={{ marginBottom: 9 }}>SEQUÊNCIA DE CORES DA FAIXA</Lbl>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <div
-          style={{
-            display: 'flex',
-            borderRadius: 6,
-            overflow: 'hidden',
-            border: '1px solid var(--field-border)',
-          }}
-        >
-          {faixaSeq.map((c, i) => (
-            <div
-              key={i}
-              onClick={() => faixaCycle(i)}
-              style={{ width: 36, height: 34, background: c, cursor: 'pointer' }}
-            />
-          ))}
-        </div>
-        <span
-          onClick={faixaDrop}
-          style={{
-            cursor: 'pointer',
-            color: 'var(--faint)',
-            fontWeight: 800,
-            fontSize: 18,
-            padding: '0 4px',
-          }}
-        >
-          −
-        </span>
-        <span
+      <div style={{ marginBottom: 14 }}>
+        {faixaSeq.map((c, i) => (
+          <div
+            key={i}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}
+          >
+            <span style={{ fontSize: 11, color: 'var(--muted)', width: 16, fontWeight: 800 }}>
+              {i + 1}
+            </span>
+            <span style={{ flex: 1, minWidth: 130 }}>
+              <ColorPicker
+                value={c}
+                ariaLabel={`Cor ${i + 1} da faixa`}
+                onChange={(nova) => faixaSetColor(i, nova)}
+              />
+            </span>
+            <button
+              type="button"
+              aria-label={`Remover a cor ${i + 1}`}
+              disabled={faixaSeq.length <= 2}
+              onClick={faixaDrop}
+              style={{
+                border: 'none',
+                background: 'none',
+                fontFamily: 'inherit',
+                fontSize: 15,
+                fontWeight: 800,
+                color: 'var(--faint)',
+                cursor: faixaSeq.length <= 2 ? 'default' : 'pointer',
+                opacity: faixaSeq.length <= 2 ? 0.4 : 1,
+                padding: '0 4px',
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          className="pill ghost"
           onClick={faixaAdd}
-          style={{
-            cursor: 'pointer',
-            color: 'var(--accent)',
-            fontWeight: 800,
-            fontSize: 18,
-            padding: '0 4px',
-          }}
+          style={{ fontSize: 12 }}
         >
-          +
-        </span>
+          + Cor
+        </button>
       </div>
       <Lbl style={{ marginBottom: 7 }}>QUANTIDADE DE FAIXAS</Lbl>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
@@ -115,19 +139,23 @@ export function ModalFaixa() {
             width: 120,
           }}
         >
-          <span
+          <button
+            type="button"
+            aria-label="Menos uma faixa"
             onClick={decFaixa}
-            style={{ cursor: 'pointer', color: 'var(--faint)', fontWeight: 800 }}
+            style={botaoContador('var(--faint)')}
           >
             −
-          </span>
+          </button>
           <b>{faixaCount}</b>
-          <span
+          <button
+            type="button"
+            aria-label="Mais uma faixa"
             onClick={incFaixa}
-            style={{ cursor: 'pointer', color: 'var(--accent)', fontWeight: 800 }}
+            style={botaoContador('var(--accent)')}
           >
             +
-          </span>
+          </button>
         </div>
       </div>
       <div style={{ marginBottom: 20 }}>

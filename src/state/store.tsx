@@ -91,7 +91,7 @@ export interface Store extends StoreState {
   grannyDel: (i: number) => void
   grannyAdd: () => void
   grannySetColor: (i: number, c: string) => void
-  faixaCycle: (i: number) => void
+  faixaSetColor: (i: number, c: string) => void
   faixaAdd: () => void
   faixaDrop: () => void
   incFaixa: () => void
@@ -157,11 +157,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       set({
         grannyRings: s.grannyRings.map((x, j) => (j === i ? { ...x, c, name: nomeDaCor(c) } : x)),
       }),
-    faixaCycle: (i) => {
-      const pal = PALETTE.map((p) => p[0])
-      const nx = pal[(pal.indexOf(s.faixaSeq[i]) + 1) % pal.length]
-      set({ faixaSeq: s.faixaSeq.map((x, j) => (j === i ? nx : x)) })
-    },
+    /* Antes a cor só ciclava pelas oito da paleta ao clicar no quadradinho —
+       sem cor livre e sem teclado. Agora é o mesmo ColorPicker do granny. */
+    faixaSetColor: (i, c) => set({ faixaSeq: s.faixaSeq.map((x, j) => (j === i ? c : x)) }),
     faixaAdd: () => set({ faixaSeq: [...s.faixaSeq, PALETTE[s.faixaSeq.length % PALETTE.length][0]] }),
     faixaDrop: () => set({ faixaSeq: s.faixaSeq.length > 2 ? s.faixaSeq.slice(0, -1) : s.faixaSeq }),
     incFaixa: () => set({ faixaCount: Math.min(20, s.faixaCount + 1) }),
