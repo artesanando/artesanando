@@ -64,7 +64,6 @@ export interface Permissoes {
   profile_id: string
   progresso: boolean
   devolucoes: boolean
-  comentarios: boolean
   financeiro: boolean
   /** marcar chamada e mexer no calendário de encontros */
   presenca: boolean

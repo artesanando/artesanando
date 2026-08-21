@@ -7,6 +7,8 @@ import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
 import { hojeIso } from '../../lib/format'
 import { ativarSemestre, atualizarSemestre, criarSemestre, fetchSemestres } from '../../lib/semestre'
+import { useAuth } from '../../state/auth'
+import { definirPapel } from '../integrantes/api'
 import { fetchPermissoes, togglePermissao, type PermCol } from './api'
 import { IconCadeado } from '../../components/ui/icons'
 
@@ -22,9 +24,14 @@ const COLS: [PermCol, string, string][] = [
   ],
   ['devolucoes', 'MATERIAIS', 'registrar empréstimo e devolução, cadastrar e repor material'],
   ['presenca', 'PRESENÇA', 'marcar a chamada, agendar encontro e cancelar encontro'],
-  ['comentarios', 'MODERAÇÃO', 'apagar comentário de outra integrante'],
   ['financeiro', 'FINANCEIRO', 'lançar entradas e saídas do caixa'],
 ]
+
+/* Administradora não é uma permissão a mais: é o papel que já traz todas elas,
+   mais o que nenhuma chave dá (configurações, área de extensão, apagar
+   comentário alheio). Fica na mesma tabela porque é aqui que se olha para
+   decidir quem pode o quê. */
+const COL_ADMIN = 'ADMINISTRADORA'
 
 const item = (on: boolean): CSSProperties => ({
   padding: '9px 12px',
@@ -71,11 +78,17 @@ export function ConfigPage() {
 function Permissoes() {
   const qc = useQueryClient()
   const toast = useToast()
+  const confirmar = useConfirmar()
+  const { profile } = useAuth()
+  const meuId = profile?.id
   const {
     data: rows,
     isLoading,
     isError,
   } = useQuery({ queryKey: ['permissoes'], queryFn: fetchPermissoes })
+
+  // a grade da tabela conta as colunas de permissão mais a de administradora
+  const colunas = { '--n-col': COLS.length + 1 } as CSSProperties
 
   const toggle = useMutation({
     mutationFn: ({ id, col, value }: { id: string; col: PermCol; value: boolean }) =>
@@ -83,6 +96,36 @@ function Permissoes() {
     onError: () => toast('Não foi possível alterar a permissão.', 'erro'),
     onSettled: () => qc.invalidateQueries({ queryKey: ['permissoes'] }),
   })
+
+  const papel = useMutation({
+    mutationFn: ({ id, admin }: { id: string; admin: boolean }) =>
+      definirPapel(id, admin ? 'admin' : 'integrante'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['permissoes'] })
+      qc.invalidateQueries({ queryKey: ['integrantes'] })
+      toast('Perfil alterado')
+    },
+    onError: () => toast('Não foi possível alterar o perfil.', 'erro'),
+  })
+
+  /* Promover dá acesso total, inclusive a esta tabela — e rebaixar a última
+     administradora deixaria o app sem quem administra. Nenhuma das duas coisas
+     deve acontecer por um clique distraído. */
+  const promover = async (id: string, nome: string, admin: boolean) => {
+    const restantes = (rows ?? []).filter((r) => r.papel === 'admin' && r.id !== id).length
+    if (admin && restantes === 0) {
+      toast('Esta é a única administradora — promova outra antes.', 'erro')
+      return
+    }
+    const ok = await confirmar({
+      titulo: admin
+        ? `${nome} deixa de ser administradora?`
+        : `Tornar ${nome} administradora?`,
+      okLabel: admin ? 'Rebaixar' : 'Tornar administradora',
+      perigo: admin,
+    })
+    if (ok) papel.mutate({ id, admin: !admin })
+  }
 
   return (
     <>
@@ -117,13 +160,14 @@ function Permissoes() {
       </div>
 
       <div className="card" style={{ borderRadius: 14, overflow: 'hidden' }}>
-        <div className="lbl linha-perm cabecalho">
+        <div className="lbl linha-perm cabecalho" style={colunas}>
           <div>INTEGRANTE</div>
           {COLS.map(([, label]) => (
             <div key={label} style={{ textAlign: 'center' }}>
               {label}
             </div>
           ))}
+          <div style={{ textAlign: 'center' }}>{COL_ADMIN}</div>
         </div>
         {isLoading && (
           <div style={{ padding: 18, fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>
@@ -141,7 +185,7 @@ function Permissoes() {
         {rows?.map((p) => {
           const admin = p.papel === 'admin'
           return (
-          <div key={p.id} className="linha-perm">
+          <div key={p.id} className="linha-perm" style={colunas}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
               <AvatarPerfil
                 nome={p.nome}
@@ -192,6 +236,28 @@ function Permissoes() {
                 </div>
               )
             })}
+            <div className="cel-perm">
+              <span className="rotulo-perm">{COL_ADMIN}</span>
+              <button
+                type="button"
+                className="sw"
+                role="switch"
+                aria-checked={admin}
+                aria-label={`${COL_ADMIN} de ${p.nome}`}
+                disabled={p.id === meuId || papel.isPending}
+                onClick={() => promover(p.id, p.nome, admin)}
+                style={{
+                  background: admin ? 'var(--primary)' : '#E7DCCF',
+                  cursor: p.id === meuId ? 'default' : 'pointer',
+                  border: 'none',
+                  padding: 0,
+                  opacity: p.id === meuId ? 0.45 : papel.isPending ? 0.6 : 1,
+                  transition: 'background var(--dur-rapida) var(--ease-suave)',
+                }}
+              >
+                <span style={admin ? { right: 2 } : { left: 2 }} />
+              </button>
+            </div>
           </div>
           )
         })}

@@ -485,10 +485,12 @@ textarea.field::placeholder {
   border-radius: 4px;
 }
 
-/* tabela de permissões — vira ficha por integrante no celular */
+/* tabela de permissões — vira ficha por integrante no celular.
+   O número de colunas vem do componente: fixá-lo aqui já quebrou o layout uma
+   vez, quando a chave de presença entrou e o 6º item caiu na coluna do nome. */
 .linha-perm {
   display: grid;
-  grid-template-columns: 1.6fr repeat(4, 1fr);
+  grid-template-columns: 1.6fr repeat(var(--n-col, 4), 1fr);
   align-items: center;
   padding: 13px 18px;
   border-top: 1px solid var(--divider);
@@ -532,7 +534,7 @@ textarea.field::placeholder {
 /* tabelas da Atividade de extensão — viram ficha por integrante no celular */
 .linha-extensao {
   display: grid;
-  grid-template-columns: 1.7fr repeat(4, 0.7fr);
+  grid-template-columns: 1.7fr repeat(var(--n-col, 4), 0.7fr);
   align-items: center;
   gap: 8px;
   padding: 11px 18px;

@@ -1,7 +1,7 @@
 import { supabase } from '../../lib/supabase'
 import type { Permissoes, Profile } from '../../types/database'
 
-export type PermCol = 'progresso' | 'devolucoes' | 'comentarios' | 'financeiro' | 'presenca'
+export type PermCol = 'progresso' | 'devolucoes' | 'financeiro' | 'presenca'
 
 export interface PermissaoRow
   extends Pick<

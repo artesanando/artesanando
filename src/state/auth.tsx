@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { setKeepConnected, supabase } from '../lib/supabase'
 import { nivelDaPessoa, turnoDaPessoa, type Permissoes, type Profile } from '../types/database'
 
-export type Perm = 'progresso' | 'devolucoes' | 'comentarios' | 'financeiro' | 'presenca'
+export type Perm = 'progresso' | 'devolucoes' | 'financeiro' | 'presenca'
 
 interface AuthCtx {
   session: Session | null

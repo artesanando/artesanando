@@ -361,12 +361,22 @@ describe('configurações', () => {
     expect(screen.queryByRole('button', { name: 'Encontros' })).not.toBeInTheDocument()
   })
 
-  it('a permissão de presença entra na tabela', async () => {
+  it('a permissão de presença entra na tabela, e a de moderação sai', async () => {
     __login()
     renderAt('/configuracoes')
     expect(
       await screen.findByRole('switch', { name: 'PRESENÇA de Ada Lovelace' }),
     ).toBeInTheDocument()
+    expect(screen.queryByText('MODERAÇÃO')).not.toBeInTheDocument()
+  })
+
+  it('dá para tornar alguém administradora pela tabela', async () => {
+    __login()
+    renderAt('/configuracoes')
+    const chave = await screen.findByRole('switch', { name: 'ADMINISTRADORA de Ada Lovelace' })
+    expect(chave).not.toBeChecked()
+    // a própria admin logada não se rebaixa por descuido
+    expect(screen.getByRole('switch', { name: 'ADMINISTRADORA de Cândida Nunes' })).toBeDisabled()
   })
 
   it('administradora aparece na tabela de permissões, mas travada', async () => {

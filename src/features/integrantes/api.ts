@@ -1,5 +1,11 @@
 import { supabase } from '../../lib/supabase'
-import { nivelDaPessoa, turnoDaPessoa, type Nivel, type Profile } from '../../types/database'
+import {
+  nivelDaPessoa,
+  turnoDaPessoa,
+  type Nivel,
+  type Papel,
+  type Profile,
+} from '../../types/database'
 import { saldoEmprestimo, type EmprestimoAtivo } from '../estoque/api'
 
 export async function fetchIntegrantes(): Promise<Profile[]> {
@@ -135,4 +141,12 @@ export function filtraIntegrantes(integrantes: Profile[], busca: string): Profil
   return integrantes.filter(
     (p) => p.nome.toLowerCase().includes(q) || p.usuario.toLowerCase().includes(q),
   )
+}
+
+/* Promover ou rebaixar administradora. O banco já autorizava — `guard_profile_update`
+   só barra não-admin —, mas não havia caminho na interface: dava para nascer
+   admin no cadastro e nunca mais mudar. O gatilho de auditoria registra a troca. */
+export async function definirPapel(id: string, papel: Papel) {
+  const { error } = await supabase.from('profiles').update({ papel }).eq('id', id)
+  if (error) throw error
 }

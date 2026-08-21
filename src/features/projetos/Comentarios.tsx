@@ -19,10 +19,10 @@ import {
   type AlvoComentario,
 } from './api'
 
-/* Comentar deixou de pedir permissão: qualquer integrante logada escreve, aqui
-   e na biblioteca. A chave `comentarios` virou moderação — apagar o alheio. */
+/* Comentar não pede permissão: qualquer integrante logada escreve, aqui e na
+   biblioteca. Apagar comentário de outra é só de administradora. */
 export function Comentarios(alvo: AlvoComentario) {
-  const { profile, can } = useAuth()
+  const { profile, isAdmin } = useAuth()
   const qc = useQueryClient()
   const toast = useToast()
   const confirmar = useConfirmar()
@@ -86,8 +86,8 @@ export function Comentarios(alvo: AlvoComentario) {
       </div>
       {(comentarios ?? []).map((c) => {
         const meu = c.autor_id === profile?.id
-        // apagar comentário alheio é o que a chave `comentarios` passou a valer
-        const modera = can('comentarios')
+        // apagar comentário alheio é decisão de coordenação, não uma chave à parte
+        const modera = isAdmin
         return (
           <div key={c.id} style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
             <AvatarPerfil
