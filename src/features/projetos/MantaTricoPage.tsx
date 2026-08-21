@@ -9,18 +9,26 @@ import { useConfirmar } from '../../components/ui/Confirm'
 import { ini } from '../../lib/format'
 import { nomeDaCor, PALETTE } from '../../lib/paleta'
 import { fmtMedida, tamanhoManta } from '../../lib/medida'
+import { reordena } from '../../components/ui/useReordenar'
 import { Comentarios, Historico } from './Comentarios'
 import { IconArrastar, IconCheck, IconChevron, IconX } from '../../components/ui/icons'
 import {
-  adicionarFaixa,
   fetchFaixas,
+  inserirFaixa,
   mudarStatusFaixa,
   progressoFaixas,
   removerFaixa,
+  reordenarFaixas,
   salvarFaixas,
   type Faixa,
   type Projeto,
 } from './api'
+
+/* O que dá para fazer com a estrutura da manta, além de pintar a faixa. */
+type AcaoFaixa =
+  | { tipo: 'inserir'; ordem: number; cores: string[] }
+  | { tipo: 'remover'; id: string }
+  | { tipo: 'mover'; de: number; para: number }
 
 /* Editor da faixa selecionada. O estado das cores é local e só vai para o banco
    no Salvar; status e responsável gravam na hora, porque são o que destrava o
@@ -83,18 +91,49 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
     onError: () => toast('Não foi possível salvar.', 'erro'),
   })
 
+  /* Estrutura da manta: onde a faixa entra, de onde sai e em que posição fica.
+     Antes só dava para somar no fim e tirar a última, então uma faixa a mais no
+     meio da manta — ou a ordem das cores trocada — pedia projeto novo. */
   const mexerNasFaixas = useMutation({
-    mutationFn: async (acao: 'add' | 'remove') => {
-      if (acao === 'add') {
-        const ordem = Math.max(0, ...faixas.map((f) => f.ordem)) + 1
-        await adicionarFaixa(projeto.id, ordem, coresSel)
-      } else {
-        await removerFaixa(faixas[faixas.length - 1].id)
-      }
+    mutationFn: async (acao: AcaoFaixa) => {
+      if (acao.tipo === 'inserir') return inserirFaixa(projeto.id, acao.ordem, acao.cores)
+      if (acao.tipo === 'remover') return removerFaixa(acao.id)
+      return reordenarFaixas(
+        projeto.id,
+        reordena(
+          faixas.map((f) => f.id),
+          acao.de,
+          acao.para,
+        ),
+      )
     },
-    onSuccess: invalidar,
+    onSuccess: (_dado, acao) => {
+      if (acao.tipo === 'inserir') setSel(acao.ordem - 1)
+      if (acao.tipo === 'mover') setSel(acao.para)
+      if (acao.tipo === 'remover') setSel((i) => Math.max(0, Math.min(i, faixas.length - 2)))
+      invalidar()
+    },
     onError: () => toast('Não foi possível mudar as faixas.', 'erro'),
   })
+
+  /* Faixa que já saiu do 'a fazer' carrega trabalho de alguém: tirar do meio da
+     manta avisa antes, como remover a última já avisava. */
+  const removerComAviso = async (f: Faixa) => {
+    if (
+      f.status !== 'afazer' &&
+      !(await confirmar({
+        titulo: `Remover a faixa ${f.ordem}?`,
+        descricao:
+          f.status === 'feita'
+            ? 'Ela já está feita — o trabalho dela sai da manta.'
+            : 'Alguém está fazendo esta faixa.',
+        okLabel: 'Remover',
+        perigo: true,
+      }))
+    )
+      return
+    mexerNasFaixas.mutate({ tipo: 'remover', id: f.id })
+  }
 
   if (!faixaSel) return null
 
@@ -211,29 +250,15 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
               className="pill ghost"
               style={{ flex: 1 }}
               disabled={mexerNasFaixas.isPending}
-              onClick={() => mexerNasFaixas.mutate('add')}
+              onClick={() =>
+                mexerNasFaixas.mutate({
+                  tipo: 'inserir',
+                  ordem: faixas.length + 1,
+                  cores: coresSel,
+                })
+              }
             >
-              + Faixa
-            </button>
-            <button
-              className="pill ghost"
-              style={{ flex: 1 }}
-              disabled={faixas.length <= 1 || mexerNasFaixas.isPending}
-              onClick={async () => {
-                const ultima = faixas[faixas.length - 1]
-                if (
-                  ultima.status !== 'afazer' &&
-                  !(await confirmar({
-                    titulo: `Remover a faixa ${ultima.ordem}?`,
-                    okLabel: 'Remover',
-                    perigo: true,
-                  }))
-                )
-                  return
-                mexerNasFaixas.mutate('remove')
-              }}
-            >
-              − Faixa
+              + Faixa no fim
             </button>
           </div>
         )}
@@ -281,6 +306,51 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
             {faixaSel.responsavel?.nome ?? 'Sem responsável'}
           </span>
         </div>
+
+        {isAdmin && (
+          <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+            <button
+              className="pill ghost"
+              style={{ padding: '7px 12px', fontSize: 11.5 }}
+              aria-label={`Mover a faixa ${faixaSel.ordem} para cima`}
+              disabled={indice === 0 || mexerNasFaixas.isPending}
+              onClick={() => mexerNasFaixas.mutate({ tipo: 'mover', de: indice, para: indice - 1 })}
+            >
+              <IconChevron size={11} para="cima" />
+            </button>
+            <button
+              className="pill ghost"
+              style={{ padding: '7px 12px', fontSize: 11.5 }}
+              aria-label={`Mover a faixa ${faixaSel.ordem} para baixo`}
+              disabled={indice >= faixas.length - 1 || mexerNasFaixas.isPending}
+              onClick={() => mexerNasFaixas.mutate({ tipo: 'mover', de: indice, para: indice + 1 })}
+            >
+              <IconChevron size={11} para="baixo" />
+            </button>
+            <button
+              className="pill ghost"
+              style={{ padding: '7px 12px', fontSize: 11.5 }}
+              disabled={mexerNasFaixas.isPending}
+              onClick={() =>
+                mexerNasFaixas.mutate({
+                  tipo: 'inserir',
+                  ordem: faixaSel.ordem + 1,
+                  cores: coresSel,
+                })
+              }
+            >
+              Inserir abaixo
+            </button>
+            <button
+              className="pill ghost"
+              style={{ padding: '7px 12px', fontSize: 11.5 }}
+              disabled={faixas.length <= 1 || mexerNasFaixas.isPending}
+              onClick={() => removerComAviso(faixaSel)}
+            >
+              Remover
+            </button>
+          </div>
+        )}
 
         {can('progresso') && (
           <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>

@@ -36,6 +36,12 @@ export function sequenciaDaFaixa(seq: string[], indice: number): string[] {
   return seq.map((_, j) => seq[(j + indice) % seq.length])
 }
 
+/* Cores de cada faixa da manta: as que foram editadas uma a uma, quando
+   houver, e o resto seguindo o deslocamento da faixa modelo. */
+export function faixasDaManta(seq: string[], faixas: number, livres?: string[][]): string[][] {
+  return Array.from({ length: faixas }, (_, i) => livres?.[i] ?? sequenciaDaFaixa(seq, i))
+}
+
 /** Redimensiona uma grade de letras preservando o que couber e completando o resto */
 export function redimensionaCelulas(
   celulas: string[][],

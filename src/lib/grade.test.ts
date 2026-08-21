@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   coordenada,
+  faixasDaManta,
   gradePadrao,
   redimensionaCelulas,
   retangulo,
@@ -79,5 +80,31 @@ describe('sequenciaDaFaixa', () => {
 
   it('sequência vazia não quebra', () => {
     expect(sequenciaDaFaixa([], 2)).toEqual([])
+  })
+})
+
+describe('faixasDaManta', () => {
+  it('sem faixas livres a manta inteira segue o deslocamento', () => {
+    expect(faixasDaManta(['a', 'b'], 3)).toEqual([
+      ['a', 'b'],
+      ['b', 'a'],
+      ['a', 'b'],
+    ])
+  })
+
+  it('a faixa editada à mão vale por si e o resto continua deslocando', () => {
+    const livres: string[][] = []
+    livres[1] = ['z', 'z', 'z']
+    expect(faixasDaManta(['a', 'b'], 3, livres)).toEqual([
+      ['a', 'b'],
+      ['z', 'z', 'z'],
+      ['a', 'b'],
+    ])
+  })
+
+  it('encolher corta as faixas de baixo e crescer devolve o padrão', () => {
+    const livres = [['z'], ['y'], ['x']]
+    expect(faixasDaManta(['a', 'b'], 2, livres)).toEqual([['z'], ['y']])
+    expect(faixasDaManta(['a', 'b'], 4, livres)).toEqual([['z'], ['y'], ['x'], ['b', 'a']])
   })
 })

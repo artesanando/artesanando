@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import { gradePadrao, sequenciaDaFaixa } from '../../lib/grade'
+import { faixasDaManta, gradePadrao } from '../../lib/grade'
 import type { Receita } from '../../types/database'
 
 /* ---------- Tipos ---------- */
@@ -448,15 +448,33 @@ export async function mudarStatusFaixa(opts: {
   })
 }
 
-export async function adicionarFaixa(projetoId: string, ordem: number, cores: string[]) {
-  const { error } = await supabase
-    .from('faixas')
-    .insert({ projeto_id: projetoId, ordem, cores })
+/* Inserir, remover e reordenar passam pelo banco: `faixas` tem unique
+   (projeto_id, ordem), então empurrar as de baixo não cabe num UPDATE só — as
+   funções fazem isso numa transação, sem a manta ficar com duas faixas na
+   mesma posição no meio do caminho. */
+
+/** Insere uma faixa na posição pedida, empurrando as de baixo */
+export async function inserirFaixa(projetoId: string, ordem: number, cores: string[]) {
+  const { error } = await supabase.rpc('inserir_faixa', {
+    p_projeto: projetoId,
+    p_ordem: ordem,
+    p_cores: cores,
+  })
   if (error) throw error
 }
 
+/** Remove a faixa e fecha o buraco que ela deixa */
 export async function removerFaixa(id: string) {
-  const { error } = await supabase.from('faixas').delete().eq('id', id)
+  const { error } = await supabase.rpc('remover_faixa', { p_faixa: id })
+  if (error) throw error
+}
+
+/** Renumera as faixas do projeto na ordem em que os ids chegam */
+export async function reordenarFaixas(projetoId: string, ids: string[]) {
+  const { error } = await supabase.rpc('reordenar_faixas', {
+    p_projeto: projetoId,
+    p_ids: ids,
+  })
   if (error) throw error
 }
 
@@ -582,6 +600,8 @@ export interface NovoProjeto {
   // manta tricô: padrão das faixas
   faixaSeq?: string[]
   faixaCount?: number
+  /** faixas desenhadas uma a uma no esquema, quando o padrão foi editado livre */
+  faixaCores?: string[][]
   // tamanho de um square (crochê) ou de uma faixa (tricô), em cm
   pecaLarguraCm?: number | null
   pecaAlturaCm?: number | null
@@ -636,12 +656,14 @@ export async function criarProjeto(novo: NovoProjeto): Promise<string> {
   if (novo.tipo === 'manta_trico') {
     const seq = novo.faixaSeq ?? []
     const count = novo.faixaCount ?? 8
-    // cada faixa desloca a sequência uma posição: é o que faz as cores
-    // caminharem na diagonal em vez de virarem blocos retos
-    const faixas = Array.from({ length: count }, (_, i) => ({
+    // as faixas desenhadas à mão no esquema vêm inteiras; as demais deslocam a
+    // sequência uma posição, que é o que faz as cores caminharem na diagonal
+    // em vez de virarem blocos retos
+    const linhas = faixasDaManta(seq, count, novo.faixaCores)
+    const faixas = linhas.map((cores, i) => ({
       projeto_id: projetoId,
       ordem: i + 1,
-      cores: sequenciaDaFaixa(seq, i),
+      cores,
     }))
     const { error: e3 } = await supabase.from('faixas').insert(faixas)
     if (e3) throw e3

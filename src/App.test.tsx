@@ -84,6 +84,22 @@ describe('navegação', () => {
     expect(screen.queryByLabelText('Nome do modelo A')).not.toBeInTheDocument()
   })
 
+  it('o tamanho da peça vem sempre do esquema escolhido', async () => {
+    __login()
+    renderAt('/')
+    await userEvent.click(await screen.findByRole('button', { name: '+ Novo projeto' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Esquema de manta' }))
+    await userEvent.click(await screen.findByRole('option', { name: /Esquema Xadrez/ }))
+    expect(screen.getByLabelText('LARGURA DO SQUARE (CM)')).toHaveValue('20')
+
+    // trocar de esquema reescreve a medida: antes ficava a do anterior
+    await userEvent.click(screen.getByRole('button', { name: 'Tricô' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Esquema de manta' }))
+    await userEvent.click(await screen.findByRole('option', { name: /Esquema Listrado/ }))
+    expect(screen.getByLabelText('LARGURA DA FAIXA (CM)')).toHaveValue('100')
+    expect(screen.getByLabelText('ALTURA DA FAIXA (CM)')).toHaveValue('12')
+  })
+
   it('sem esquema salvo, o próprio formulário leva ao criador', async () => {
     __login()
     renderAt('/')
@@ -200,6 +216,23 @@ describe('projetos (M3)', () => {
     // F2 está como "a fazer" no fake
     await userEvent.click(await screen.findByRole('button', { name: /Faixa 2, a fazer/ }))
     expect(screen.getByRole('button', { name: 'Pegar faixa' })).toBeInTheDocument()
+  })
+
+  it('admin mexe na estrutura da manta de tricô', async () => {
+    __login()
+    renderAt('/projetos/p2')
+    await userEvent.click(await screen.findByRole('button', { name: /Faixa 2, a fazer/ }))
+    expect(screen.getByRole('button', { name: /Mover a faixa 2 para cima/ })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Inserir abaixo' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Remover' })).toBeEnabled()
+  })
+
+  it('integrante não mexe na estrutura da manta de tricô', async () => {
+    __login(INTEGRANTE_PROFILE)
+    renderAt('/projetos/p2')
+    await screen.findByText('FEITA · SOMENTE LEITURA')
+    expect(screen.queryByRole('button', { name: 'Inserir abaixo' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '+ Faixa no fim' })).not.toBeInTheDocument()
   })
 
   it('o mapa mostra a etapa de cada square', async () => {
@@ -498,6 +531,25 @@ describe('biblioteca (M2)', () => {
     await userEvent.click(await screen.findByRole('button', { name: '+ Adicionar' }))
     await userEvent.click(screen.getByRole('button', { name: 'Salvar na biblioteca' }))
     expect(await screen.findByText('Dê um nome à receita.')).toBeInTheDocument()
+  })
+
+  it('o esquema de tricô puxa cores, faixas e medida do padrão salvo', async () => {
+    __login()
+    renderAt('/biblioteca')
+    await userEvent.click(await screen.findByRole('button', { name: '+ Adicionar' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Esquema de manta' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Tricô' }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Puxar padrão de faixa da biblioteca' }),
+    )
+    await userEvent.click(await screen.findByRole('option', { name: /Listras do Ateliê/ }))
+    // antes daqui saíam só as cores: a manta nascia com 8 faixas e sem medida
+    expect(screen.getByRole('spinbutton', { name: 'Faixas' })).toHaveAttribute(
+      'aria-valuenow',
+      '10',
+    )
+    expect(screen.getByLabelText('LARGURA DA FAIXA (CM)')).toHaveValue('90')
+    expect(screen.getByLabelText('ALTURA DA FAIXA (CM)')).toHaveValue('10')
   })
 
   it('a categoria troca o editor sem sair do fluxo', async () => {
