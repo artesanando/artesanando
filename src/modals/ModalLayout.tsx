@@ -17,6 +17,7 @@ import { criarReceita, fetchReceitas } from '../features/biblioteca/api'
 import { fmtMedida, tamanhoManta } from '../lib/medida'
 import type { Tecnica } from '../types/database'
 import type { ModeloNovo } from '../features/projetos/api'
+import { IconX } from '../components/ui/icons'
 
 const LETRAS = 'ABCDEFGH'.split('')
 const MIN = 2
@@ -471,7 +472,7 @@ export function ModalLayout() {
                     aria-label={`Remover modelo ${m.letra}`}
                     onClick={() => removerModelo(i)}
                   >
-                    ✕
+                    <IconX size={12} />
                   </button>
                 )}
               </div>
@@ -563,7 +564,7 @@ export function ModalLayout() {
                   disabled={seq.length <= 2}
                   onClick={() => setSeq((atual) => atual.filter((_, j) => j !== i))}
                 >
-                  ✕
+                  <IconX size={12} />
                 </button>
               </div>
             ))}

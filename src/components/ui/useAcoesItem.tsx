@@ -5,7 +5,7 @@ import { arquivar, desarquivar, excluir, podeExcluir } from '../../lib/arquivo'
 import type { Arquivavel } from '../../types/database'
 import type { AcaoMenu } from './controles'
 
-/* Monta o Arquivar/Excluir do menu ⋮ do mesmo jeito em toda lista do app.
+/* Monta o Arquivar/Excluir do menu de ações do mesmo jeito em toda lista do app.
    A escolha entre os dois não é do chamador: `pode_excluir` no banco decide, e
    o que tem histórico só oferece arquivar — com o motivo escrito no diálogo. */
 

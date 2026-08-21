@@ -12,6 +12,7 @@ import { fetchSemestres, useSemestreAtivo } from '../../lib/semestre'
 import { NIVEL_LABEL, TURNO_LABEL, type Nivel } from '../../types/database'
 import { entregasDe, fetchEntregasLight, fetchIntegrantes } from '../integrantes/api'
 import { avaliaRegra, textoDaLinha, TIPO_LABEL, type TipoLinha } from './creditos'
+import { IconX } from '../../components/ui/icons'
 import {
   ACAO_LABEL,
   criarBloco,
@@ -782,7 +783,7 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
                     aria-label={`Remover o bloco ${i + 1} de ${NIVEL_LABEL[nivel]}`}
                     onClick={() => mudar.mutate(() => removerBloco(b.id))}
                   >
-                    ✕
+                    <IconX />
                   </button>
                 </div>
                 {b.linhas.map((l) => (
@@ -807,7 +808,7 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
                       aria-label={`Remover ${TIPO_LABEL[l.tipo]} do bloco ${i + 1}`}
                       onClick={() => mudar.mutate(() => removerLinha(l.id))}
                     >
-                      ✕
+                      <IconX />
                     </button>
                   </div>
                 ))}

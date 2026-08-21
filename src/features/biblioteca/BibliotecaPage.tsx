@@ -109,7 +109,7 @@ export function BibliotecaPage() {
             style={{ border: 'none', background: 'none', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
             onClick={() => setVerArquivadas((v) => !v)}
           >
-            {verArquivadas ? '‹ Ativas' : `Arquivadas (${arquivados.length}) ›`}
+            {verArquivadas ? 'Ativas' : `Arquivadas (${arquivados.length})`}
           </button>
         )}
       </div>

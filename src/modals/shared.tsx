@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react'
 import { useStore } from '../state/store'
 import { usePrendeFoco } from '../components/ui/Popover'
+import { IconX } from '../components/ui/icons'
 
 /* O título do ModalHeader é o rótulo acessível do diálogo: o ModalBox gera o id
    e passa por contexto, o header o carimba no <h>, e o `aria-labelledby` liga os
@@ -27,7 +28,7 @@ export function ModalHeader({ title, sub }: { title: string; sub?: string }) {
           {title}
         </div>
         <button className="x" onClick={close} aria-label="Fechar">
-          ×
+          <IconX size={15} />
         </button>
       </div>
       {sub && (

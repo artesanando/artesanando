@@ -9,6 +9,7 @@ import { ModalBox, ModalHeader } from './shared'
 import { SeletorCategoria } from './SeletorCategoria'
 import { criarReceita } from '../features/biblioteca/api'
 import { fmtMedida } from '../lib/medida'
+import { IconX } from '../components/ui/icons'
 
 const passo = (cor: string): React.CSSProperties => ({
   border: 'none',
@@ -164,7 +165,7 @@ export function ModalGranny() {
                   onClick={() => grannyDel(i)}
                   style={passo('var(--faint-3)')}
                 >
-                  ✕
+                  <IconX size={12} />
                 </button>
               )}
             </div>

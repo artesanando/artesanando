@@ -7,6 +7,7 @@ import { Stepper } from '../../components/ui/bits'
 import { useConfirmar } from '../../components/ui/Confirm'
 import { useToast } from '../../components/ui/Toast'
 import { Comentarios } from './Comentarios'
+import { IconChevron, IconSetaLonga } from '../../components/ui/icons'
 import {
   adicionarUnidades,
   concluirUnidades,
@@ -139,7 +140,7 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
   return (
     <div className="pagina">
       <div className="crumb" onClick={() => navigate('/projetos')} style={{ marginBottom: 8 }}>
-        ‹ Projetos / <span style={{ color: 'var(--ink)' }}>Amigurumi {projeto.nome}</span>
+        <IconChevron size={11} para="esquerda" /> Projetos / <span style={{ color: 'var(--ink)' }}>Amigurumi {projeto.nome}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
         <div className="h titulo-pagina">
@@ -401,7 +402,7 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
                   style={{ color: 'var(--amber)', cursor: 'pointer' }}
                   onClick={() => navigate(`/biblioteca?receita=${receita.id}`)}
                 >
-                  {receita.nome} ↗
+                  {receita.nome} <IconSetaLonga size={11} para="diagonal" />
                 </b>
               ) : (
                 <span style={{ color: 'var(--faint-3)' }}>—</span>

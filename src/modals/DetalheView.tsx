@@ -6,6 +6,7 @@ import { PreviaFaixas } from '../components/ui/PreviaFaixas'
 import { PreviaGrade } from '../components/ui/PreviaGrade'
 import { Comentarios } from '../features/projetos/Comentarios'
 import { ModalBox } from './shared'
+import { IconX } from '../components/ui/icons'
 
 export interface DetalheProps {
   /** id da receita — sem ele o detalhe é só prévia e não abre comentários */
@@ -272,8 +273,8 @@ export function DetalheView({
           </div>
           {sub && <div style={{ fontSize: 12, color: '#7A6C62', marginTop: 2 }}>{sub}</div>}
         </div>
-        <button className="x" onClick={onClose}>
-          ×
+        <button className="x" onClick={onClose} aria-label="Fechar">
+          <IconX size={15} />
         </button>
       </div>
       {capa && (

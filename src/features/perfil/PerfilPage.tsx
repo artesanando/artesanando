@@ -19,7 +19,7 @@ import {
 import { atualizarPerfil, fetchMeuRa, salvarRa, subirAvatar } from './api'
 import { RecorteImagem } from '../../components/ui/RecorteImagem'
 import { MinhaMeta } from './MinhaMeta'
-import { IconCadeado } from '../../components/ui/icons'
+import { IconCadeado, IconChevron } from '../../components/ui/icons'
 
 const PREFS: [Preferencia, string][] = [
   ['croche', 'Crochê'],
@@ -169,7 +169,7 @@ export function PerfilPage() {
     <>
       <form onSubmit={salvar} className="pagina" style={{ maxWidth: 760 }}>
         <div className="crumb" onClick={() => navigate('/')} style={{ marginBottom: 10 }}>
-          ‹ Voltar
+          <IconChevron size={12} para="esquerda" /> Voltar
         </div>
         <div className="h titulo-pagina" style={{ marginBottom: 22 }}>
           Meu perfil

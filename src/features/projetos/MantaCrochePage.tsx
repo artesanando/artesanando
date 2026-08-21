@@ -10,6 +10,7 @@ import { useZoomGrade } from '../../components/ui/ZoomGrade'
 import { coordenada } from '../../lib/grade'
 import { fmtMedida, tamanhoManta } from '../../lib/medida'
 import { Comentarios, Historico } from './Comentarios'
+import { IconChevron } from '../../components/ui/icons'
 import {
   ETAPAS,
   ETAPA_LABEL,
@@ -465,7 +466,7 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
   return (
     <div className="pagina">
       <div className="crumb" onClick={() => navigate('/projetos')} style={{ marginBottom: 8 }}>
-        ‹ Projetos / <span style={{ color: 'var(--ink)' }}>{projeto.nome}</span>
+        <IconChevron size={11} para="esquerda" /> Projetos / <span style={{ color: 'var(--ink)' }}>{projeto.nome}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
         <div className="h titulo-pagina">

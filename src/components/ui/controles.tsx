@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Popover, useGatilho } from './Popover'
 import { PALETTE } from '../../lib/paleta'
 import { dataLocal, fmtDataBarra } from '../../lib/format'
-import { IconCheck } from './icons'
+import { IconCheck, IconChevron, IconKebab } from './icons'
 
 /* Substitutos dos controles nativos: o <select>, o <input type=date|time|color>
    e o window.confirm abrem janelas do sistema, que não seguem a estética do app
@@ -71,7 +71,7 @@ export function Select<T extends string>({
         >
           {atual?.[1] ?? placeholder}
         </span>
-        <span className="seta">▼</span>
+        <span className="seta"><IconChevron /></span>
       </button>
       <Popover aberto={g.aberto} aoFechar={g.fechar} ancora={g.ref.current} ariaLabel={ariaLabel}>
         {comBusca && (
@@ -172,13 +172,13 @@ export function Calendario({
         }}
       >
         <button type="button" className="kebab" aria-label="Mês anterior" onClick={() => mover(-1)}>
-          ‹
+          <IconChevron size={12} para="esquerda" />
         </button>
         <b style={{ fontSize: 13 }}>
           {MESES[mes]} {ano}
         </b>
         <button type="button" className="kebab" aria-label="Próximo mês" onClick={() => mover(1)}>
-          ›
+          <IconChevron size={12} para="direita" />
         </button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2 }}>
@@ -269,7 +269,7 @@ export function DatePicker({
         <span style={{ color: value ? 'var(--ink)' : 'var(--faint)' }}>
           {value ? fmtDataBarra(value) : 'dd/mm'}
         </span>
-        <span className="seta">▼</span>
+        <span className="seta"><IconChevron /></span>
       </button>
       <Popover
         aberto={g.aberto}
@@ -325,7 +325,7 @@ export function TimePicker({
         onClick={g.alternar}
       >
         <span style={{ color: value ? 'var(--ink)' : 'var(--faint)' }}>{value || '--:--'}</span>
-        <span className="seta">▼</span>
+        <span className="seta"><IconChevron /></span>
       </button>
       <Popover aberto={g.aberto} aoFechar={g.fechar} ancora={g.ref.current} ariaLabel={ariaLabel}>
         <div role="listbox" aria-label={ariaLabel}>
@@ -392,7 +392,7 @@ export function ColorPicker({
           />
           {nome ?? value}
         </span>
-        <span className="seta">▼</span>
+        <span className="seta"><IconChevron /></span>
       </button>
       <Popover
         aberto={g.aberto}
@@ -464,7 +464,7 @@ export function ColorPicker({
   )
 }
 
-/* ---------- Menu ⋮ ---------- */
+/* ---------- Menu de ações ---------- */
 
 export interface AcaoMenu {
   label: string
@@ -492,7 +492,7 @@ export function MenuKebab({ acoes, ariaLabel = 'Ações' }: { acoes: AcaoMenu[];
           g.alternar()
         }}
       >
-        ⋮
+        <IconKebab />
       </button>
       <Popover
         aberto={g.aberto}

@@ -211,7 +211,7 @@ export function EstoquePage() {
                 style={{ border: 'none', background: 'none', fontFamily: 'inherit' }}
                 onClick={() => setVerArquivados((v) => !v)}
               >
-                {verArquivados ? '‹ Voltar aos ativos' : `Arquivados (${arquivados.length}) ›`}
+                {verArquivados ? 'Voltar aos ativos' : `Arquivados (${arquivados.length})`}
               </button>
             )}
           </div>

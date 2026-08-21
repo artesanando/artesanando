@@ -474,7 +474,7 @@ describe('financeiro — modal', () => {
   it('valor zero e descrição vazia mostram erro sob cada campo', async () => {
     __login()
     renderAt('/financeiro')
-    await userEvent.click(await screen.findByRole('button', { name: '↑ Entrada' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Entrada' }))
     await userEvent.click(screen.getByRole('button', { name: 'Registrar entrada' }))
     expect(await screen.findByText('Informe um valor maior que zero.')).toBeInTheDocument()
     expect(screen.getByText('Descreva a movimentação.')).toBeInTheDocument()
@@ -493,7 +493,7 @@ describe('financeiro é restrito', () => {
   it('admin continua vendo o financeiro', async () => {
     __login()
     renderAt('/financeiro')
-    expect(await screen.findByRole('button', { name: '↑ Entrada' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Entrada' })).toBeInTheDocument()
   })
 })
 

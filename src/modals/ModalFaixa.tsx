@@ -10,6 +10,7 @@ import { ModalBox, ModalHeader } from './shared'
 import { SeletorCategoria } from './SeletorCategoria'
 import { criarReceita } from '../features/biblioteca/api'
 import { fmtMedida, tamanhoManta } from '../lib/medida'
+import { IconX } from '../components/ui/icons'
 
 const botaoContador = (cor: string) => ({
   border: 'none',
@@ -115,7 +116,7 @@ export function ModalFaixa() {
                 padding: '0 4px',
               }}
             >
-              ✕
+              <IconX size={12} />
             </button>
           </div>
         ))}

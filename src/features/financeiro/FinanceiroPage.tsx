@@ -8,6 +8,7 @@ import { useAcoesArquivo } from '../../components/ui/useAcoesItem'
 import { separaArquivados } from '../../lib/arquivo'
 import { useSemestreAtivo } from '../../lib/semestre'
 import { fmtCentavos, fmtDataCurta, hojeIso } from '../../lib/format'
+import { IconSetaLonga } from '../../components/ui/icons'
 import {
   fetchMovimentacoes,
   filtraPeriodo,
@@ -145,10 +146,10 @@ export function FinanceiroPage() {
         {can('financeiro') && (
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="pill ghost" onClick={() => openFin('saida')}>
-              ↓ Saída
+              <IconSetaLonga size={12} para="baixo" /> Saída
             </button>
             <button className="pill" onClick={() => openFin('entrada')}>
-              ↑ Entrada
+              <IconSetaLonga size={12} para="cima" /> Entrada
             </button>
           </div>
         )}
@@ -251,7 +252,7 @@ export function FinanceiroPage() {
             style={{ border: 'none', background: 'none', fontFamily: 'inherit' }}
             onClick={() => setVerArquivadas((v) => !v)}
           >
-            {verArquivadas ? '‹ Voltar às ativas' : `Ver arquivadas (${arquivados.length}) ›`}
+            {verArquivadas ? 'Voltar às ativas' : `Ver arquivadas (${arquivados.length})`}
           </button>
         )}
       </div>

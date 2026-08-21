@@ -10,7 +10,7 @@ import { ini } from '../../lib/format'
 import { nomeDaCor, PALETTE } from '../../lib/paleta'
 import { fmtMedida, tamanhoManta } from '../../lib/medida'
 import { Comentarios, Historico } from './Comentarios'
-import { IconCheck } from '../../components/ui/icons'
+import { IconArrastar, IconCheck, IconChevron, IconX } from '../../components/ui/icons'
 import {
   adicionarFaixa,
   fetchFaixas,
@@ -366,7 +366,7 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
                   touchAction: 'none',
                 }}
               >
-                ⠿
+                <IconArrastar />
               </button>
               <span
                 style={{
@@ -409,7 +409,7 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
                 onClick={() => mover(i, i - 1)}
                 style={setaStyle(travada || i === 0)}
               >
-                ▲
+                <IconChevron size={11} para="cima" />
               </button>
               <button
                 type="button"
@@ -418,7 +418,7 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
                 onClick={() => mover(i, i + 1)}
                 style={setaStyle(travada || i === coresSel.length - 1)}
               >
-                ▼
+                <IconChevron size={11} para="baixo" />
               </button>
               {!travada && coresSel.length > 2 && (
                 <button
@@ -427,7 +427,7 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
                   onClick={() => removerCor(i)}
                   style={{ ...setaStyle(false), color: 'var(--faint-3)' }}
                 >
-                  ✕
+                  <IconX size={12} />
                 </button>
               )}
             </div>
@@ -497,7 +497,7 @@ export function MantaTricoPage({ projeto }: { projeto: Projeto }) {
   return (
     <div className="pagina">
       <div className="crumb" onClick={() => navigate('/projetos')} style={{ marginBottom: 8 }}>
-        ‹ Projetos / <span style={{ color: 'var(--ink)' }}>{projeto.nome}</span>
+        <IconChevron size={11} para="esquerda" /> Projetos / <span style={{ color: 'var(--ink)' }}>{projeto.nome}</span>
       </div>
       <div
         style={{

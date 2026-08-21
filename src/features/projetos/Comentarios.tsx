@@ -6,7 +6,7 @@ import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
 import { MenuKebab } from '../../components/ui/controles'
 import { tempoRelativo } from '../../lib/format'
-import { IconCamera } from '../../components/ui/icons'
+import { IconCamera, IconX } from '../../components/ui/icons'
 import {
   apagarComentario,
   chaveComentarios,
@@ -260,7 +260,7 @@ export function Comentarios(alvo: AlvoComentario) {
                 if (inputFoto.current) inputFoto.current.value = ''
               }}
             >
-              ✕
+              <IconX size={12} />
             </button>
           </div>
         )}
