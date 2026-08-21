@@ -17,8 +17,8 @@ Nada de rodar SQL na mão no painel.
 
 3. **Push na `main`** — a integração aplica as migrations e registra as versões em
    `supabase_migrations.schema_migrations`. Confira em *Table Editor* que as tabelas
-   apareceram e em *Storage* que existem os buckets `receitas`, `avatares`, `capas` e
-   `extensao`.
+   apareceram e em *Storage* que existem os buckets `receitas`, `avatares`, `capas`,
+   `comentarios` e `extensao`.
 
 4. **Seed** — [`seed.sql`](seed.sql) **não** roda em produção (a integração só aplica
    migrations; seed vale para branches de preview e para o ambiente local). Ajuste as
@@ -72,7 +72,7 @@ encontros, chamada, estoque, empréstimos, biblioteca, caixa e feed) e **preserv
 `profiles`, `permissoes` e `semestres` — você continua logada, com as mesmas integrantes.
 
 Não é uma migration: cole no *SQL Editor* e rode quando quiser recomeçar. Os arquivos nos
-buckets `receitas`, `avatares`, `capas` e `extensao` não saem no truncate — apague-os pelo
+buckets `receitas`, `avatares`, `capas`, `comentarios` e `extensao` não saem no truncate — apague-os pelo
 *Storage*.
 
 ## Nova migration
