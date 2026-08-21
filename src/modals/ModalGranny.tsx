@@ -10,6 +10,7 @@ import { SeletorCategoria } from './SeletorCategoria'
 import { criarReceita } from '../features/biblioteca/api'
 import { fmtMedida } from '../lib/medida'
 import { IconX } from '../components/ui/icons'
+import { useFios } from '../features/estoque/useFios'
 
 const passo = (cor: string): React.CSSProperties => ({
   border: 'none',
@@ -33,6 +34,7 @@ export function ModalGranny() {
     backToProjeto,
   } = useStore()
   const { profile } = useAuth()
+  const fios = useFios()
   const qc = useQueryClient()
   const [nome, setNome] = useState('Novo granny')
   const [medida, setMedida] = useState<{ largura: number | null; altura: number | null }>({
@@ -120,6 +122,7 @@ export function ModalGranny() {
                   precisar, qualquer outra cor */}
               <span style={{ flex: 1, minWidth: 130 }}>
                 <ColorPicker
+                  fios={fios}
                   value={r.c}
                   ariaLabel={`Cor da carreira ${i + 1}${nameOf(i)}`}
                   onChange={(c) => grannySetColor(i, c)}

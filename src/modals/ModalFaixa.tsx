@@ -11,6 +11,7 @@ import { SeletorCategoria } from './SeletorCategoria'
 import { criarReceita } from '../features/biblioteca/api'
 import { fmtMedida, tamanhoManta } from '../lib/medida'
 import { IconX } from '../components/ui/icons'
+import { useFios } from '../features/estoque/useFios'
 
 const botaoContador = (cor: string) => ({
   border: 'none',
@@ -35,6 +36,7 @@ export function ModalFaixa() {
     backToProjeto,
   } = useStore()
   const { profile } = useAuth()
+  const fios = useFios()
   const qc = useQueryClient()
   const [nome, setNome] = useState('Novo padrão de faixa')
   const [medida, setMedida] = useState<{ largura: number | null; altura: number | null }>({
@@ -94,6 +96,7 @@ export function ModalFaixa() {
             </span>
             <span style={{ flex: 1, minWidth: 130 }}>
               <ColorPicker
+                fios={fios}
                 value={c}
                 ariaLabel={`Cor ${i + 1} da faixa`}
                 onChange={(nova) => faixaSetColor(i, nova)}

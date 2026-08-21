@@ -20,6 +20,7 @@ import type { ModeloNovo } from '../features/projetos/api'
 import { IconX } from '../components/ui/icons'
 import { SquareGranny } from '../components/ui/SquareGranny'
 import { useConfirmar } from '../components/ui/Confirm'
+import { useFios } from '../features/estoque/useFios'
 
 const LETRAS = 'ABCDEFGH'.split('')
 const MIN = 2
@@ -71,6 +72,7 @@ export function ModalLayout() {
   const { backToProjeto } = useStore()
   const confirmar = useConfirmar()
   const { profile } = useAuth()
+  const fios = useFios()
   const qc = useQueryClient()
 
   const [nome, setNome] = useState('')
@@ -566,6 +568,7 @@ export function ModalLayout() {
                   </span>
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <ColorPicker
+                      fios={fios}
                       value={c}
                       ariaLabel={`Carreira ${j + 1} do modelo ${m.letra}`}
                       onChange={(cor) => mudarCarreira(i, j, cor)}
@@ -652,6 +655,7 @@ export function ModalLayout() {
                 </span>
                 <span style={{ flex: 1, minWidth: 130 }}>
                   <ColorPicker
+                    fios={fios}
                     value={c}
                     ariaLabel={`Cor ${i + 1} da faixa`}
                     onChange={(nova) => setSeq((atual) => atual.map((x, j) => (j === i ? nova : x)))}

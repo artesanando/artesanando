@@ -353,20 +353,36 @@ export function TimePicker({
 
 /* ---------- Cor ---------- */
 
+/* Um novelo do estoque oferecido como cor. Quem chama monta a lista — assim o
+   ColorPicker segue sem saber que `features/estoque` existe. */
+export interface FioDoEstoque {
+  id: string
+  nome: string
+  detalhe: string | null
+  cor_hex: string
+  capa?: string | null
+}
+
 export function ColorPicker({
   value,
   onChange,
   ariaLabel = 'Cor',
   /** deixa escolher qualquer cor além da paleta de fios */
   livre = true,
+  /** novelos do estoque, com foto — some quando a lista vem vazia */
+  fios,
 }: {
   value: string
   onChange: (hex: string) => void
   ariaLabel?: string
   livre?: boolean
+  fios?: FioDoEstoque[]
 }) {
   const g = useGatilho()
-  const nome = PALETTE.find(([c]) => c.toLowerCase() === value.toLowerCase())?.[1]
+  const daPaleta = PALETTE.find(([c]) => c.toLowerCase() === value.toLowerCase())?.[1]
+  // o fio escolhido nomeia a cor melhor do que o hex cru
+  const fio = (fios ?? []).find((f) => f.cor_hex.toLowerCase() === value.toLowerCase())
+  const nome = fio?.nome ?? daPaleta
 
   return (
     <>
@@ -430,6 +446,63 @@ export function ColorPicker({
               />
             ))}
           </div>
+          {(fios ?? []).length > 0 && (
+            <>
+              <div className="lbl" style={{ margin: '12px 0 6px' }}>
+                FIOS DO ESTOQUE
+              </div>
+              <div style={{ maxHeight: 168, overflowY: 'auto' }}>
+                {(fios ?? []).map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    aria-pressed={f.cor_hex.toLowerCase() === value.toLowerCase()}
+                    onClick={() => {
+                      onChange(f.cor_hex)
+                      g.fechar()
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      width: '100%',
+                      border: 'none',
+                      background:
+                        f.cor_hex.toLowerCase() === value.toLowerCase()
+                          ? 'var(--chip-rose)'
+                          : 'none',
+                      borderRadius: 8,
+                      padding: '5px 6px',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span className="miniatura-item" style={{ background: f.cor_hex }}>
+                      {f.capa && <img src={f.capa} alt="" />}
+                    </span>
+                    <span style={{ minWidth: 0, flex: 1 }}>
+                      <span
+                        style={{
+                          display: 'block',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {f.nome}
+                      </span>
+                      {f.detalhe && (
+                        <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>{f.detalhe}</span>
+                      )}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           {livre && (
             <label
               style={{
