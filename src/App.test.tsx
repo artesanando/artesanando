@@ -89,6 +89,9 @@ describe('navegação', () => {
     renderAt('/')
     await userEvent.click(await screen.findByRole('button', { name: '+ Novo projeto' }))
     await userEvent.click(screen.getByRole('button', { name: '+ Criar esquema' }))
+    // o editor só abre depois de dizer a técnica
+    expect(screen.getByText('DE QUE TÉCNICA É A MANTA?')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Crochê' }))
     expect(screen.getByLabelText('Nome do esquema')).toBeInTheDocument()
   })
 
@@ -467,6 +470,7 @@ describe('biblioteca (M2)', () => {
     renderAt('/biblioteca')
     await userEvent.click(await screen.findByRole('button', { name: '+ Adicionar' }))
     await userEvent.click(screen.getByRole('button', { name: 'Esquema de manta' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Tricô' }))
     expect(await screen.findByRole('button', { name: 'Salvar esquema' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Granny square' }))
     expect(await screen.findByRole('button', { name: 'Salvar padrão' })).toBeInTheDocument()

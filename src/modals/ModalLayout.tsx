@@ -19,6 +19,7 @@ import type { Tecnica } from '../types/database'
 import type { ModeloNovo } from '../features/projetos/api'
 import { IconX } from '../components/ui/icons'
 import { SquareGranny } from '../components/ui/SquareGranny'
+import { useConfirmar } from '../components/ui/Confirm'
 
 const LETRAS = 'ABCDEFGH'.split('')
 const MIN = 2
@@ -68,11 +69,15 @@ const seg = (on: boolean): CSSProperties => ({
    Nos dois casos dá para puxar um padrão já salvo na biblioteca. */
 export function ModalLayout() {
   const { backToProjeto } = useStore()
+  const confirmar = useConfirmar()
   const { profile } = useAuth()
   const qc = useQueryClient()
 
   const [nome, setNome] = useState('')
-  const [tecnica, setTecnica] = useState<Tecnica>('croche')
+  /* A técnica é escolhida ANTES de o editor abrir: crochê e tricô desenham
+     coisas diferentes, e ver a grade de squares montada antes de dizer qual das
+     duas é a manta confundia mais do que ajudava. */
+  const [tecnica, setTecnica] = useState<Tecnica | null>(null)
   const [modelos, setModelos] = useState<ModeloNovo[]>(MODELOS_INICIAIS)
   const [seq, setSeq] = useState<string[]>(SEQ_INICIAL)
   const [faixas, setFaixas] = useState(8)
@@ -89,6 +94,17 @@ export function ModalLayout() {
     altura: null,
   })
   const [erro, setErro] = useState<string | null>(null)
+
+  /* Trocar de técnica joga fora o que foi desenhado — a grade de squares não
+     vira pilha de faixas. Por isso avisa antes. */
+  const trocarTecnica = async () => {
+    const ok = await confirmar({
+      titulo: 'Trocar a técnica apaga o que você desenhou. Continuar?',
+      okLabel: 'Trocar',
+      perigo: true,
+    })
+    if (ok) setTecnica(null)
+  }
 
   const croche = tecnica === 'croche'
 
@@ -290,23 +306,51 @@ export function ModalLayout() {
       <ModalHeader title="Adicionar à biblioteca" />
       <SeletorCategoria atual="manta" />
 
-      <Lbl style={{ marginBottom: 7 }}>NOME</Lbl>
-      <input
-        className="field"
-        style={{ marginBottom: 18 }}
-        value={nome}
-        aria-label="Nome do esquema"
-        onChange={(e) => setNome(e.target.value)}
-        placeholder="Manta Ada"
-      />
-
-      <Lbl style={{ marginBottom: 7 }}>TÉCNICA</Lbl>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
-        {TECNICAS.map(([t, label]) => (
-          <button key={t} type="button" onClick={() => setTecnica(t)} style={seg(tecnica === t)}>
-            {label}
+      {!tecnica ? (
+        <>
+          <Lbl style={{ marginBottom: 10 }}>DE QUE TÉCNICA É A MANTA?</Lbl>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 22 }}>
+            {TECNICAS.map(([t, label]) => (
+              <button
+                key={t}
+                type="button"
+                className="pill ghost"
+                style={{ padding: '12px 26px', fontSize: 14 }}
+                onClick={() => setTecnica(t)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button type="button" className="pill ghost" onClick={backToProjeto}>
+              Voltar
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <Lbl style={{ marginBottom: 7 }}>NOME</Lbl>
+          <input
+            className="field"
+            value={nome}
+            aria-label="Nome do esquema"
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Manta Ada"
+          />
+        </span>
+        <span style={{ alignSelf: 'flex-end' }}>
+          <button
+            type="button"
+            className="crumb"
+            onClick={() => trocarTecnica()}
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            {TECNICAS.find(([t]) => t === tecnica)?.[1]}
           </button>
-        ))}
+        </span>
       </div>
 
       {croche ? (
@@ -700,6 +744,8 @@ export function ModalLayout() {
           {salvar.isPending ? 'Salvando…' : 'Salvar esquema'}
         </button>
       </div>
+        </>
+      )}
     </ModalBox>
   )
 }
