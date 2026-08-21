@@ -580,6 +580,37 @@ textarea.field::placeholder {
   }
 }
 
+/* linha de "quem cumpriu": pessoa à esquerda, situação à direita, e o
+   diagnóstico da regra ocupando a largura toda embaixo. Em grade, e não em
+   flex-wrap: no celular a tag e o kebab caíam em linhas soltas sob o nome. */
+.linha-credito {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 12px 14px;
+}
+.situacao-credito {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.detalhe-credito {
+  grid-column: 1 / -1;
+  font-size: 11.5px;
+  line-height: 1.6;
+  margin-top: 3px;
+}
+@media (max-width: 640px) {
+  .linha-credito {
+    grid-template-columns: 1fr auto;
+  }
+  .detalhe-credito {
+    padding-left: 36px;
+  }
+}
+
 /* linha da tabela do estoque — vira cartão no celular */
 .linha-estoque {
   display: grid;

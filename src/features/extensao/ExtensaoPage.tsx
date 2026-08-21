@@ -5,12 +5,12 @@ import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
 import { Campo, useFormulario } from '../../components/ui/Campo'
 import { DatePicker, MenuKebab, Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
-import { useConfirmar } from '../../components/ui/Confirm'
+import { useConfirmar, usePedirTexto } from '../../components/ui/Confirm'
 import { fmtDataCurta, fmtDataLonga, fmtEntrega, hojeIso } from '../../lib/format'
 import { fetchSemestres, useSemestreAtivo } from '../../lib/semestre'
 import { NIVEL_LABEL, TURNO_LABEL } from '../../types/database'
 import { entregasDe, fetchEntregasLight, fetchIntegrantes } from '../integrantes/api'
-import { textoDaLinha } from './creditos'
+import { detalheDaLinha, textoDaLinha } from './creditos'
 import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 import { AjudaCabecalho } from '../../components/ui/AjudaCabecalho'
 import { fetchRas, raOuTraco } from './api'
@@ -66,6 +66,14 @@ const AJUDA_TOTAL =
   'Presenças sobre os encontros do turno dela: quem é só do noturno não leva falta por encontro diurno. Por isso não é a soma de diurno e noturno.'
 const AJUDA_ENTREGAS =
   'Peças entregues no semestre: cada amigurumi concluído e cada faixa feita valem 1; no granny square, o miolo vale 0,5 e a borda 0,5.'
+type Situacao = 'todas' | 'cumpriu' | 'andamento'
+
+const SITUACOES: [Situacao, string][] = [
+  ['todas', 'Todas'],
+  ['cumpriu', 'Cumpriram'],
+  ['andamento', 'Em andamento'],
+]
+
 const AJUDA_SQUARES =
   'O square costuma ser dividido: quem faz o miolo leva 0,5 e quem faz a borda leva 0,5. Quem fez as duas metades leva 1.'
 
@@ -780,10 +788,14 @@ function Arquivos({ semestreId }: { semestreId: string | null }) {
 function Creditos({ semestreId }: { semestreId: string | null }) {
   const { profile } = useAuth()
   const [busca, setBusca] = useState('')
+  const [situacao, setSituacao] = useState<Situacao>('todas')
+  const [ordem, setOrdem] = useState<'nome' | 'situacao'>('nome')
   const qc = useQueryClient()
   const toast = useToast()
+  const perguntar = usePedirTexto()
 
   const { data: ras } = useQuery({ queryKey: ['ras'], queryFn: fetchRas })
+  const { data: nomes } = useQuery({ queryKey: ['integrantes'], queryFn: fetchIntegrantes })
   const linhas = useLinhasDeCredito(semestreId)
 
   const marcar = useMutation({
@@ -804,25 +816,85 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
     return <div style={{ fontSize: 13, color: 'var(--muted)' }}>Crie um semestre em Ajustes.</div>
   }
 
+  const cumpriram = linhas.filter((l) => l.av.cumpriu).length
+
+  /* Ordenar por situação junta em cima quem ainda não fechou — que é a
+     pergunta de quem está prestando contas do semestre. */
+  const visiveis = filtraLinhas(
+    linhas.map((l) => ({ ...l, nome: l.p.nome })),
+    busca,
+  )
+    .filter((l) => situacao === 'todas' || (situacao === 'cumpriu') === l.av.cumpriu)
+    .sort((a, b) =>
+      ordem === 'nome'
+        ? a.nome.localeCompare(b.nome)
+        : Number(a.av.cumpriu) - Number(b.av.cumpriu) || a.nome.localeCompare(b.nome),
+    )
+
+  /* Dar o crédito à mão sem dizer por quê deixava a auditoria com uma linha que
+     não explicava nada — a frase genérica de antes só repetia o rótulo. */
+  const darComoCumprida = async (nome: string, perfilId: string, mentoria: boolean) => {
+    const motivo = await perguntar({
+      titulo: `Dar ${nome} como cumprida?`,
+      descricao: 'Fica registrado na auditoria com o seu nome e a data.',
+      campo: {
+        rotulo: 'POR QUÊ?',
+        placeholder: 'entregou fora do prazo, mas entregou',
+        obrigatorio: true,
+      },
+      okLabel: 'Dar como cumprida',
+    })
+    if (motivo) marcar.mutate({ perfilId, mentoria, cumprido: true, motivo })
+  }
+
   return (
     <>
-      <div className="h" style={{ fontSize: 17, marginBottom: 12 }}>
+      <div className="h" style={{ fontSize: 17, marginBottom: 4 }}>
         Quem cumpriu
       </div>
-      <CampoBusca valor={busca} aoMudar={setBusca} />
+      <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 14 }}>
+        {linhas.length === 0
+          ? 'Nenhuma integrante neste semestre ainda.'
+          : `${cumpriram} de ${linhas.length} ${
+              linhas.length === 1 ? 'integrante cumpriu' : 'integrantes cumpriram'
+            } a regra do semestre.`}
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <span style={{ flex: 1, minWidth: 200 }}>
+          <CampoBusca valor={busca} aoMudar={setBusca} />
+        </span>
+        <span style={{ width: 168 }}>
+          <Select value={situacao} onChange={setSituacao} options={SITUACOES} ariaLabel="Situação" />
+        </span>
+        <span style={{ width: 156 }}>
+          <Select
+            value={ordem}
+            onChange={setOrdem}
+            options={[
+              ['nome', 'Ordem: nome'],
+              ['situacao', 'Ordem: situação'],
+            ]}
+            ariaLabel="Ordenar por"
+          />
+        </span>
+      </div>
+
       <div className="card" style={{ overflow: 'hidden' }}>
-        {filtraLinhas(
-          linhas.map((l) => ({ ...l, nome: l.p.nome })),
-          busca,
-        ).map(({ p, marca, av }, i) => (
+        {visiveis.length === 0 && (
+          <div style={{ padding: 18, fontSize: 13, color: 'var(--muted)' }}>
+            {linhas.length === 0
+              ? 'Nenhuma integrante neste semestre ainda.'
+              : 'Ninguém nesta situação.'}
+          </div>
+        )}
+        {visiveis.map(({ p, marca, av }, i) => (
           <div
             key={p.id}
-            style={{
-              padding: '12px 14px',
-              borderTop: i > 0 ? '1px solid var(--border)' : undefined,
-            }}
+            className="linha-credito"
+            style={{ borderTop: i > 0 ? '1px solid var(--border)' : undefined }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
               <AvatarPerfil
                 nome={p.nome}
                 avatarColor={p.avatar_color}
@@ -830,11 +902,15 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
                 size={26}
                 fontSize={10}
               />
-              <div style={{ flex: 1, minWidth: 120 }}>
+              <div style={{ minWidth: 0 }}>
                 <b style={{ fontSize: 13 }}>{p.nome}</b>
-                <div style={{ fontSize: 11, color: 'var(--faint)' }}>{raOuTraco(ras, p.id)}</div>
+                <div style={{ fontSize: 11, color: 'var(--faint)' }}>
+                  {raOuTraco(ras, p.id)} · {NIVEL_LABEL[p.nivel]}
+                </div>
               </div>
-              <span style={{ fontSize: 11, color: 'var(--muted)' }}>{NIVEL_LABEL[p.nivel]}</span>
+            </div>
+
+            <div className="situacao-credito">
               <span
                 className="tag"
                 style={
@@ -858,38 +934,61 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
                         motivo: marca?.motivo ?? null,
                       }),
                   },
-                  {
-                    label: marca?.cumprido ? 'Desfazer o cumprido' : 'Dar como cumprida',
-                    onSelect: () =>
-                      marcar.mutate({
-                        perfilId: p.id,
-                        mentoria: marca?.mentoria ?? false,
-                        cumprido: !marca?.cumprido,
-                        motivo: marca?.cumprido ? null : 'dada como cumprida pela coordenação',
-                      }),
-                  },
+                  marca?.cumprido
+                    ? {
+                        label: 'Desfazer o cumprido',
+                        onSelect: () =>
+                          marcar.mutate({
+                            perfilId: p.id,
+                            mentoria: marca?.mentoria ?? false,
+                            cumprido: false,
+                            motivo: null,
+                          }),
+                      }
+                    : {
+                        label: 'Dar como cumprida',
+                        onSelect: () => darComoCumprida(p.nome, p.id, marca?.mentoria ?? false),
+                      },
                 ]}
               />
             </div>
-            {/* todas as alternativas lado a lado: dá para ver quem está quase lá */}
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 7 }}>
-              {av.blocos.length === 0 && (
-                <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+
+            {/* o porquê estava só na auditoria: na linha, "MANUAL" não explicava nada */}
+            {av.manual && marca && (
+              <div className="detalhe-credito" style={{ color: 'var(--gold-dark)' }}>
+                {marca.motivo ?? 'sem motivo registrado'} — por{' '}
+                {nomes?.find((n) => n.id === marca.marcado_por)?.nome ?? 'coordenação'} em{' '}
+                {fmtDataCurta(marca.marcado_em.slice(0, 10))}
+              </div>
+            )}
+
+            {/* uma exigência por linha: lado a lado, ninguém via onde uma terminava */}
+            <div className="detalhe-credito">
+              {av.blocos.length === 0 ? (
+                <span style={{ color: 'var(--muted)' }}>
                   Sem regra para {NIVEL_LABEL[p.nivel].toLowerCase()} neste semestre.
                 </span>
+              ) : (
+                av.blocos.map((b) => (
+                  <div
+                    key={b.id}
+                    style={{
+                      color: b.cumpriu ? 'var(--green-dark)' : 'var(--muted)',
+                      fontWeight: b.cumpriu ? 800 : 600,
+                    }}
+                  >
+                    <span aria-hidden style={{ marginRight: 5 }}>
+                      {b.cumpriu ? '✓' : '·'}
+                    </span>
+                    {b.linhas.map((l, k) => (
+                      <span key={l.tipo + k} title={detalheDaLinha(l)}>
+                        {k > 0 && <span style={{ fontWeight: 600 }}> ou </span>}
+                        {textoDaLinha(l)}
+                      </span>
+                    ))}
+                  </div>
+                ))
               )}
-              {av.blocos.map((b) => (
-                <span
-                  key={b.id}
-                  style={{
-                    fontSize: 11.5,
-                    color: b.cumpriu ? 'var(--green-dark)' : 'var(--muted)',
-                    fontWeight: b.cumpriu ? 800 : 600,
-                  }}
-                >
-                  {b.linhas.map(textoDaLinha).join(' · ')}
-                </span>
-              ))}
             </div>
           </div>
         ))}

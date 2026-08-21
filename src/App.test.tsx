@@ -634,6 +634,30 @@ describe('atividade de extensão', () => {
     expect(await screen.findByText('100100')).toBeInTheDocument()
   })
 
+  it('quem cumpriu resume o semestre e filtra por situação', async () => {
+    __login()
+    renderAt('/extensao')
+    expect(await screen.findByText(/integrantes? cumpri/)).toBeInTheDocument()
+
+    // sem regra fechada, filtrar por "cumpriram" esvazia a lista
+    await userEvent.click(screen.getByLabelText('Situação'))
+    await userEvent.click(await screen.findByRole('option', { name: 'Cumpriram' }))
+    expect(await screen.findByText('Ninguém nesta situação.')).toBeInTheDocument()
+  })
+
+  it('dar como cumprida pede o motivo antes de gravar', async () => {
+    __login()
+    renderAt('/extensao')
+    await screen.findByText('Quem cumpriu')
+    await userEvent.click(screen.getAllByRole('button', { name: /Marcas de/ })[0])
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Dar como cumprida' }))
+    // o botão só libera depois que o porquê é escrito
+    const ok = screen.getByRole('button', { name: 'Dar como cumprida' })
+    expect(ok).toBeDisabled()
+    await userEvent.type(screen.getByLabelText('POR QUÊ?'), 'entregou fora do prazo')
+    expect(ok).toBeEnabled()
+  })
+
   it('a regra do semestre se monta por exigências, cada uma com suas formas de cumprir', async () => {
     __login()
     renderAt('/extensao')

@@ -14,39 +14,60 @@ export interface PedidoConfirmacao {
   perigo?: boolean
   /** exige digitar esta palavra para liberar o botão — para o que não tem volta */
   confirmarDigitando?: string
+  /* Texto livre pedido junto da confirmação: dar um crédito à mão sem dizer por
+     quê deixa a auditoria com uma linha que não explica nada. Só `usePedirTexto`
+     enxerga o que foi digitado. */
+  campo?: { rotulo: string; placeholder?: string; obrigatorio?: boolean }
 }
 
-type Resolver = (ok: boolean) => void
+type Resolver = (valor: boolean | string | null) => void
 
 const Ctx = createContext<((p: PedidoConfirmacao) => Promise<boolean>) | null>(null)
+const CtxTexto = createContext<((p: PedidoConfirmacao) => Promise<string | null>) | null>(null)
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [pedido, setPedido] = useState<PedidoConfirmacao | null>(null)
   const [texto, setTexto] = useState('')
+  const [livre, setLivre] = useState('')
   const resolver = useRef<Resolver | null>(null)
+  const devolveTexto = useRef(false)
   const caixa = useRef<HTMLDivElement>(null)
   const { montado, saindo } = useMontagemAnimada(pedido !== null, 200)
 
   usePrendeFoco(caixa, montado && !saindo)
 
-  const confirmar = useCallback((p: PedidoConfirmacao) => {
+  const abrir = useCallback((p: PedidoConfirmacao, comTexto: boolean) => {
     setTexto('')
+    setLivre('')
+    devolveTexto.current = comTexto
     setPedido(p)
-    return new Promise<boolean>((res) => {
+    return new Promise<boolean | string | null>((res) => {
       resolver.current = res
     })
   }, [])
 
+  const confirmar = useCallback(
+    (p: PedidoConfirmacao) => abrir(p, false) as Promise<boolean>,
+    [abrir],
+  )
+  const perguntar = useCallback(
+    (p: PedidoConfirmacao) => abrir(p, true) as Promise<string | null>,
+    [abrir],
+  )
+
   const responder = (ok: boolean) => {
-    resolver.current?.(ok)
+    resolver.current?.(devolveTexto.current ? (ok ? livre.trim() : null) : ok)
     resolver.current = null
     setPedido(null)
   }
 
-  const liberado = !pedido?.confirmarDigitando || texto.trim() === pedido.confirmarDigitando
+  const palavraOk = !pedido?.confirmarDigitando || texto.trim() === pedido.confirmarDigitando
+  const campoOk = !pedido?.campo?.obrigatorio || livre.trim().length > 0
+  const liberado = palavraOk && campoOk
 
   return (
     <Ctx.Provider value={confirmar}>
+      <CtxTexto.Provider value={perguntar}>
       {children}
       {montado &&
         pedido &&
@@ -79,6 +100,21 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 >
                   {pedido.descricao}
                 </div>
+              )}
+              {pedido.campo && (
+                <>
+                  <div className="lbl" style={{ marginBottom: 7 }}>
+                    {pedido.campo.rotulo}
+                  </div>
+                  <input
+                    className="field"
+                    value={livre}
+                    onChange={(e) => setLivre(e.target.value)}
+                    placeholder={pedido.campo.placeholder}
+                    aria-label={pedido.campo.rotulo}
+                    style={{ marginBottom: 18 }}
+                  />
+                </>
               )}
               {pedido.confirmarDigitando && (
                 <>
@@ -117,6 +153,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           </div>,
           document.body,
         )}
+      </CtxTexto.Provider>
     </Ctx.Provider>
   )
 }
@@ -125,5 +162,12 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 export function useConfirmar() {
   const ctx = useContext(Ctx)
   if (!ctx) throw new Error('useConfirmar fora do ConfirmProvider')
+  return ctx
+}
+
+/** Mesma caixa, mas devolve o que foi digitado no `campo` — nulo se cancelar */
+export function usePedirTexto() {
+  const ctx = useContext(CtxTexto)
+  if (!ctx) throw new Error('usePedirTexto fora do ConfirmProvider')
   return ctx
 }
