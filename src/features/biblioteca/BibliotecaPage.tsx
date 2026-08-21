@@ -274,6 +274,7 @@ export function BibliotecaPage() {
       {aberta && (
         <div className="ov" onClick={fechar}>
           <DetalheView
+            receitaId={aberta.id}
             nome={aberta.nome}
             categoria={aberta.categoria}
             sub={aberta.sub}

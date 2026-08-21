@@ -424,6 +424,14 @@ describe('biblioteca (M2)', () => {
     expect(screen.getByText('Granny Flor de Maio')).toBeInTheDocument()
   })
 
+  it('o detalhe da receita aceita comentário, mesmo sem permissão nenhuma', async () => {
+    __login(INTEGRANTE_PROFILE)
+    renderAt('/biblioteca')
+    await userEvent.click(await screen.findByText('Granny Flor de Maio'))
+    expect(await screen.findByLabelText('Escrever um comentário')).toBeInTheDocument()
+    expect(screen.getByLabelText('Anexar foto ao comentário')).toBeInTheDocument()
+  })
+
   it('abre o detalhe da receita ao clicar no card', async () => {
     __login()
     renderAt('/biblioteca')

@@ -4,9 +4,12 @@ import { CAT_TAG } from '../features/biblioteca/meta'
 import { Lbl } from '../components/ui/bits'
 import { PreviaFaixas } from '../components/ui/PreviaFaixas'
 import { PreviaGrade } from '../components/ui/PreviaGrade'
+import { Comentarios } from '../features/projetos/Comentarios'
 import { ModalBox } from './shared'
 
 export interface DetalheProps {
+  /** id da receita — sem ele o detalhe é só prévia e não abre comentários */
+  receitaId?: string
   nome: string
   categoria: ReceitaCategoria
   sub: string | null
@@ -20,6 +23,7 @@ export interface DetalheProps {
 }
 
 export function DetalheView({
+  receitaId,
   nome,
   categoria,
   sub,
@@ -310,6 +314,12 @@ export function DetalheView({
           </div>
         )}
         {body}
+        {receitaId && (
+          <div style={{ marginTop: 24, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+            <Lbl style={{ marginBottom: 10 }}>COMENTÁRIOS</Lbl>
+            <Comentarios receitaId={receitaId} />
+          </div>
+        )}
         <div
           style={{
             display: 'flex',

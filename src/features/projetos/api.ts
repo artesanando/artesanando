@@ -77,14 +77,24 @@ export interface Unidade {
   responsavel?: { nome: string } | null
 }
 
+/* Um comentário pende de um projeto OU de um item da biblioteca, nunca dos dois
+   — o CHECK do banco garante. Daí o alvo ser um par discriminado, e não dois
+   parâmetros opcionais que alguém poderia passar juntos. */
+export type AlvoComentario = { projetoId: string } | { receitaId: string }
+
 export interface Comentario {
   id: string
-  projeto_id: string
+  projeto_id: string | null
+  receita_id: string | null
   autor_id: string
   texto: string
+  foto_path: string | null
   created_at: string
   autor?: { nome: string; avatar_color: string; avatar_url: string | null } | null
 }
+
+export const chaveComentarios = (alvo: AlvoComentario) =>
+  'projetoId' in alvo ? ['comentarios', 'projeto', alvo.projetoId] : ['comentarios', 'receita', alvo.receitaId]
 
 export interface Atividade {
   id: string
@@ -178,12 +188,14 @@ export async function fetchUnidades(projetoId: string): Promise<Unidade[]> {
   return (data ?? []) as unknown as Unidade[]
 }
 
-export async function fetchComentarios(projetoId: string): Promise<Comentario[]> {
-  const { data, error } = await supabase
+export async function fetchComentarios(alvo: AlvoComentario): Promise<Comentario[]> {
+  const q = supabase
     .from('comentarios')
     .select('*, autor:profiles!autor_id(nome, avatar_color, avatar_url)')
-    .eq('projeto_id', projetoId)
-    .order('created_at')
+  const { data, error } = await ('projetoId' in alvo
+    ? q.eq('projeto_id', alvo.projetoId)
+    : q.eq('receita_id', alvo.receitaId)
+  ).order('created_at')
   if (error) throw error
   return (data ?? []) as unknown as Comentario[]
 }
@@ -479,11 +491,41 @@ export async function apagarComentario(id: string) {
   if (error) throw error
 }
 
-export async function comentar(projetoId: string, autorId: string, texto: string) {
-  const { error } = await supabase
-    .from('comentarios')
-    .insert({ projeto_id: projetoId, autor_id: autorId, texto })
+export async function comentar(
+  alvo: AlvoComentario,
+  autorId: string,
+  texto: string,
+  fotoPath: string | null = null,
+) {
+  const { error } = await supabase.from('comentarios').insert({
+    ...('projetoId' in alvo ? { projeto_id: alvo.projetoId } : { receita_id: alvo.receitaId }),
+    autor_id: autorId,
+    texto,
+    foto_path: fotoPath,
+  })
   if (error) throw error
+}
+
+/* Foto de comentário vai como está, sem passar pelo recorte: quem fotografa o
+   progresso quer mandar e seguir, não enquadrar. */
+export async function subirFotoComentario(arquivo: File): Promise<string> {
+  const ext = arquivo.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const caminho = `${crypto.randomUUID()}.${ext}`
+  const { error } = await supabase.storage
+    .from('comentarios')
+    .upload(caminho, arquivo, { contentType: arquivo.type || 'image/jpeg' })
+  if (error) throw error
+  return caminho
+}
+
+export async function urlsDasFotos(caminhos: string[]): Promise<Map<string, string>> {
+  if (caminhos.length === 0) return new Map()
+  const { data } = await supabase.storage.from('comentarios').createSignedUrls(caminhos, 60 * 60 * 8)
+  const mapa = new Map<string, string>()
+  for (const item of data ?? []) {
+    if (item.path && item.signedUrl) mapa.set(item.path, item.signedUrl)
+  }
+  return mapa
 }
 
 export interface ModeloNovo {

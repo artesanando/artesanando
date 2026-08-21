@@ -275,10 +275,23 @@ const COMENTARIOS_FAKE = [
   {
     id: 'c1',
     projeto_id: 'p1',
+    receita_id: null,
     autor_id: 'u5',
     texto: 'Peguei as bordas do Modelo A 👍',
+    foto_path: null,
     created_at: '2026-07-14T12:00:00Z',
     autor: { nome: 'Edsger Dijkstra', avatar_color: '#7D9B76' },
+  },
+  /* comentário de item da biblioteca: o mesmo lugar serve projeto e receita */
+  {
+    id: 'c2',
+    projeto_id: null,
+    receita_id: 'r1',
+    autor_id: 'u2',
+    texto: 'Fica melhor com agulha 4,0',
+    foto_path: null,
+    created_at: '2026-07-15T12:00:00Z',
+    autor: { nome: 'Ada Lovelace', avatar_color: '#A9BFA3' },
   },
 ]
 
