@@ -1,11 +1,13 @@
+import { fmtEntrega } from '../../lib/format'
 import type { Entregas } from '../integrantes/api'
 
 /* Regra de crédito do semestre.
  *
- * Um BLOCO é uma exigência; as LINHAS dentro dele são jeitos alternativos de
- * atendê-la. Blocos se somam (E), linhas se alternam (OU). Duas linhas de
- * exemplo real: "5 granny squares OU 1 faixa" E "75% de frequência";
- * "3 amigurumis OU mentorar uma iniciante" E "75% de frequência".
+ * Uma EXIGÊNCIA (`credito_blocos`) é algo que a integrante precisa cumprir; as
+ * FORMAS DE CUMPRIR dentro dela (`credito_linhas`) são caminhos alternativos.
+ * Exigências se somam (E), formas se alternam (OU). Duas de exemplo real:
+ * "5 granny squares OU 1 faixa" E "75% de frequência"; "3 amigurumis OU
+ * mentorar uma iniciante" E "75% de frequência".
  *
  * Essa forma cobre os casos sem aninhamento, que é o que torna a regra legível
  * na tela e a conta possível de auditar.
@@ -13,12 +15,33 @@ import type { Entregas } from '../integrantes/api'
 
 export type TipoLinha = 'amigurumi' | 'granny' | 'faixa' | 'frequencia' | 'mentoria'
 
+/** Plural — serve ao seletor de tipo, que fala do tipo sem quantidade */
 export const TIPO_LABEL: Record<TipoLinha, string> = {
   amigurumi: 'amigurumis',
   granny: 'granny squares',
   faixa: 'faixas de tricô',
   frequencia: '% de frequência',
   mentoria: 'mentorar uma iniciante',
+}
+
+const TIPO_SINGULAR: Record<TipoLinha, string> = {
+  amigurumi: 'amigurumi',
+  granny: 'granny square',
+  faixa: 'faixa de tricô',
+  frequencia: '% de frequência',
+  mentoria: 'mentorar uma iniciante',
+}
+
+/* Quantidade e unidade andam juntas: colar o rótulo plural na quantidade
+   escrevia "1 faixas de tricô" e "75 % de frequência" (com espaço). Uma função
+   só monta o texto, e ela serve tanto à regra escrita quanto ao diagnóstico. */
+
+/** "5 granny squares", "1 faixa de tricô", "75% de frequência" */
+export function textoDoAlvo(tipo: TipoLinha, quantidade: number): string {
+  if (tipo === 'mentoria') return TIPO_LABEL.mentoria
+  if (tipo === 'frequencia') return `${quantidade}% de frequência`
+  const unidade = quantidade === 1 ? TIPO_SINGULAR[tipo] : TIPO_LABEL[tipo]
+  return `${fmtEntrega(quantidade)} ${unidade}`
 }
 
 export interface LinhaRegra {
@@ -58,7 +81,7 @@ export interface Avaliacao {
   blocos: BlocoAvaliado[]
 }
 
-/** Quanto a pessoa já fez do que aquela linha pede */
+/** Quanto a pessoa já fez do que aquela forma de cumprir pede */
 function feitoDe(tipo: TipoLinha, entregas: Entregas, freqPct: number, marca: Marca | null) {
   switch (tipo) {
     case 'amigurumi':
@@ -88,8 +111,8 @@ export function avaliaRegra(
         const feito = feitoDe(l.tipo, entregas, freqPct, marca)
         return { tipo: l.tipo, feito, alvo: l.quantidade, cumpriu: feito >= l.quantidade }
       })
-      /* Bloco sem linha nenhuma não é "cumprido por vacuidade": uma regra vazia
-         não deve dar crédito a ninguém sem querer. */
+      /* Exigência sem forma nenhuma não é "cumprida por vacuidade": uma regra
+         vazia não deve dar crédito a ninguém sem querer. */
       return { id: b.id, cumpriu: linhas.length > 0 && linhas.some((l) => l.cumpriu), linhas }
     })
 
@@ -103,10 +126,17 @@ export function avaliaRegra(
   }
 }
 
-/** "3/5 granny squares" — o texto que a tabela mostra por alternativa */
-export const textoDaLinha = (l: LinhaAvaliada) =>
-  l.tipo === 'mentoria'
-    ? TIPO_LABEL.mentoria
-    : l.tipo === 'frequencia'
-      ? `${l.feito}% de ${l.alvo}%`
-      : `${l.feito}/${l.alvo} ${TIPO_LABEL[l.tipo]}`
+/* "3/5 granny squares" — o texto de cada forma de cumprir na linha da pessoa.
+   O feito é limitado ao alvo: "14/3 amigurumis" só faz o olho tropeçar, e o
+   número cheio continua disponível em `detalheDaLinha`, no title. */
+export function textoDaLinha(l: LinhaAvaliada): string {
+  if (l.tipo === 'mentoria') return l.cumpriu ? 'mentoria marcada' : 'mentoria não marcada'
+  if (l.tipo === 'frequencia') return `${l.feito}% de ${l.alvo}%`
+  return `${fmtEntrega(Math.min(l.feito, l.alvo))}/${textoDoAlvo(l.tipo, l.alvo)}`
+}
+
+/** Só quando ela passou do alvo: "entregou 14, a regra pede 3" */
+export function detalheDaLinha(l: LinhaAvaliada): string | undefined {
+  if (l.tipo === 'mentoria' || l.tipo === 'frequencia' || l.feito <= l.alvo) return undefined
+  return `entregou ${fmtEntrega(l.feito)}, a regra pede ${fmtEntrega(l.alvo)}`
+}

@@ -11,7 +11,7 @@ import { fmtDataCurta, fmtDataLonga, fmtEntrega, hojeIso } from '../../lib/forma
 import { fetchSemestres, useSemestreAtivo } from '../../lib/semestre'
 import { NIVEL_LABEL, TURNO_LABEL, type Nivel } from '../../types/database'
 import { entregasDe, fetchEntregasLight, fetchIntegrantes } from '../integrantes/api'
-import { avaliaRegra, textoDaLinha, TIPO_LABEL, type TipoLinha } from './creditos'
+import { avaliaRegra, textoDaLinha, textoDoAlvo, TIPO_LABEL, type TipoLinha } from './creditos'
 import { IconX } from '../../components/ui/icons'
 import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 import { AjudaCabecalho } from '../../components/ui/AjudaCabecalho'
@@ -914,11 +914,7 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
                       marginBottom: 5,
                     }}
                   >
-                    <span style={{ flex: 1 }}>
-                      {l.tipo === 'mentoria'
-                        ? TIPO_LABEL.mentoria
-                        : `${l.quantidade} ${TIPO_LABEL[l.tipo]}`}
-                    </span>
+                    <span style={{ flex: 1 }}>{textoDoAlvo(l.tipo, l.quantidade)}</span>
                     <button
                       type="button"
                       className="kebab"

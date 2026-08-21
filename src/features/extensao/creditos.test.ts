@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { avaliaRegra, textoDaLinha, type BlocoRegra } from './creditos'
+import {
+  avaliaRegra,
+  detalheDaLinha,
+  textoDaLinha,
+  textoDoAlvo,
+  type BlocoRegra,
+} from './creditos'
 
 const entregas = (over: Partial<Record<'amigurumis' | 'faixas' | 'grannies', number>> = {}) => ({
   amigurumis: 0,
@@ -42,7 +48,7 @@ describe('avaliaRegra', () => {
     const r = avaliaRegra(REGRA_INICIANTE, entregas({ grannies: 3 }), 80)
     expect(r.blocos[0].linhas.map(textoDaLinha)).toEqual([
       '3/5 granny squares',
-      '0/1 faixas de tricô',
+      '0/1 faixa de tricô',
     ])
     expect(r.cumpriu).toBe(false)
   })
@@ -86,5 +92,56 @@ describe('avaliaRegra', () => {
       { id: 'b1', ordem: 0, linhas: [{ id: 'l1', tipo: 'granny', quantidade: 5 }] },
     ]
     expect(avaliaRegra(fora, entregas(), 0).blocos.map((b) => b.id)).toEqual(['b1', 'b2'])
+  })
+})
+
+describe('textoDoAlvo', () => {
+  it('usa o singular quando a regra pede uma peça só', () => {
+    expect(textoDoAlvo('faixa', 1)).toBe('1 faixa de tricô')
+    expect(textoDoAlvo('granny', 1)).toBe('1 granny square')
+  })
+
+  it('usa o plural do dois em diante', () => {
+    expect(textoDoAlvo('faixa', 2)).toBe('2 faixas de tricô')
+    expect(textoDoAlvo('amigurumi', 3)).toBe('3 amigurumis')
+  })
+
+  it('frequência não leva espaço antes do por cento', () => {
+    expect(textoDoAlvo('frequencia', 75)).toBe('75% de frequência')
+  })
+
+  it('mentoria não tem quantidade', () => {
+    expect(textoDoAlvo('mentoria', 1)).toBe('mentorar uma iniciante')
+  })
+})
+
+describe('textoDaLinha', () => {
+  const linha = (over: Partial<Parameters<typeof textoDaLinha>[0]>) => ({
+    tipo: 'granny' as const,
+    feito: 0,
+    alvo: 5,
+    cumpriu: false,
+    ...over,
+  })
+
+  it('escreve meio square com vírgula, como a tabela de entregas', () => {
+    expect(textoDaLinha(linha({ feito: 3.5 }))).toBe('3,5/5 granny squares')
+  })
+
+  it('não passa do alvo, e guarda o número cheio no detalhe', () => {
+    const l = linha({ tipo: 'amigurumi', feito: 14, alvo: 3, cumpriu: true })
+    expect(textoDaLinha(l)).toBe('3/3 amigurumis')
+    expect(detalheDaLinha(l)).toBe('entregou 14, a regra pede 3')
+  })
+
+  it('não inventa detalhe quando ela ainda não chegou lá', () => {
+    expect(detalheDaLinha(linha({ feito: 2 }))).toBeUndefined()
+  })
+
+  it('diz se a mentoria foi marcada ou não', () => {
+    expect(textoDaLinha(linha({ tipo: 'mentoria', alvo: 1, cumpriu: true }))).toBe(
+      'mentoria marcada',
+    )
+    expect(textoDaLinha(linha({ tipo: 'mentoria', alvo: 1 }))).toBe('mentoria não marcada')
   })
 })
