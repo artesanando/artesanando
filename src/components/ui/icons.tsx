@@ -50,14 +50,16 @@ export const IconPres = () => (
   </svg>
 )
 
-/* Cofrinho — o cifrão desenhado a traço parecia texto ao lado dos outros oito */
+/* Cofrinho — o cifrão desenhado a traço parecia texto ao lado dos outros oito.
+   O desenho ocupa a caixa inteira de 24: menor que isso, ele aparecia miúdo ao
+   lado dos vizinhos no menu, que todos renderizam em 16px. */
 export const IconFin = () => (
   <svg {...base}>
     {/* corpo, focinho e as duas patas, num traço só */}
-    <path d="M15 6.6a7.4 7.4 0 0 1 3.9 4h2.1v3.2h-2.1a7.5 7.5 0 0 1-2.2 2.8v1.8a.6.6 0 0 1-.6.6h-1.8a.6.6 0 0 1-.6-.6v-.8h-2.6v.8a.6.6 0 0 1-.6.6H8.7a.6.6 0 0 1-.6-.6v-1.8A7 7 0 0 1 5 11.3 6 6 0 0 1 11 5.9h1.4l2.9-2z" />
+    <path d="M14.25 6.43a8.3 8.3 0 0 1 4.39 4.5H21v3.6h-2.36a8.4 8.4 0 0 1-2.48 3.15v2.02a.68.68 0 0 1-.67.68h-2.03a.68.68 0 0 1-.67-.68v-.9H9.86v.9a.68.68 0 0 1-.67.68H7.16a.68.68 0 0 1-.67-.68v-2.02A7.9 7.9 0 0 1 3 11.71 6.75 6.75 0 0 1 9.75 5.64h1.58l3.26-2.25z" />
     {/* fenda da moeda e o olho */}
-    <path d="M9.8 8.7h3.4" />
-    <circle cx="16.7" cy="11.4" r=".9" fill="currentColor" stroke="none" />
+    <path d="M8.4 8.79h3.83" />
+    <circle cx="16.16" cy="11.83" r="1" fill="currentColor" stroke="none" />
   </svg>
 )
 
