@@ -127,6 +127,8 @@ export function ModalProjeto() {
       : cellsBase
 
   const seqDoEsquema = esquema?.conteudo.seq ?? []
+  // faixas que o esquema desenhou uma a uma, em vez do deslocamento automático
+  const faixasLivresDoEsquema = esquema?.conteudo.faixasCores
   const faixasDoEsquema = redim?.linhas ?? esquema?.conteudo.faixas ?? 0
 
   const grade = croche
@@ -207,6 +209,7 @@ export function ModalProjeto() {
         celulas: celulas ?? [],
         faixaSeq: seqDoEsquema,
         faixaCount: faixasDoEsquema,
+        faixaCores: faixasLivresDoEsquema,
       }),
     onSuccess: (id) => {
       qc.invalidateQueries({ queryKey: ['projetos'] })
@@ -375,7 +378,11 @@ export function ModalProjeto() {
                   </>
                 ) : (
                   <>
-                    <PreviaFaixas seq={seqDoEsquema} faixas={grade.linhas} />
+                    <PreviaFaixas
+                      seq={seqDoEsquema}
+                      faixas={grade.linhas}
+                      livres={faixasLivresDoEsquema}
+                    />
                     <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>
                       {grade.linhas} faixas · {seqDoEsquema.length} cores
                     </div>

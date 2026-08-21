@@ -6,14 +6,19 @@ import { useRef, useState } from 'react'
  * que não funciona em toque, acha o item sob o ponteiro por `elementFromPoint`
  * e um `data-i`. A página do projeto de tricô já fazia isso à mão — aqui vira
  * um hook, para o criador de padrão e o projeto seguirem o mesmo gesto. */
-export function useReordenar(aoSoltar: (de: number, para: number) => void) {
+export function useReordenar(
+  aoSoltar: (de: number, para: number) => void,
+  /* Duas listas arrastáveis na mesma tela precisam de marcadores diferentes,
+     senão soltar numa acha o índice da outra por `elementFromPoint`. */
+  marcador = 'i',
+) {
   const [arrastado, setArrastado] = useState<number | null>(null)
   const [alvo, setAlvo] = useState<number | null>(null)
   const origem = useRef<number | null>(null)
 
   const indiceSob = (x: number, y: number): number | null => {
-    const el = document.elementFromPoint(x, y)?.closest('[data-i]')
-    const i = el?.getAttribute('data-i')
+    const el = document.elementFromPoint(x, y)?.closest(`[data-${marcador}]`)
+    const i = el?.getAttribute(`data-${marcador}`)
     return i === null || i === undefined ? null : Number(i)
   }
 

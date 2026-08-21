@@ -159,6 +159,10 @@ export interface ReceitaConteudo {
   montagem?: string[]
   esquema?: string[][]
   faixas?: number
+  /* Cores de cada faixa do esquema de tricô, quando alguém editou a manta faixa
+     a faixa em vez de deixar o deslocamento automático da faixa modelo. Só as
+     faixas listadas aqui saem do padrão; o resto continua vindo de `seq`. */
+  faixasCores?: string[][]
   cells?: string[][]
   /* `cores` traz todas as carreiras; `border`/`inner` seguem como fallback do
      que foi salvo quando o modelo só sabia duas. `receita_id` liga ao granny. */

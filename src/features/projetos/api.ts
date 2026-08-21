@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import { gradePadrao, sequenciaDaFaixa } from '../../lib/grade'
+import { faixasDaManta, gradePadrao } from '../../lib/grade'
 import type { Receita } from '../../types/database'
 
 /* ---------- Tipos ---------- */
@@ -582,6 +582,8 @@ export interface NovoProjeto {
   // manta tricô: padrão das faixas
   faixaSeq?: string[]
   faixaCount?: number
+  /** faixas desenhadas uma a uma no esquema, quando o padrão foi editado livre */
+  faixaCores?: string[][]
   // tamanho de um square (crochê) ou de uma faixa (tricô), em cm
   pecaLarguraCm?: number | null
   pecaAlturaCm?: number | null
@@ -636,12 +638,14 @@ export async function criarProjeto(novo: NovoProjeto): Promise<string> {
   if (novo.tipo === 'manta_trico') {
     const seq = novo.faixaSeq ?? []
     const count = novo.faixaCount ?? 8
-    // cada faixa desloca a sequência uma posição: é o que faz as cores
-    // caminharem na diagonal em vez de virarem blocos retos
-    const faixas = Array.from({ length: count }, (_, i) => ({
+    // as faixas desenhadas à mão no esquema vêm inteiras; as demais deslocam a
+    // sequência uma posição, que é o que faz as cores caminharem na diagonal
+    // em vez de virarem blocos retos
+    const linhas = faixasDaManta(seq, count, novo.faixaCores)
+    const faixas = linhas.map((cores, i) => ({
       projeto_id: projetoId,
       ordem: i + 1,
-      cores: sequenciaDaFaixa(seq, i),
+      cores,
     }))
     const { error: e3 } = await supabase.from('faixas').insert(faixas)
     if (e3) throw e3
