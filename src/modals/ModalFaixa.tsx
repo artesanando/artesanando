@@ -29,7 +29,7 @@ export function ModalFaixa() {
     faixaCount,
     faixaSetColor,
     faixaAdd,
-    faixaDrop,
+    faixaRemover,
     incFaixa,
     decFaixa,
     backToProjeto,
@@ -103,7 +103,7 @@ export function ModalFaixa() {
               type="button"
               aria-label={`Remover a cor ${i + 1}`}
               disabled={faixaSeq.length <= 2}
-              onClick={faixaDrop}
+              onClick={() => faixaRemover(i)}
               style={{
                 border: 'none',
                 background: 'none',

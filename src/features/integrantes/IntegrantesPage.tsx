@@ -13,6 +13,7 @@ import { useSemestreAtivo } from '../../lib/semestre'
 import { fetchEmprestimosAtivos } from '../estoque/api'
 import { fetchEncontros, fetchPresencas, frequenciaDe } from '../presenca/api'
 import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
+import { IconChevron } from '../../components/ui/icons'
 import {
   definirAtivo,
   definirNivel,
@@ -55,6 +56,7 @@ export function IntegrantesPage() {
   const confirmar = useConfirmar()
   const { id } = useParams()
   const [busca, setBusca] = useState('')
+  const [avisoAberto, setAvisoAberto] = useState(false)
   const [vinculando, setVinculando] = useState<string | null>(null)
   const [destino, setDestino] = useState('')
   const [linkSenhaPara, setLinkSenhaPara] = useState<string | null>(null)
@@ -171,13 +173,41 @@ export function IntegrantesPage() {
               color: 'var(--gold-dark)',
             }}
           >
-            <b>
-              {semConta.length}{' '}
-              {semConta.length === 1 ? 'pessoa na chamada' : 'pessoas na chamada'} ainda sem
-              perfil.
-            </b>{' '}
-            Convide para o app, ou junte a ficha a uma integrante que já existe.
-            {semConta.map((p) => (
+            {/* Nasce recolhido: é um lembrete permanente enquanto alguém estiver
+                sem perfil, e aberto ele empurrava a lista para fora da tela. */}
+            <button
+              type="button"
+              aria-expanded={avisoAberto}
+              onClick={() => setAvisoAberto((v) => !v)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                width: '100%',
+                border: 'none',
+                background: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontSize: 12.5,
+                color: 'inherit',
+                textAlign: 'left',
+              }}
+            >
+              <IconChevron size={11} para={avisoAberto ? 'cima' : 'baixo'} />
+              <b>
+                {semConta.length}{' '}
+                {semConta.length === 1 ? 'pessoa na chamada' : 'pessoas na chamada'} ainda sem
+                perfil
+              </b>
+            </button>
+            {avisoAberto && (
+              <div style={{ marginTop: 8 }}>
+                Convide para o app, ou junte a ficha a uma integrante que já existe.
+              </div>
+            )}
+            {avisoAberto &&
+              semConta.map((p) => (
               <div
                 key={p.id}
                 style={{
@@ -236,8 +266,8 @@ export function IntegrantesPage() {
                     </button>
                   </>
                 )}
-              </div>
-            ))}
+                </div>
+              ))}
           </div>
         )}
         <div style={{ borderTop: '1px solid var(--border)' }}>

@@ -525,7 +525,7 @@ export function MantaTricoPage({ projeto }: { projeto: Projeto }) {
         </div>
       </div>
       <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 20 }}>
-        Ponto arroz · agulha 5mm{tamanho ? ` · ${fmtMedida(tamanho)}` : ''}
+        {tamanho ? fmtMedida(tamanho) : ''}
       </div>
       {isLoading && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>}
       {faixas && faixas.length > 0 && <Editor projeto={projeto} faixas={faixas} />}

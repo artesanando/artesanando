@@ -42,8 +42,10 @@ export function projetosAtivos(projetos: Pick<Projeto, 'tipo' | 'status'>[]) {
   }
 }
 
-/** Saudação pela hora local */
+/* Saudação pela hora local. A noite atravessa a virada do dia: quem abre o app
+   às duas da manhã ainda está na noite anterior, não no dia seguinte. */
 export function saudacao(hora: number): string {
+  if (hora < 4) return 'Boa noite'
   if (hora < 12) return 'Bom dia'
   if (hora < 18) return 'Boa tarde'
   return 'Boa noite'

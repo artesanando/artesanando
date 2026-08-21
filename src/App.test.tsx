@@ -347,7 +347,11 @@ describe('integrantes (M4)', () => {
   it('avisa quem ainda precisa ser vinculada a um perfil', async () => {
     __login()
     renderAt('/integrantes')
-    expect(await screen.findByText(/1 pessoa na chamada.* ainda sem/s)).toBeInTheDocument()
+    // o aviso nasce recolhido: fica o lembrete, e a lista abre no clique
+    const aviso = await screen.findByRole('button', { name: /1 pessoa na chamada.*sem perfil/ })
+    expect(aviso).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('button', { name: 'Juntar a outra' })).not.toBeInTheDocument()
+    await userEvent.click(aviso)
     expect(screen.getByRole('button', { name: 'Juntar a outra' })).toBeInTheDocument()
   })
 })
