@@ -94,6 +94,7 @@ export interface Store extends StoreState {
   faixaSetColor: (i: number, c: string) => void
   faixaAdd: () => void
   faixaRemover: (i: number) => void
+  faixaSeqSet: (seq: string[]) => void
   incFaixa: () => void
   decFaixa: () => void
   setFaixaCount: (n: number) => void
@@ -160,6 +161,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     /* Antes a cor só ciclava pelas oito da paleta ao clicar no quadradinho —
        sem cor livre e sem teclado. Agora é o mesmo ColorPicker do granny. */
     faixaSetColor: (i, c) => set({ faixaSeq: s.faixaSeq.map((x, j) => (j === i ? c : x)) }),
+    faixaSeqSet: (faixaSeq) => set({ faixaSeq }),
     faixaAdd: () => set({ faixaSeq: [...s.faixaSeq, PALETTE[s.faixaSeq.length % PALETTE.length][0]] }),
     /* Removia sempre a última cor, qualquer que fosse o ✕ clicado — o rótulo
        dizia "remover a cor 1" e sumia a 6. */
