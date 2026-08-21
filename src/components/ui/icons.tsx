@@ -57,7 +57,7 @@ export const IconPres = () => (
    24 — o traçado cresce dentro dos mesmos 16px do menu — e a espessura cai na
    mesma proporção, para o traço continuar do peso dos vizinhos. */
 export const IconFin = () => (
-  <svg {...base} viewBox="2.4 2.4 19.2 19.2" strokeWidth={1.45}>
+  <svg {...base} viewBox="1.8 1.8 20.4 20.4" strokeWidth={1.53}>
     {/* corpo, focinho e as duas patas, num traço só */}
     <path d="M14.25 6.43a8.3 8.3 0 0 1 4.39 4.5H21v3.6h-2.36a8.4 8.4 0 0 1-2.48 3.15v2.02a.68.68 0 0 1-.67.68h-2.03a.68.68 0 0 1-.67-.68v-.9H9.86v.9a.68.68 0 0 1-.67.68H7.16a.68.68 0 0 1-.67-.68v-2.02A7.9 7.9 0 0 1 3 11.71 6.75 6.75 0 0 1 9.75 5.64h1.58l3.26-2.25z" />
     {/* fenda da moeda e o olho */}
