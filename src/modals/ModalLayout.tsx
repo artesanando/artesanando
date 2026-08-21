@@ -6,9 +6,10 @@ import { Lbl, Stepper } from '../components/ui/bits'
 import { ColorPicker, Select } from '../components/ui/controles'
 import { CampoMedida } from '../components/ui/CampoMedida'
 import { PreviaFaixas } from '../components/ui/PreviaFaixas'
+import { reordena, useReordenar } from '../components/ui/useReordenar'
 import { useGradeInterativa, type ModoGrade } from '../components/ui/useGradeInterativa'
 import { useZoomGrade } from '../components/ui/ZoomGrade'
-import { gradePadrao, redimensionaCelulas } from '../lib/grade'
+import { faixasDaManta, gradePadrao, redimensionaCelulas } from '../lib/grade'
 import { MODELS, PALETTE } from '../lib/paleta'
 import { coresDoGranny, seqDaFaixa } from '../lib/padrao'
 import { ModalBox, ModalHeader } from './shared'
@@ -17,7 +18,7 @@ import { criarReceita, fetchReceitas } from '../features/biblioteca/api'
 import { fmtMedida, tamanhoManta } from '../lib/medida'
 import type { Tecnica } from '../types/database'
 import type { ModeloNovo } from '../features/projetos/api'
-import { IconX } from '../components/ui/icons'
+import { IconArrastar, IconChevron, IconX } from '../components/ui/icons'
 import { SquareGranny } from '../components/ui/SquareGranny'
 import { useConfirmar } from '../components/ui/Confirm'
 import { useFios } from '../features/estoque/useFios'
@@ -25,6 +26,8 @@ import { useFios } from '../features/estoque/useFios'
 const LETRAS = 'ABCDEFGH'.split('')
 const MIN = 2
 const MAX = 20
+const MIN_FAIXAS = 2
+const MAX_FAIXAS = 60
 
 const MODELOS_INICIAIS: ModeloNovo[] = (['A', 'B', 'C'] as const).map((k) => ({
   letra: k,
@@ -34,6 +37,18 @@ const MODELOS_INICIAIS: ModeloNovo[] = (['A', 'B', 'C'] as const).map((k) => ({
 }))
 
 const SEQ_INICIAL = PALETTE.slice(0, 3).map(([c]) => c)
+
+const arrastarStyle: CSSProperties = {
+  border: 'none',
+  background: 'none',
+  padding: 0,
+  cursor: 'grab',
+  color: 'var(--faint)',
+  touchAction: 'none',
+  display: 'flex',
+}
+
+const limitarFaixas = (n: number) => Math.max(MIN_FAIXAS, Math.min(MAX_FAIXAS, n))
 
 /** Carreiras do modelo, com as duas cores antigas como fallback */
 const carreiras = (m: ModeloNovo): string[] =>
@@ -83,6 +98,15 @@ export function ModalLayout() {
   const [modelos, setModelos] = useState<ModeloNovo[]>(MODELOS_INICIAIS)
   const [seq, setSeq] = useState<string[]>(SEQ_INICIAL)
   const [faixas, setFaixas] = useState(8)
+  /* Manta de tricô editada faixa a faixa. `null` é a manta seguindo a faixa
+     modelo — o deslocamento automático. Assim que alguém mexe numa faixa
+     sozinha, a manta materializa e cada faixa passa a valer por si. */
+  const [faixasLivres, setFaixasLivres] = useState<string[][] | null>(null)
+  const [faixaSel, setFaixaSel] = useState(0)
+  /* De qual padrão de faixa da biblioteca vieram as cores, para mostrar o
+     vínculo como o crochê já mostra no granny. */
+  const [faixaReceitaId, setFaixaReceitaId] = useState('')
+  const [faixaAjustada, setFaixaAjustada] = useState(false)
   const [colunas, setColunas] = useState(8)
   const [linhas, setLinhas] = useState(6)
   const [celulas, setCelulas] = useState<string[][]>(() =>
@@ -127,6 +151,10 @@ export function ModalLayout() {
     const r = grannies.find((x) => x.id === receitaId)
     const cores = r && coresDoGranny(r)
     if (!r || !cores) return
+    // o tamanho do granny é o tamanho do square: sem ele a manta fica sem medida
+    if (!medida.largura && !medida.altura && (r.largura_cm || r.altura_cm)) {
+      setMedida({ largura: r.largura_cm, altura: r.altura_cm })
+    }
     mudarModelo(i, {
       nome: r.nome,
       cores,
@@ -158,10 +186,106 @@ export function ModalLayout() {
       ajustado: Boolean(modelos[i].receita_id),
     })
 
+  /* O padrão de faixa guarda três coisas — as cores, quantas faixas empilham e
+     o tamanho da faixa — e antes daqui só saíam as cores: a manta nascia com 8
+     faixas e sem medida, por mais que o padrão dissesse outra coisa. */
   const puxarFaixa = (receitaId: string) => {
     const r = padroesFaixa.find((x) => x.id === receitaId)
-    const s = r && seqDaFaixa(r)
-    if (s) setSeq(s)
+    const nova = r && seqDaFaixa(r)
+    if (!r || !nova) return
+    setSeq(nova)
+    setFaixasLivres(null)
+    setFaixaSel(0)
+    setFaixaReceitaId(r.id)
+    setFaixaAjustada(false)
+    if (r.conteudo.faixas) setFaixas(limitarFaixas(r.conteudo.faixas))
+    if (r.largura_cm || r.altura_cm) setMedida({ largura: r.largura_cm, altura: r.altura_cm })
+  }
+
+  /* Mexer numa cor não desfaz o vínculo em silêncio, igual ao granny: o padrão
+     continua sendo o de origem, só que ajustado. */
+  const mudarSeq = (novas: string[]) => {
+    setSeq(novas)
+    if (faixaReceitaId) setFaixaAjustada(true)
+  }
+
+  const mudarQuantidade = (n: number) => {
+    const q = limitarFaixas(n)
+    setFaixas(q)
+    // encolher corta as faixas de baixo; crescer devolve o deslocamento padrão
+    setFaixasLivres((atual) => (atual === null ? null : faixasDaManta(seq, q, atual)))
+    setFaixaSel((i) => Math.min(i, q - 1))
+  }
+
+  /* Toda edição faixa a faixa materializa a manta inteira: a partir daí as
+     faixas não seguem mais o deslocamento da faixa modelo. */
+  const editarManta = (muda: (linhas: string[][]) => string[][]) => {
+    const novas = muda(faixasLivres ?? faixasDaManta(seq, faixas))
+    const cortadas = novas.slice(0, MAX_FAIXAS)
+    setFaixasLivres(cortadas)
+    setFaixas(cortadas.length)
+  }
+
+  const editarFaixa = (i: number, cores: string[]) =>
+    editarManta((linhas) => linhas.map((c, j) => (j === i ? cores : c)))
+
+  const moverFaixa = (de: number, para: number) => {
+    if (para < 0 || para >= faixas) return
+    editarManta((linhas) => reordena(linhas, de, para))
+    setFaixaSel(para)
+  }
+
+  const duplicarFaixa = (i: number) => {
+    if (faixas >= MAX_FAIXAS) return
+    editarManta((linhas) => [...linhas.slice(0, i + 1), linhas[i], ...linhas.slice(i + 1)])
+    setFaixaSel(i + 1)
+  }
+
+  const removerFaixa = (i: number) => {
+    if (faixas <= MIN_FAIXAS) return
+    editarManta((linhas) => linhas.filter((_, j) => j !== i))
+    setFaixaSel(Math.max(0, Math.min(i, faixas - 2)))
+  }
+
+  /* Voltar ao automático joga fora o que foi editado à mão — por isso avisa. */
+  const redesenharFaixas = async () => {
+    const ok = await confirmar({
+      titulo: 'Redesenhar apaga as faixas que você editou à mão. Continuar?',
+      okLabel: 'Redesenhar',
+      perigo: true,
+    })
+    if (ok) setFaixasLivres(null)
+  }
+
+  const linhasDaManta = faixasDaManta(seq, faixas, faixasLivres ?? undefined)
+  const coresSel = linhasDaManta[Math.min(faixaSel, faixas - 1)] ?? seq
+
+  const ordemSeq = useReordenar((de, para) => mudarSeq(reordena(seq, de, para)))
+  const ordemFaixa = useReordenar(
+    (de, para) => editarFaixa(faixaSel, reordena(coresSel, de, para)),
+    'cor',
+  )
+
+  /* Puxar a borda de baixo muda quantas faixas a manta tem, como a grade do
+     crochê já fazia. Cada ~9px arrastados vale uma faixa. */
+  const arrastoFaixas = useRef<{ y: number; faixas: number } | null>(null)
+  const alcaFaixas = {
+    onPointerDown: (e: React.PointerEvent) => {
+      e.preventDefault()
+      e.currentTarget.setPointerCapture(e.pointerId)
+      arrastoFaixas.current = { y: e.clientY, faixas }
+    },
+    onPointerMove: (e: React.PointerEvent) => {
+      const ini = arrastoFaixas.current
+      if (!ini) return
+      mudarQuantidade(ini.faixas + Math.round((e.clientY - ini.y) / 9))
+    },
+    onPointerUp: () => {
+      arrastoFaixas.current = null
+    },
+    onPointerCancel: () => {
+      arrastoFaixas.current = null
+    },
   }
 
   const letras = modelos.map((m) => m.letra)
@@ -292,7 +416,13 @@ export function ModalLayout() {
                 ]),
               ),
             }
-          : { tecnica: 'trico', seq, faixas },
+          : {
+              tecnica: 'trico',
+              seq,
+              faixas,
+              // só vai junto o que foi desenhado faixa a faixa
+              ...(faixasLivres ? { faixasCores: faixasLivres } : {}),
+            },
         origem: 'criador',
         criado_por: profile!.id,
       }),
@@ -634,22 +764,50 @@ export function ModalLayout() {
         <>
           <Lbl style={{ marginBottom: 9 }}>FAIXA MODELO</Lbl>
           {padroesFaixa.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
+            <div style={{ marginBottom: 10 }}>
               <Select
-                value=""
+                value={faixaReceitaId}
                 onChange={puxarFaixa}
                 options={padroesFaixa.map((r) => [r.id, r.nome] as [string, string])}
                 ariaLabel="Puxar padrão de faixa da biblioteca"
                 placeholder="Puxar da biblioteca…"
               />
+              {faixaReceitaId && (
+                <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 4 }}>
+                  {faixaAjustada
+                    ? `ajustado a partir de ${padroesFaixa.find((r) => r.id === faixaReceitaId)?.nome ?? 'um padrão'}`
+                    : 'as cores, as faixas e a medida vieram deste padrão'}
+                </div>
+              )}
             </div>
           )}
           <div style={{ marginBottom: 16 }}>
             {seq.map((c, i) => (
               <div
                 key={i}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}
+                data-i={i}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginBottom: 7,
+                  opacity: ordemSeq.arrastado === i ? 0.4 : 1,
+                  outline:
+                    ordemSeq.alvo === i && ordemSeq.arrastado !== i
+                      ? '2px dashed var(--ink)'
+                      : 'none',
+                  outlineOffset: 2,
+                  borderRadius: 8,
+                }}
               >
+                <button
+                  type="button"
+                  aria-label={`Mover a cor ${i + 1} da faixa modelo`}
+                  {...ordemSeq.alca(i)}
+                  style={arrastarStyle}
+                >
+                  <IconArrastar size={13} />
+                </button>
                 <span style={{ fontSize: 11, color: 'var(--muted)', width: 16, fontWeight: 800 }}>
                   {i + 1}
                 </span>
@@ -658,7 +816,7 @@ export function ModalLayout() {
                     fios={fios}
                     value={c}
                     ariaLabel={`Cor ${i + 1} da faixa`}
-                    onChange={(nova) => setSeq((atual) => atual.map((x, j) => (j === i ? nova : x)))}
+                    onChange={(nova) => mudarSeq(seq.map((x, j) => (j === i ? nova : x)))}
                   />
                 </span>
                 <button
@@ -666,7 +824,7 @@ export function ModalLayout() {
                   className="kebab"
                   aria-label={`Remover a cor ${i + 1}`}
                   disabled={seq.length <= 2}
-                  onClick={() => setSeq((atual) => atual.filter((_, j) => j !== i))}
+                  onClick={() => mudarSeq(seq.filter((_, j) => j !== i))}
                 >
                   <IconX size={12} />
                 </button>
@@ -676,7 +834,7 @@ export function ModalLayout() {
               type="button"
               className="pill ghost"
               style={{ padding: '6px 14px', fontSize: 12 }}
-              onClick={() => setSeq((atual) => [...atual, PALETTE[atual.length % PALETTE.length][0]])}
+              onClick={() => mudarSeq([...seq, PALETTE[seq.length % PALETTE.length][0]])}
             >
               + Cor
             </button>
@@ -684,7 +842,13 @@ export function ModalLayout() {
 
           <Lbl style={{ marginBottom: 7 }}>QUANTAS FAIXAS</Lbl>
           <div style={{ marginBottom: 18, maxWidth: 140 }}>
-            <Stepper value={faixas} onChange={setFaixas} min={2} max={60} ariaLabel="Faixas" />
+            <Stepper
+              value={faixas}
+              onChange={mudarQuantidade}
+              min={MIN_FAIXAS}
+              max={MAX_FAIXAS}
+              ariaLabel="Faixas"
+            />
           </div>
 
           <div style={{ marginBottom: 18 }}>
@@ -703,17 +867,186 @@ export function ModalLayout() {
               justifyContent: 'space-between',
               alignItems: 'baseline',
               marginBottom: 9,
+              gap: 10,
+              flexWrap: 'wrap',
             }}
           >
-            <Lbl>PRÉVIA DA MANTA</Lbl>
+            <Lbl>A MANTA</Lbl>
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+              clique numa faixa para editar; puxe a borda de baixo para mudar a quantidade
+            </span>
             {daManta && (
               <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--accent)' }}>
                 {fmtMedida(daManta)}
               </span>
             )}
           </div>
-          <div style={{ marginBottom: 22 }}>
-            <PreviaFaixas seq={seq} faixas={faixas} />
+          <div style={{ position: 'relative', paddingBottom: 14, marginBottom: 14 }}>
+            <PreviaFaixas
+              seq={seq}
+              faixas={faixas}
+              livres={faixasLivres ?? undefined}
+              sel={faixaSel}
+              aoSelecionar={setFaixaSel}
+              altura={Math.min(300, faixas * 16)}
+            />
+            <button
+              type="button"
+              className="alca-grade alca-y"
+              aria-label={`Quantidade de faixas: ${faixas}`}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowDown') mudarQuantidade(faixas + 1)
+                if (e.key === 'ArrowUp') mudarQuantidade(faixas - 1)
+              }}
+              {...alcaFaixas}
+            />
+          </div>
+
+          {/* Edição livre: a faixa escolhida vale por si, sem seguir o
+              deslocamento da faixa modelo. É o que faltava para mudar só uma
+              faixa do meio da manta sem refazer o esquema inteiro. */}
+          <div
+            style={{
+              background: 'var(--sand-soft)',
+              border: '1px solid var(--border)',
+              borderRadius: 12,
+              padding: '12px 14px',
+              marginBottom: 22,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
+                marginBottom: 10,
+                flexWrap: 'wrap',
+              }}
+            >
+              <Lbl>FAIXA {faixaSel + 1}</Lbl>
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="kebab"
+                  aria-label={`Mover a faixa ${faixaSel + 1} para cima`}
+                  disabled={faixaSel === 0}
+                  onClick={() => moverFaixa(faixaSel, faixaSel - 1)}
+                >
+                  <IconChevron size={11} para="cima" />
+                </button>
+                <button
+                  type="button"
+                  className="kebab"
+                  aria-label={`Mover a faixa ${faixaSel + 1} para baixo`}
+                  disabled={faixaSel >= faixas - 1}
+                  onClick={() => moverFaixa(faixaSel, faixaSel + 1)}
+                >
+                  <IconChevron size={11} para="baixo" />
+                </button>
+                <button
+                  type="button"
+                  className="pill ghost"
+                  style={{ padding: '4px 11px', fontSize: 11.5 }}
+                  disabled={faixas >= MAX_FAIXAS}
+                  onClick={() => duplicarFaixa(faixaSel)}
+                >
+                  Duplicar
+                </button>
+                <button
+                  type="button"
+                  className="pill ghost"
+                  style={{ padding: '4px 11px', fontSize: 11.5 }}
+                  disabled={faixas <= MIN_FAIXAS}
+                  onClick={() => removerFaixa(faixaSel)}
+                >
+                  Remover
+                </button>
+              </div>
+            </div>
+
+            {coresSel.map((c, i) => (
+              <div
+                key={i}
+                data-cor={i}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginBottom: 6,
+                  opacity: ordemFaixa.arrastado === i ? 0.4 : 1,
+                  outline:
+                    ordemFaixa.alvo === i && ordemFaixa.arrastado !== i
+                      ? '2px dashed var(--ink)'
+                      : 'none',
+                  outlineOffset: 2,
+                  borderRadius: 8,
+                }}
+              >
+                <button
+                  type="button"
+                  aria-label={`Mover a cor ${i + 1} da faixa ${faixaSel + 1}`}
+                  {...ordemFaixa.alca(i)}
+                  style={arrastarStyle}
+                >
+                  <IconArrastar size={13} />
+                </button>
+                <span style={{ flex: 1, minWidth: 130 }}>
+                  <ColorPicker
+                    fios={fios}
+                    value={c}
+                    ariaLabel={`Cor ${i + 1} da faixa ${faixaSel + 1}`}
+                    onChange={(nova) =>
+                      editarFaixa(
+                        faixaSel,
+                        coresSel.map((x, j) => (j === i ? nova : x)),
+                      )
+                    }
+                  />
+                </span>
+                <button
+                  type="button"
+                  className="kebab"
+                  aria-label={`Remover a cor ${i + 1} da faixa ${faixaSel + 1}`}
+                  disabled={coresSel.length <= 2}
+                  onClick={() =>
+                    editarFaixa(
+                      faixaSel,
+                      coresSel.filter((_, j) => j !== i),
+                    )
+                  }
+                >
+                  <IconX size={12} />
+                </button>
+              </div>
+            ))}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+              <button
+                type="button"
+                className="pill ghost"
+                style={{ padding: '6px 14px', fontSize: 12 }}
+                onClick={() =>
+                  editarFaixa(faixaSel, [...coresSel, PALETTE[coresSel.length % PALETTE.length][0]])
+                }
+              >
+                + Cor
+              </button>
+              {faixasLivres && (
+                <button
+                  type="button"
+                  className="pill ghost"
+                  style={{ padding: '6px 14px', fontSize: 12 }}
+                  onClick={redesenharFaixas}
+                >
+                  Redesenhar pela faixa modelo
+                </button>
+              )}
+            </div>
+            {faixasLivres && (
+              <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 8 }}>
+                as faixas foram editadas à mão e não seguem mais o deslocamento automático
+              </div>
+            )}
           </div>
         </>
       )}
