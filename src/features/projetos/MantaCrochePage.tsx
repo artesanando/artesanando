@@ -3,36 +3,34 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../state/auth'
 import { Lbl } from '../../components/ui/bits'
-import { Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { useGradeInterativa, type ModoGrade } from '../../components/ui/useGradeInterativa'
 import { useZoomGrade } from '../../components/ui/ZoomGrade'
 import { coordenada } from '../../lib/grade'
 import { fmtMedida, tamanhoManta } from '../../lib/medida'
 import { Comentarios, Historico } from './Comentarios'
-import { BotoesEtapa, ETAPA_COR, QuadroEtapas } from './QuadroEtapas'
+import { ETAPA_COR, QuadroEtapas } from './QuadroEtapas'
 import { AcoesProjeto, AvisoArquivado, ProgressoProjeto } from './CabecalhoProjeto'
 import { IconChevron } from '../../components/ui/icons'
 import { SquareGranny, coresDoModelo } from '../../components/ui/SquareGranny'
 import {
   ETAPA_LABEL,
-  fetchIntegrantesAtivas,
   fetchModelos,
   fetchSquares,
-  marcarSquares,
   pintarSquares,
   progressoSquares,
   trocarSquares,
   type MantaModelo,
   type Projeto,
   type Square,
-  type SquareEtapa,
 } from './api'
 
+/* O mapa é o desenho da manta: onde cada padrão fica e como a peça se encaixa
+   no todo. Quem anda com a produção é o quadro de etapas — misturar as duas
+   coisas fazia a mesma peça ser editável de dois jeitos diferentes. */
 const MODOS: [ModoGrade, string, string][] = [
-  ['marcar', 'Marcar', 'selecione squares e diga em que etapa estão'],
   ['mover', 'Mover', 'arraste um square sobre outro para trocarem de lugar'],
-  ['pintar', 'Pintar', 'escolha um modelo e arraste pela grade'],
+  ['pintar', 'Pintar', 'escolha um padrão e arraste pela grade'],
 ]
 
 /* Vista e ferramenta eram duas fileiras da mesma pílula preenchida em cor de
@@ -65,49 +63,41 @@ function Mapa({
   modelos: MantaModelo[]
   colunas: number
 }) {
-  const { profile, can } = useAuth()
+  const { can } = useAuth()
   const qc = useQueryClient()
   const toast = useToast()
 
-  const [modo, setModo] = useState<ModoGrade>('marcar')
+  const [modo, setModo] = useState<ModoGrade>('mover')
   const [pincel, setPincel] = useState<string>(modelos[0]?.id ?? '')
-  const [respId, setRespId] = useState('')
-  const zoom = useZoomGrade()
-
-  const { data: integrantes } = useQuery({
-    queryKey: ['integrantes-min'],
-    queryFn: fetchIntegrantesAtivas,
-  })
+  const zoom = useZoomGrade(46)
 
   const porPosicao = useMemo(() => new Map(squares.map((s) => [s.posicao, s])), [squares])
   const porModelo = useMemo(() => new Map(modelos.map((m) => [m.id, m])), [modelos])
+
+  /* Qual célula do mapa está pronta não quer dizer nada: quem faz um square pega
+     "um do padrão A", não a peça da terceira linha. O mapa mostra então a mesma
+     quantidade que o quadro diz estar pronta, preenchendo de cima para baixo. */
+  const prontas = useMemo(() => {
+    const faltam = new Map<string, number>()
+    for (const s of squares) {
+      if (s.etapa === 'pronto') faltam.set(s.modelo_id, (faltam.get(s.modelo_id) ?? 0) + 1)
+    }
+    const set = new Set<number>()
+    for (const s of [...squares].sort((a, b) => a.posicao - b.posicao)) {
+      const n = faltam.get(s.modelo_id) ?? 0
+      if (n > 0) {
+        set.add(s.posicao)
+        faltam.set(s.modelo_id, n - 1)
+      }
+    }
+    return set
+  }, [squares])
 
   const invalidar = () => {
     qc.invalidateQueries({ queryKey: ['squares', projeto.id] })
     qc.invalidateQueries({ queryKey: ['atividades', projeto.id] })
     qc.invalidateQueries({ queryKey: ['progresso-geral'] })
   }
-
-  const marcar = useMutation({
-    mutationFn: (etapa: SquareEtapa) => {
-      const ids = [...sel].map((p) => porPosicao.get(p)?.id).filter((x): x is string => !!x)
-      const resp = (integrantes ?? []).find((p) => p.id === respId)
-      return marcarSquares({
-        projetoId: projeto.id,
-        ids,
-        etapa,
-        responsavelId: respId || profile!.id,
-        responsavelNome: resp?.nome ?? profile!.nome,
-        autorId: profile!.id,
-      })
-    },
-    onSuccess: () => {
-      setSel(new Set())
-      invalidar()
-      toast('Progresso registrado')
-    },
-    onError: () => toast('Não foi possível registrar.', 'erro'),
-  })
 
   const trocar = useMutation({
     mutationFn: ({ de, para }: { de: Square; para: Square }) => trocarSquares(de, para),
@@ -126,7 +116,7 @@ function Mapa({
 
   const podeEditar = can('progresso')
 
-  const { sel, setSel, arrastado, alvo, aoClicar, propsGrade } = useGradeInterativa({
+  const { sel, arrastado, alvo, aoClicar, propsGrade } = useGradeInterativa({
     colunas,
     modo,
     ativo: podeEditar,
@@ -215,7 +205,7 @@ function Mapa({
             {Array.from({ length: linhas * colunas }, (_, pos) => {
               const sq = porPosicao.get(pos)
               const m = sq ? porModelo.get(sq.modelo_id) : undefined
-              const feito = sq?.etapa === 'pronto'
+              const feito = prontas.has(pos)
               const naSelecao = sel.has(pos)
               const ehArrastado = arrastado === pos
               const ehAlvo = alvo === pos
@@ -239,18 +229,21 @@ function Mapa({
                     padding: 0,
                     border: 'none',
                     background: 'var(--sand)',
-                    opacity: ehArrastado ? 0.35 : feito ? 1 : 0.42,
+                    opacity: ehArrastado ? 0.35 : feito ? 1 : 0.5,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: 2,
                     cursor: podeEditar ? (modo === 'mover' ? 'grab' : 'pointer') : 'default',
+                    /* a seleção precisa saltar por cima da própria cor do
+                       padrão: um contorno fino sumia dentro da grade */
                     outline: naSelecao
-                      ? '2px solid var(--ink)'
+                      ? '3px solid var(--ink)'
                       : ehAlvo
                         ? '2px dashed var(--primary)'
                         : 'none',
-                    outlineOffset: -2,
+                    outlineOffset: -1,
+                    boxShadow: naSelecao ? '0 0 0 2px var(--card), 0 2px 8px rgba(0,0,0,.25)' : undefined,
                     transform: ehAlvo ? 'scale(1.14)' : 'scale(1)',
                     zIndex: ehAlvo || naSelecao ? 1 : 0,
                     transition:
@@ -301,10 +294,7 @@ function Mapa({
 
           {selecionado && modeloSel && (
             <div className="card" style={{ padding: '12px 14px' }}>
-              <Lbl style={{ marginBottom: 8 }}>
-                SELECIONADO · L{coordenada(selecionado.posicao, colunas).linha} C
-                {coordenada(selecionado.posicao, colunas).coluna}
-              </Lbl>
+              <Lbl style={{ marginBottom: 8 }}>PEÇA ESCOLHIDA</Lbl>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <SquareGranny
                   cores={coresDoModelo(modeloSel)}
@@ -324,49 +314,6 @@ function Mapa({
         </div>
       </div>
 
-      {modo === 'marcar' && sel.size > 0 && podeEditar && (
-        <div
-          className="card barra-acao"
-          style={{ padding: '14px 16px', marginBottom: 26, borderColor: 'var(--chip-rose-border)' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <b style={{ fontSize: 13 }}>
-              {sel.size} square{sel.size > 1 ? 's' : ''} selecionado{sel.size > 1 ? 's' : ''}
-            </b>
-            <div style={{ minWidth: 180, flex: 1 }}>
-              <Select
-                ariaLabel="Quem fez"
-                value={respId}
-                onChange={setRespId}
-                options={[
-                  ['', 'Quem fez… (eu)'],
-                  ...(integrantes ?? []).map((p) => [p.id, p.nome] as [string, string]),
-                ]}
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => setSel(new Set())}
-              style={{
-                border: 'none',
-                background: 'none',
-                fontFamily: 'inherit',
-                fontSize: 12.5,
-                fontWeight: 700,
-                color: 'var(--muted)',
-                cursor: 'pointer',
-              }}
-            >
-              Limpar
-            </button>
-          </div>
-          <BotoesEtapa
-            squares={[...sel].map((p) => porPosicao.get(p)).filter((s): s is Square => !!s)}
-            pendente={marcar.isPending}
-            aoEscolher={(etapa) => marcar.mutate(etapa)}
-          />
-        </div>
-      )}
 
     </>
   )
@@ -376,7 +323,8 @@ function Mapa({
 
 export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
   const navigate = useNavigate()
-  const [view, setView] = useState<'mapa' | 'etapas'>('mapa')
+  // o quadro abre primeiro: é onde a produção anda; o mapa é o desenho da manta
+  const [view, setView] = useState<'mapa' | 'etapas'>('etapas')
 
   const { data: modelos } = useQuery({
     queryKey: ['modelos', projeto.id],
@@ -422,11 +370,11 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
       <AvisoArquivado projeto={projeto} />
       <ProgressoProjeto done={prog.done} total={prog.total} unidade="squares" />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <button onClick={() => setView('mapa')} style={seg(view === 'mapa')}>
-          Mapa de montagem
-        </button>
         <button onClick={() => setView('etapas')} style={seg(view === 'etapas')}>
           Quadro de etapas
+        </button>
+        <button onClick={() => setView('mapa')} style={seg(view === 'mapa')}>
+          Mapa de montagem
         </button>
       </div>
       {view === 'mapa' ? (
@@ -437,12 +385,7 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
           colunas={colunas}
         />
       ) : (
-        <QuadroEtapas
-          projeto={projeto}
-          squares={lista}
-          modelos={modelos ?? []}
-          colunas={colunas}
-        />
+        <QuadroEtapas projeto={projeto} squares={lista} modelos={modelos ?? []} />
       )}
       <div className="pgrid" style={{ '--cols': '1fr 1fr', '--gap': '24px' } as CSSProperties}>
         <Comentarios projetoId={projeto.id} />

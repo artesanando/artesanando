@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useMontagemAnimada, usePrendeFoco } from './Popover'
+import { Select } from './controles'
 
 /* Confirmação com a cara do app no lugar do window.confirm, que é uma janela do
    sistema operacional. Usado em tudo que é difícil de desfazer: arquivar,
@@ -17,7 +18,14 @@ export interface PedidoConfirmacao {
   /* Texto livre pedido junto da confirmação: dar um crédito à mão sem dizer por
      quê deixa a auditoria com uma linha que não explica nada. Só `usePedirTexto`
      enxerga o que foi digitado. */
-  campo?: { rotulo: string; placeholder?: string; obrigatorio?: boolean }
+  campo?: {
+    rotulo: string
+    placeholder?: string
+    obrigatorio?: boolean
+    /** com opções o campo vira uma lista em vez de texto livre */
+    opcoes?: [string, string][]
+    padrao?: string
+  }
 }
 
 type Resolver = (valor: boolean | string | null) => void
@@ -38,7 +46,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
   const abrir = useCallback((p: PedidoConfirmacao, comTexto: boolean) => {
     setTexto('')
-    setLivre('')
+    setLivre(p.campo?.padrao ?? '')
     devolveTexto.current = comTexto
     setPedido(p)
     return new Promise<boolean | string | null>((res) => {
@@ -102,19 +110,28 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 </div>
               )}
               {pedido.campo && (
-                <>
+                <div style={{ marginBottom: 18 }}>
                   <div className="lbl" style={{ marginBottom: 7 }}>
                     {pedido.campo.rotulo}
                   </div>
-                  <input
-                    className="field"
-                    value={livre}
-                    onChange={(e) => setLivre(e.target.value)}
-                    placeholder={pedido.campo.placeholder}
-                    aria-label={pedido.campo.rotulo}
-                    style={{ marginBottom: 18 }}
-                  />
-                </>
+                  {pedido.campo.opcoes ? (
+                    <Select
+                      value={livre}
+                      onChange={setLivre}
+                      options={pedido.campo.opcoes}
+                      ariaLabel={pedido.campo.rotulo}
+                      placeholder={pedido.campo.placeholder}
+                    />
+                  ) : (
+                    <input
+                      className="field"
+                      value={livre}
+                      onChange={(e) => setLivre(e.target.value)}
+                      placeholder={pedido.campo.placeholder}
+                      aria-label={pedido.campo.rotulo}
+                    />
+                  )}
+                </div>
               )}
               {pedido.confirmarDigitando && (
                 <>

@@ -338,39 +338,62 @@ export async function inserirAtividade(a: {
 /** Registrar produção: marca a etapa (e quem fez) dos squares selecionados no mapa */
 /* Cada metade do square guarda quem a fez. Voltar uma etapa limpa a metade
    correspondente — senão alguém levaria crédito por trabalho desfeito. */
-function creditoDaEtapa(etapa: SquareEtapa, quem: string | null) {
-  switch (etapa) {
-    case 'afazer':
-      return { miolo_por: null, borda_por: null }
-    case 'miolo':
-    case 'aguardando_borda':
-      return { miolo_por: quem, borda_por: null }
-    default:
-      return { borda_por: quem }
+/* Etapa e crédito não são a mesma coisa. "Miolo" e "Borda" dizem que alguém
+   está com a peça na agulha; "Aguardando borda" e "Pronto" dizem que a metade
+   ficou pronta — e é só aí que a meia entrega existe. Antes o crédito saía já
+   em "Miolo", então quem pegava a peça e não terminava levava a entrega. */
+export const mioloFeitoEm = (etapa: SquareEtapa) =>
+  ETAPAS.indexOf(etapa) >= ETAPAS.indexOf('aguardando_borda')
+
+export const bordaFeitaEm = (etapa: SquareEtapa) => etapa === 'pronto'
+
+/** Quem precisa ser perguntado para o square chegar nesta etapa */
+export function creditoQueFalta(square: Pick<Square, 'miolo_por' | 'borda_por'>, etapa: SquareEtapa) {
+  return {
+    miolo: mioloFeitoEm(etapa) && !square.miolo_por,
+    borda: bordaFeitaEm(etapa) && !square.borda_por,
   }
 }
 
-export async function marcarSquares(opts: {
+/** Metades que a volta desfaz — o que some das entregas de quem fez */
+export function creditoQueVolta(square: Pick<Square, 'miolo_por' | 'borda_por'>, etapa: SquareEtapa) {
+  return {
+    miolo: !mioloFeitoEm(etapa) && Boolean(square.miolo_por),
+    borda: !bordaFeitaEm(etapa) && Boolean(square.borda_por),
+  }
+}
+
+/* Move um square de etapa. Uma peça por vez: o quadro anda unidade a unidade,
+   e quem fez cada metade é perguntado no momento em que a metade fica pronta. */
+export async function moverSquare(opts: {
   projetoId: string
-  ids: string[]
+  square: Square
   etapa: SquareEtapa
-  responsavelId: string | null
-  responsavelNome: string | null
+  /** quem está com a peça na agulha — só enquanto ela está sendo feita */
+  responsavelId?: string | null
+  /** quem fez o miolo, quando esta mudança o dá por pronto */
+  mioloPor?: string | null
+  /** quem fez a borda, quando esta mudança a dá por pronta */
+  bordaPor?: string | null
   autorId: string
+  quemNome: string | null
 }) {
-  const { projetoId, ids, etapa, responsavelId, responsavelNome, autorId } = opts
-  if (ids.length === 0) return
+  const { projetoId, square, etapa, autorId, quemNome } = opts
+
+  /* Estar com a peça e ter feito a metade são coisas diferentes: em "aguardando
+     borda" e em "pronto" ninguém está com ela, e é justamente aí que a metade
+     conta como entrega. */
+  const naAgulha = etapa === 'miolo' || etapa === 'borda'
 
   const { error } = await supabase
     .from('squares')
     .update({
       etapa,
-      responsavel_id: etapa === 'afazer' ? null : responsavelId,
-      // quem fez o miolo não pode ser apagada quando outra pessoa marca a borda:
-      // o normal aqui é o square ser dividido entre duas
-      ...creditoDaEtapa(etapa, responsavelId),
+      responsavel_id: naAgulha ? (opts.responsavelId ?? square.responsavel_id) : null,
+      miolo_por: mioloFeitoEm(etapa) ? (square.miolo_por ?? opts.mioloPor ?? null) : null,
+      borda_por: bordaFeitaEm(etapa) ? (square.borda_por ?? opts.bordaPor ?? null) : null,
     })
-    .in('id', ids)
+    .eq('id', square.id)
   if (error) throw error
 
   await inserirAtividade({
@@ -378,13 +401,12 @@ export async function marcarSquares(opts: {
     tipo: 'producao',
     projeto_id: projetoId,
     payload: {
-      texto: `marcou ${ids.length} square${ids.length > 1 ? 's' : ''} como ${ETAPA_LABEL[etapa].toLowerCase()}`,
-      detalhe: responsavelNome ?? undefined,
+      texto: `moveu um square para ${ETAPA_LABEL[etapa].toLowerCase()}`,
+      detalhe: quemNome ?? undefined,
     },
   })
 }
 
-/** Troca dois squares de lugar no mapa (o desenho muda, o progresso vai junto) */
 export async function trocarSquares(a: Square, b: Square) {
   // posicao é unique por projeto (e tem check >= 0): passa por um valor alto e
   // livre antes de cruzar, senão o UPDATE do meio colide com a posição do outro

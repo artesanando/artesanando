@@ -235,28 +235,26 @@ describe('projetos (M3)', () => {
     expect(screen.queryByRole('button', { name: '+ Faixa no fim' })).not.toBeInTheDocument()
   })
 
-  it('o mapa mostra a etapa de cada square', async () => {
+  it('o quadro de etapas abre primeiro, com a fila empilhada por padrão', async () => {
     __login()
     renderAt('/projetos/p1')
-    expect(
-      await screen.findByRole('button', { name: /linha 1 coluna 1 · Pronto/ }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /linha 1 coluna 3 · Aguardando borda/ }),
-    ).toBeInTheDocument()
+    // "a fazer" e "pronto" agregam: quem pega um square pega um do padrão
+    expect(await screen.findByRole('button', { name: /peças? do padrão A em a fazer/i })).toBeInTheDocument()
   })
 
-  it('selecionar squares no mapa abre a barra para marcar a etapa', async () => {
+  it('o mapa não mexe mais em etapa — só move e pinta', async () => {
     __login()
     renderAt('/projetos/p1')
-    await userEvent.click(await screen.findByRole('button', { name: /linha 1 coluna 4/ }))
-    expect(screen.getByText('1 square selecionado')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Pronto' })).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Mapa de montagem' }))
+    expect(screen.getByRole('button', { name: 'Mover' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Pintar' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Marcar' })).not.toBeInTheDocument()
   })
 
-  it('integrante sem permissão de progresso não consegue marcar o mapa', async () => {
+  it('integrante sem permissão de progresso não consegue mexer no mapa', async () => {
     __login(INTEGRANTE_PROFILE)
     renderAt('/projetos/p1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Mapa de montagem' }))
     expect(await screen.findByRole('button', { name: /linha 1 coluna 4/ })).toBeDisabled()
   })
 })
