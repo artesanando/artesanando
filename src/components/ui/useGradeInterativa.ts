@@ -33,6 +33,11 @@ export function useGradeInterativa({
   const pressionado = useRef(false)
   /** houve arrasto de verdade? se sim, o clique que vem depois é ignorado */
   const arrastou = useRef(false)
+  /* Com o ponteiro capturado pela grade, o navegador entrega o `click` à grade
+     e não ao <button> da célula — o onClick dela nunca rodava, e marcar square
+     por toque simplesmente não acontecia. O toque limpo passou a ser resolvido
+     no `pointerup`; esta trava evita contar duas vezes onde o click chega. */
+  const tratado = useRef(false)
   /** o pintar em área lê a seleção no pointerup, e o estado ainda não chegou lá */
   const pincelada = useRef<number[]>([])
 
@@ -52,7 +57,7 @@ export function useGradeInterativa({
   }
 
   const aoClicar = (pos: number) => {
-    if (!ativo || arrastou.current) return
+    if (!ativo || arrastou.current || tratado.current) return
     if (modo === 'pintar') {
       aoPintar?.([pos])
       return
@@ -114,6 +119,12 @@ export function useGradeInterativa({
         setSel(new Set())
       }
       setArrastado(null)
+    } else if (ancora.current !== null) {
+      aoClicar(ancora.current)
+      tratado.current = true
+      setTimeout(() => {
+        tratado.current = false
+      }, 0)
     }
     setAlvo(null)
     ancora.current = null
