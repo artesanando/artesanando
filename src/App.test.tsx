@@ -403,7 +403,7 @@ describe('integrantes (M4)', () => {
   it('as entregas passam a contar granny squares', async () => {
     __login()
     renderAt('/integrantes')
-    expect(await screen.findByText('Granny squares prontos')).toBeInTheDocument()
+    expect(await screen.findByText('Granny squares (metades contam meio)')).toBeInTheDocument()
   })
 
   it('avisa quem ainda precisa ser vinculada a um perfil', async () => {

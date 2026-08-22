@@ -8,11 +8,12 @@ import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
 import { MenuKebab, Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
-import { hojeIso } from '../../lib/format'
+import { fmtDataLonga, fmtEntrega, hojeIso } from '../../lib/format'
 import { useSemestreAtivo } from '../../lib/semestre'
 import { fetchEmprestimosAtivos } from '../estoque/api'
 import { fetchEncontros, fetchPresencas, frequenciaDe } from '../presenca/api'
 import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
+import { soDoSemestre, useParticipantes } from '../extensao/useParticipantes'
 import { IconChevron } from '../../components/ui/icons'
 import {
   definirAtivo,
@@ -84,7 +85,12 @@ export function IntegrantesPage() {
     (e) => !semestre || e.semestre_id === semestre.id,
   )
 
-  const lista = filtraIntegrantes(integrantes ?? [], busca)
+  /* A lista também é do semestre ativo, como em Atividade de extensão. Antes
+     misturava quem só participou de semestres passados — aparecendo com 0% de
+     frequência ao lado de entregas de anos atrás. */
+  const participantes = useParticipantes(semestre?.id ?? null)
+  const doSemestreAtivo = soDoSemestre(integrantes ?? [], participantes, semestre?.id ?? null)
+  const lista = filtraIntegrantes(doSemestreAtivo, busca)
   const sel = (integrantes ?? []).find((p) => p.id === id) ?? lista[0]
 
   const freqDe = (p: Profile) => frequenciaDe(p.id, doSemestre, presencas ?? [], hoje, p.turno)
@@ -139,7 +145,7 @@ export function IntegrantesPage() {
     <div className="pagina">
       <CabecalhoPagina
         titulo="Integrantes"
-        sub={`${(integrantes ?? []).length} cadastradas`}
+        sub={`${lista.length} no semestre`}
         acoes={
           isAdmin && (
             <button className="pill" onClick={() => openIntegrante(null)}>
@@ -278,14 +284,16 @@ export function IntegrantesPage() {
           )}
           {lista.length === 0 && !isLoading && (
             <div style={{ padding: '12px 8px', fontSize: 13, color: 'var(--muted)' }}>
-              Ninguém encontrada{busca ? ` para "${busca}"` : ''}.
+              {busca ? `Ninguém encontrado para "${busca}".` : 'Ninguém no semestre ativo ainda.'}
             </div>
           )}
           {lista.map((p) => {
             const selected = p.id === sel?.id
             const emprestados = emprestadosDe(p.id, loans ?? [])
-            const ent = entregas ? entregasDe(p.id, entregas).total : 0
-            const sub = `${ent} entregas${emprestados > 0 ? ` · ${emprestados} itens em casa` : ''}`
+            const ent = entregas ? entregasDe(p.id, entregas, semestre?.id ?? null).total : 0
+            const sub = `${fmtEntrega(ent)} ${ent === 1 ? 'entrega' : 'entregas'}${
+              emprestados > 0 ? ` · ${emprestados} itens em casa` : ''
+            }`
             const freq = freqDe(p)
             return (
               <div key={p.id}>
@@ -351,6 +359,7 @@ export function IntegrantesPage() {
                     <MenuKebab
                       ariaLabel={`Ações de ${p.nome}`}
                       acoes={[
+                        { label: 'Editar ficha', onSelect: () => openIntegrante(p.id) },
                         ...(p.user_id
                           ? [
                               {
@@ -461,12 +470,28 @@ export function IntegrantesPage() {
               fontSize={18}
             />
             <div>
-              <div className="h" style={{ fontSize: 19 }}>
+              <div
+                className="h"
+                style={{ fontSize: 19, display: 'flex', alignItems: 'center', gap: 8 }}
+              >
                 {sel.nome}
+                {/* o selo estava só na lista: aberta a ficha, nada dizia que ela
+                    não tem acesso ao app, e o convite morava dentro do aviso
+                    recolhido lá em cima */}
+                {!sel.user_id && (
+                  <span
+                    className="tag"
+                    style={{ background: 'var(--chip-warn)', color: 'var(--gold-dark)' }}
+                  >
+                    SEM PERFIL
+                  </span>
+                )}
               </div>
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                @{sel.usuario}
-                {sel.desde ? ` · desde ${sel.desde}` : ''} ·{' '}
+                {/* o usuário de quem entrou só pela chamada é gerado com sufixo
+                    aleatório ("ana.prado.k3f1") — não é nome de ninguém */}
+                {sel.user_id ? `@${sel.usuario} · ` : ''}
+                {sel.desde ? `desde ${fmtDataLonga(sel.desde)} · ` : ''}
                 {PREFERENCIA_LABEL[sel.preferencia].toLowerCase()}
                 {/* o RA nem chega ao front de quem não é admin: a policy de
                     `perfis_academico` só devolve a linha da própria dona */}
@@ -492,7 +517,34 @@ export function IntegrantesPage() {
                       ariaLabel={`Nível de ${sel.nome}`}
                     />
                   </span>
+                  {/* papel e permissões ficam em Ajustes; sem esta pista, quem
+                      quer promover alguém procura aqui e não acha */}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/configuracoes')}
+                    style={{
+                      border: 'none',
+                      background: 'none',
+                      padding: 0,
+                      fontFamily: 'inherit',
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                      color: 'var(--accent)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Papel e permissões em Ajustes
+                  </button>
                 </div>
+              )}
+              {isAdmin && !sel.user_id && (
+                <button
+                  className="pill ghost"
+                  style={{ padding: '6px 14px', fontSize: 12, marginTop: 10 }}
+                  onClick={() => openIntegrante(sel.id)}
+                >
+                  Convidar para o app
+                </button>
               )}
             </div>
           </div>
@@ -508,7 +560,7 @@ export function IntegrantesPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px' }}>
               <span style={{ width: 12, height: 12, borderRadius: 3, background: '#C08A2E' }} />
               <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>Amigurumis concluídos</span>
-              <b style={{ fontSize: 15 }}>{selEntregas.amigurumis}</b>
+              <b style={{ fontSize: 15 }}>{fmtEntrega(selEntregas.amigurumis)}</b>
             </div>
             <div
               style={{
@@ -521,7 +573,7 @@ export function IntegrantesPage() {
             >
               <span style={{ width: 12, height: 12, borderRadius: 3, background: '#7D9B76' }} />
               <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>Faixas de tricô feitas</span>
-              <b style={{ fontSize: 15 }}>{selEntregas.faixas}</b>
+              <b style={{ fontSize: 15 }}>{fmtEntrega(selEntregas.faixas)}</b>
             </div>
             <div
               style={{
@@ -534,9 +586,9 @@ export function IntegrantesPage() {
             >
               <span style={{ width: 12, height: 12, borderRadius: 3, background: '#C4798A' }} />
               <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>
-                Granny squares prontos
+                Granny squares (metades contam meio)
               </span>
-              <b style={{ fontSize: 15 }}>{selEntregas.grannies}</b>
+              <b style={{ fontSize: 15 }}>{fmtEntrega(selEntregas.grannies)}</b>
             </div>
           </div>
           {selEmprestados > 0 && (
@@ -580,11 +632,15 @@ export function IntegrantesPage() {
               </div>
               <Progress pct={`${selFreq?.[vista].pct ?? 0}%`} />
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                {selFreq?.[vista].presentes ?? 0}/{selFreq?.[vista].total ?? 0} encontros ·{' '}
-                {selFreq?.[vista].pct ?? 0}%
                 {/* o total dela não é a soma dos dois turnos: quem é de um turno
-                    só não tem o outro no denominador */}
-                {vistaFreq === 'ambos' ? ` · ${TURNO_LABEL[sel.turno].toLowerCase()}` : ''}
+                    só não tem o outro no denominador — daí dizer de quais são */}
+                {selFreq?.[vista].presentes ?? 0}/{selFreq?.[vista].total ?? 0} encontros
+                {vistaFreq === 'ambos'
+                  ? sel.turno === 'ambos'
+                    ? ''
+                    : ` ${TURNO_LABEL[sel.turno].toLowerCase()}s`
+                  : ` ${vistaFreq}s`}{' '}
+                · {selFreq?.[vista].pct ?? 0}%
               </div>
             </div>
             <div
@@ -595,7 +651,7 @@ export function IntegrantesPage() {
               }}
             >
               <div className="h" style={{ fontSize: 24, color: 'var(--accent)' }}>
-                {selEntregas.total}
+                {fmtEntrega(selEntregas.total)}
               </div>
               <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>entregas no semestre</div>
             </div>
