@@ -12,6 +12,7 @@ import { fmtMedida, tamanhoManta } from '../../lib/medida'
 import { reordena } from '../../components/ui/useReordenar'
 import { Comentarios, Historico } from './Comentarios'
 import { IconArrastar, IconCheck, IconChevron, IconX } from '../../components/ui/icons'
+import { AcoesProjeto, AvisoArquivado, ProgressoProjeto } from './CabecalhoProjeto'
 import {
   fetchFaixas,
   inserirFaixa,
@@ -514,25 +515,27 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
           </button>
         )}
 
+        {/* salvar é a ação principal; embaralhar é alternativa. Estava ao
+            contrário: o sorteio preenchido e o salvar em fantasma. */}
         <div style={{ display: 'flex', gap: 9, marginTop: 18, flexWrap: 'wrap' }}>
-          <button
-            className="pill"
-            style={{ flex: 1, minWidth: 140, opacity: travada ? 0.5 : 1 }}
-            onClick={embaralhar}
-            disabled={travada}
-          >
-            Embaralhar ordem
-          </button>
           {can('progresso') && (
             <button
-              className="pill ghost"
-              style={{ padding: '10px 16px' }}
+              className="pill"
+              style={{ flex: 1, minWidth: 140 }}
               onClick={() => salvar.mutate()}
               disabled={salvar.isPending}
             >
               {salvar.isPending ? 'Salvando…' : 'Salvar'}
             </button>
           )}
+          <button
+            className="pill ghost"
+            style={{ padding: '10px 16px', opacity: travada ? 0.5 : 1 }}
+            onClick={embaralhar}
+            disabled={travada}
+          >
+            Embaralhar ordem
+          </button>
         </div>
       </div>
     </div>
@@ -590,13 +593,16 @@ export function MantaTricoPage({ projeto }: { projeto: Projeto }) {
             TRICÔ
           </span>
         </div>
-        <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--accent)' }}>
-          {prog.done}/{prog.total} faixas
-        </div>
+        <AcoesProjeto projeto={projeto} />
       </div>
-      <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 20 }}>
-        {tamanho ? fmtMedida(tamanho) : ''}
+      {/* mesma linha de subtítulo da manta de crochê: destino, peças e tamanho */}
+      <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 18 }}>
+        {projeto.destino ? `Destino: ${projeto.destino} · ` : ''}
+        {prog.total} faixas
+        {tamanho ? ` · ${fmtMedida(tamanho)}` : ''}
       </div>
+      <AvisoArquivado projeto={projeto} />
+      <ProgressoProjeto done={prog.done} total={prog.total} unidade="faixas" />
       {isLoading && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>}
       {faixas && faixas.length > 0 && <Editor projeto={projeto} faixas={faixas} />}
       <div

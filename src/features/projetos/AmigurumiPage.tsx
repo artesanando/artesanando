@@ -8,6 +8,7 @@ import { useConfirmar } from '../../components/ui/Confirm'
 import { useToast } from '../../components/ui/Toast'
 import { Comentarios } from './Comentarios'
 import { IconChevron, IconSetaLonga } from '../../components/ui/icons'
+import { AcoesProjeto, AvisoArquivado, ProgressoProjeto } from './CabecalhoProjeto'
 import {
   adicionarUnidades,
   concluirUnidades,
@@ -146,12 +147,6 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
         <div className="h titulo-pagina">
           Amigurumi {projeto.nome}
         </div>
-        <span
-          className="tag"
-          style={{ border: '1px solid var(--chip-rose-border)', color: 'var(--accent)' }}
-        >
-          {prog.done}/{prog.total} UND
-        </span>
         {projeto.status === 'entregue' && (
           <span
             className="tag"
@@ -160,11 +155,16 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
             ENTREGUE
           </span>
         )}
+        <span style={{ marginLeft: 'auto' }}>
+          <AcoesProjeto projeto={projeto} />
+        </span>
       </div>
       <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 22 }}>
         Cada unidade é feita integralmente por uma integrante
         {projeto.destino ? ` · destino: ${projeto.destino}` : ''}
       </div>
+      <AvisoArquivado projeto={projeto} />
+      <ProgressoProjeto done={prog.done} total={prog.total} unidade="unidades" />
       <div className="pgrid" style={{ '--cols': '1.3fr 1fr', '--gap': '32px' } as React.CSSProperties}>
         <div>
           <div className="h" style={{ fontSize: 16, marginBottom: 12 }}>

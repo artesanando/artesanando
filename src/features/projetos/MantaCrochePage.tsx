@@ -2,7 +2,7 @@ import { useMemo, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../state/auth'
-import { Lbl, Progress } from '../../components/ui/bits'
+import { Lbl } from '../../components/ui/bits'
 import { Select } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { useGradeInterativa, type ModoGrade } from '../../components/ui/useGradeInterativa'
@@ -11,6 +11,7 @@ import { coordenada } from '../../lib/grade'
 import { fmtMedida, tamanhoManta } from '../../lib/medida'
 import { Comentarios, Historico } from './Comentarios'
 import { BotoesEtapa, ETAPA_COR, QuadroEtapas } from './QuadroEtapas'
+import { AcoesProjeto, AvisoArquivado, ProgressoProjeto } from './CabecalhoProjeto'
 import { IconChevron } from '../../components/ui/icons'
 import { SquareGranny, coresDoModelo } from '../../components/ui/SquareGranny'
 import {
@@ -388,7 +389,6 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
 
   const lista = squares ?? []
   const prog = progressoSquares(lista)
-  const pct = prog.total === 0 ? 0 : Math.round((prog.done / prog.total) * 100)
   const letras = (modelos ?? []).map((m) => m.letra).join('/')
   // mantas criadas antes da grade configurável não têm colunas gravadas
   const colunas = projeto.colunas ?? 10
@@ -403,14 +403,15 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
         <IconChevron size={11} para="esquerda" /> Projetos / <span style={{ color: 'var(--ink)' }}>{projeto.nome}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-        <div className="h titulo-pagina">
-          {projeto.nome}
-        </div>
+        <div className="h titulo-pagina">{projeto.nome}</div>
         <span
           className="tag"
           style={{ border: '1px solid var(--chip-rose-border)', color: 'var(--accent)' }}
         >
           CROCHÊ
+        </span>
+        <span style={{ marginLeft: 'auto' }}>
+          <AcoesProjeto projeto={projeto} />
         </span>
       </div>
       <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 18 }}>
@@ -418,13 +419,8 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
         {prog.total} squares{letras ? ` · padrões ${letras}` : ''}
         {tamanho ? ` · ${fmtMedida(tamanho)}` : ''}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26 }}>
-        <Progress pct={`${pct}%`} style={{ flex: 1, height: 8 }} />
-        <div className="h" style={{ fontSize: 19, color: 'var(--accent)', flex: 'none' }}>
-          {prog.done}
-          <span style={{ color: 'var(--faint)', fontSize: 14 }}>/{prog.total} squares</span>
-        </div>
-      </div>
+      <AvisoArquivado projeto={projeto} />
+      <ProgressoProjeto done={prog.done} total={prog.total} unidade="squares" />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
         <button onClick={() => setView('mapa')} style={seg(view === 'mapa')}>
           Mapa de montagem
