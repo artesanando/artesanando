@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../state/auth'
@@ -69,6 +69,21 @@ export function PerfilPage() {
     queryFn: () => fetchMeuRa(profile!.id),
     enabled: Boolean(profile?.id),
   })
+
+  /* O formulário nascia do perfil do primeiro render e ficava lá. Com o perfil
+     revalidando, isso passava a ser pior do que só mostrar valor velho: salvar
+     o telefone reenviava o nível antigo e desfazia a correção da coordenação.
+     O react-query devolve o mesmo objeto enquanto o perfil não muda de verdade,
+     então isto não atropela o que ela está digitando. */
+  useEffect(() => {
+    if (!profile) return
+    setNome(profile.nome)
+    setUsuario(profile.usuario)
+    setTelefone(profile.telefone ?? '')
+    setPreferencia(profile.preferencia)
+    setTurno(profile.turno)
+    setNivel(nivelDaPessoa(profile.nivel))
+  }, [profile])
 
   const [aRecortar, setARecortar] = useState<File | null>(null)
   const [subindoFoto, setSubindoFoto] = useState(false)

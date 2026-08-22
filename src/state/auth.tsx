@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Session } from '@supabase/supabase-js'
 import { setKeepConnected, supabase } from '../lib/supabase'
 import { nivelDaPessoa, turnoDaPessoa, type Permissoes, type Profile } from '../types/database'
@@ -52,42 +53,43 @@ async function fetchPermissoes(profileId: string): Promise<Permissoes | null> {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [perms, setPerms] = useState<Permissoes | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [sessaoLida, setSessaoLida] = useState(false)
+  const qc = useQueryClient()
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
-      if (!data.session) setLoading(false)
+      setSessaoLida(true)
     })
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s)
-      if (!s) setLoading(false)
+      setSessaoLida(true)
     })
     return () => sub.subscription.unsubscribe()
   }, [])
 
   const userId = session?.user.id
-  useEffect(() => {
-    if (!userId) {
-      setProfile(null)
-      setPerms(null)
-      return
-    }
-    let alive = true
-    fetchProfile(userId)
-      .then(async (p) => (alive ? ([p, p ? await fetchPermissoes(p.id) : null] as const) : null))
-      .then((res) => {
-        if (!alive || !res) return
-        setProfile(res[0])
-        setPerms(res[1])
-        setLoading(false)
-      })
-    return () => {
-      alive = false
-    }
-  }, [userId])
+
+  /* O perfil ficava congelado no que foi lido no login: quando a coordenação
+     corrigia o nível de alguém, a própria dona seguia vendo o antigo — e a meta
+     dela era medida pela regra errada até sair e entrar de novo. Passando pelo
+     react-query ele revalida como todo o resto, e `refreshProfile` é só uma
+     invalidação a mais. */
+  const { data: perfil, isPending: carregandoPerfil } = useQuery({
+    queryKey: ['meu-perfil', userId],
+    queryFn: () => fetchProfile(userId!),
+    enabled: Boolean(userId),
+  })
+  const profile = userId ? (perfil ?? null) : null
+
+  const { data: permissoes } = useQuery({
+    queryKey: ['minhas-permissoes', profile?.id],
+    queryFn: () => fetchPermissoes(profile!.id),
+    enabled: Boolean(profile?.id),
+  })
+  const perms = profile ? (permissoes ?? null) : null
+
+  const loading = !sessaoLida || (Boolean(userId) && carregandoPerfil)
 
   const login = async (usuarioOuEmail: string, senha: string, manter: boolean) => {
     setKeepConnected(manter)
@@ -113,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const refreshProfile = async () => {
-    if (userId) setProfile(await fetchProfile(userId))
+    await qc.invalidateQueries({ queryKey: ['meu-perfil', userId] })
   }
 
   const isAdmin = profile?.papel === 'admin'

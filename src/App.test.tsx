@@ -10,13 +10,16 @@ vi.mock('./lib/supabase', () => import('./test/fakeSupabase'))
 
 function renderAt(path: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
-    <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[path]}>
-        <App />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  )
+  return {
+    qc,
+    ...render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={[path]}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    ),
+  }
 }
 
 beforeEach(() => {
@@ -256,6 +259,27 @@ describe('projetos (M3)', () => {
     renderAt('/projetos/p1')
     await userEvent.click(await screen.findByRole('button', { name: 'Mapa de montagem' }))
     expect(await screen.findByRole('button', { name: /linha 1 coluna 4/ })).toBeDisabled()
+  })
+})
+
+describe('meu perfil', () => {
+  it('acompanha o nível que a coordenação corrigiu, em vez do lido no login', async () => {
+    const original = ADMIN_PROFILE.nivel
+    try {
+      __login()
+      const { qc } = renderAt('/perfil')
+      expect(await screen.findByText('Iniciante')).toBeInTheDocument()
+
+      // a coordenação corrige o nível dela enquanto a sessão está aberta
+      ADMIN_PROFILE.nivel = 'experiente'
+      await qc.invalidateQueries({ queryKey: ['meu-perfil'] })
+
+      // o formulário tem de reler: salvar com o valor velho desfazia a correção
+      expect(await screen.findByText('Experiente')).toBeInTheDocument()
+      expect(screen.queryByText('Iniciante')).not.toBeInTheDocument()
+    } finally {
+      ADMIN_PROFILE.nivel = original
+    }
   })
 })
 
