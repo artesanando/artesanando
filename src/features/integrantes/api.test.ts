@@ -27,6 +27,13 @@ describe('entregasDe', () => {
       { ...s1, responsavel_id: 'c', etapa: 'pronto', miolo_por: 'a', borda_por: 'c' },
       { ...s1, responsavel_id: 'b', etapa: 'afazer', miolo_por: null, borda_por: null },
     ],
+    feira: [
+      // dois na caixa e três vendidos: ela fez cinco
+      { autoria_id: 'a', quantidade: 2, vendidos: 3, semestre_id: 's1', arquivado_em: null },
+      { autoria_id: 'a', quantidade: 1, vendidos: 0, semestre_id: 's2', arquivado_em: null },
+      { autoria_id: 'a', quantidade: 9, vendidos: 0, semestre_id: 's1', arquivado_em: '2026-08-01' },
+      { autoria_id: 'c', quantidade: 1, vendidos: 0, semestre_id: 's1', arquivado_em: null },
+    ],
   }
 
   it('conta amigurumis concluídos, faixas feitas e granny squares prontos', () => {
@@ -35,7 +42,8 @@ describe('entregasDe', () => {
       amigurumis: 2,
       faixas: 1,
       grannies: 2.5,
-      total: 5.5,
+      feira: 6,
+      total: 11.5,
     })
   })
 
@@ -49,14 +57,27 @@ describe('entregasDe', () => {
       amigurumis: 1,
       faixas: 1,
       grannies: 2.5,
-      total: 4.5,
+      feira: 5,
+      total: 9.5,
     })
     expect(entregasDe('a', dados, 's2')).toEqual({
       amigurumis: 1,
       faixas: 0,
       grannies: 0,
-      total: 1,
+      feira: 1,
+      total: 2,
     })
+  })
+
+  it('peça de feira conta uma por unidade, vendida ou não', () => {
+    // dois na caixa e três vendidos no semestre 's1'
+    expect(entregasDe('a', dados, 's1').feira).toBe(5)
+  })
+
+  it('peça de feira arquivada sai da conta', () => {
+    // as nove arquivadas de 'a' em 's1' não entram
+    expect(entregasDe('a', dados, 's1').feira).toBe(5)
+    expect(entregasDe('c', dados, 's1').feira).toBe(1)
   })
 
   it('quem só fez granny square deixa de aparecer com zero entregas', () => {
@@ -64,7 +85,8 @@ describe('entregasDe', () => {
       amigurumis: 0,
       faixas: 0,
       grannies: 0.5,
-      total: 0.5,
+      feira: 1,
+      total: 1.5,
     })
   })
 

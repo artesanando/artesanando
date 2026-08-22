@@ -14,6 +14,8 @@ const item = (id: string, categoria: EstoqueItem['categoria'], quantidade: numbe
   custo_centavos: null,
   capa_path: null,
   arquivado_em: null,
+  autoria_id: null,
+  semestre_id: null,
 })
 
 const loan = (item_id: string, quantidade: number): EmprestimoAtivo => ({

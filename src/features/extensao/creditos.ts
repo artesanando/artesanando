@@ -13,13 +13,20 @@ import type { Entregas } from '../integrantes/api'
  * na tela e a conta possível de auditar.
  */
 
-export type TipoLinha = 'amigurumi' | 'granny' | 'faixa' | 'frequencia' | 'mentoria'
+export type TipoLinha =
+  | 'amigurumi'
+  | 'granny'
+  | 'faixa'
+  | 'feira'
+  | 'frequencia'
+  | 'mentoria'
 
 /** Plural — serve ao seletor de tipo, que fala do tipo sem quantidade */
 export const TIPO_LABEL: Record<TipoLinha, string> = {
   amigurumi: 'amigurumis',
   granny: 'granny squares',
   faixa: 'faixas de tricô',
+  feira: 'peças de feira',
   frequencia: '% de frequência',
   mentoria: 'mentorar uma iniciante',
 }
@@ -28,6 +35,7 @@ const TIPO_SINGULAR: Record<TipoLinha, string> = {
   amigurumi: 'amigurumi',
   granny: 'granny square',
   faixa: 'faixa de tricô',
+  feira: 'peça de feira',
   frequencia: '% de frequência',
   mentoria: 'mentorar uma iniciante',
 }
@@ -90,6 +98,11 @@ function feitoDe(tipo: TipoLinha, entregas: Entregas, freqPct: number, marca: Ma
       return entregas.grannies
     case 'faixa':
       return entregas.faixas
+    /* Peça de feira não fecha a exigência de amigurumi de projeto, mesmo sendo
+       um amigurumi: são trabalhos diferentes, e a coordenação escolhe se quer
+       exigir um, outro, ou os dois. */
+    case 'feira':
+      return entregas.feira
     case 'frequencia':
       return freqPct
     case 'mentoria':

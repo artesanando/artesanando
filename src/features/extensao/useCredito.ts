@@ -48,7 +48,7 @@ export function useLinhasDeCredito(semestreId: string | null): LinhaCredito[] {
     const freq = frequenciaDe(p.id, doSem, presencas ?? [], hoje, p.turno)
     const dela = entregas
       ? entregasDe(p.id, entregas, semestreId)
-      : { amigurumis: 0, faixas: 0, grannies: 0, total: 0 }
+      : { amigurumis: 0, faixas: 0, grannies: 0, feira: 0, total: 0 }
     const marca = marcas?.get(p.id) ?? null
     return { p, marca, av: avaliaRegra(regras?.[p.nivel] ?? [], dela, freq.total.pct, marca) }
   })

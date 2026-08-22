@@ -26,7 +26,7 @@ import { useLinhasDeCredito } from './useCredito'
 const NIVEIS: Nivel[] = ['iniciante', 'experiente']
 
 const TIPOS: [TipoLinha, string][] = (
-  ['granny', 'faixa', 'amigurumi', 'frequencia', 'mentoria'] as TipoLinha[]
+  ['granny', 'faixa', 'amigurumi', 'feira', 'frequencia', 'mentoria'] as TipoLinha[]
 ).map((t) => [t, TIPO_LABEL[t]])
 
 /* A quantidade acompanha o tipo: com um padrão fixo, trocar para frequência
@@ -35,6 +35,7 @@ const PADRAO_QTD: Record<TipoLinha, number> = {
   granny: 5,
   faixa: 1,
   amigurumi: 3,
+  feira: 2,
   frequencia: 75,
   mentoria: 1,
 }

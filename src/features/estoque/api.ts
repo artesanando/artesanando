@@ -39,6 +39,9 @@ export async function criarItemEstoque(item: {
   cor_hex: string | null
   quantidade: number
   capa_path?: string
+  /** só peça de feira tem autora — é o que a conta de entregas procura */
+  autoria_id?: string | null
+  semestre_id?: string | null
 }) {
   const { error } = await supabase.from('estoque_itens').insert(item)
   if (error) throw error
@@ -46,7 +49,12 @@ export async function criarItemEstoque(item: {
 
 export async function atualizarItemEstoque(
   id: string,
-  patch: Partial<Pick<EstoqueItem, 'nome' | 'detalhe' | 'cor_hex' | 'categoria' | 'capa_path'>>,
+  patch: Partial<
+    Pick<
+      EstoqueItem,
+      'nome' | 'detalhe' | 'cor_hex' | 'categoria' | 'capa_path' | 'autoria_id' | 'semestre_id'
+    >
+  >,
 ) {
   const { error } = await supabase.from('estoque_itens').update(patch).eq('id', id)
   if (error) throw error

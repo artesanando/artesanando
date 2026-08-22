@@ -99,7 +99,7 @@ export function IntegrantesPage() {
   const selEntregas =
     sel && entregas
       ? entregasDe(sel.id, entregas, semestre?.id ?? null)
-      : { amigurumis: 0, faixas: 0, grannies: 0, total: 0 }
+      : { amigurumis: 0, faixas: 0, grannies: 0, feira: 0, total: 0 }
   const selEmprestados = sel ? emprestadosDe(sel.id, loans ?? []) : 0
   const vista = vistaFreq === 'ambos' ? 'total' : vistaFreq
   const selRa = sel ? ras?.get(sel.id) : undefined

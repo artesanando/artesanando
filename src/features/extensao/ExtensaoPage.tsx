@@ -47,11 +47,13 @@ import {
   type TipoArquivo,
 } from './api'
 
-type Secao = 'creditos' | 'regras' | 'frequencia' | 'entregas' | 'chamadas' | 'arquivos' | 'auditoria'
+type Secao = 'regras' | 'creditos' | 'frequencia' | 'entregas' | 'chamadas' | 'arquivos' | 'auditoria'
 
+/* A regra vem antes de quem cumpriu: é ela que define o resto da página, e é a
+   primeira coisa a montar quando o semestre começa. */
 const SECOES: [Secao, string][] = [
-  ['creditos', 'Créditos'],
   ['regras', 'Regras'],
+  ['creditos', 'Créditos'],
   ['frequencia', 'Frequência'],
   ['entregas', 'Entregas'],
   ['chamadas', 'Chamadas'],
@@ -85,6 +87,8 @@ const SITUACOES: [Situacao, string][] = [
 
 const AJUDA_SQUARES =
   'O square costuma ser dividido: quem faz o miolo leva 0,5 e quem faz a borda leva 0,5. Quem fez as duas metades leva 1.'
+const AJUDA_FEIRA =
+  'Peças que ela fez e foram para a feira, contadas uma a uma — as que ainda estão na caixa e as já vendidas. Item de feira arquivado sai da conta.'
 
 const item = (on: boolean): CSSProperties => ({
   padding: '9px 12px',
@@ -105,7 +109,7 @@ const item = (on: boolean): CSSProperties => ({
    Não é configuração do app — é o produto do trabalho — e por isso tem tela
    própria em vez de virar mais uma aba de Ajustes. */
 export function ExtensaoPage() {
-  const [secao, setSecao] = useState<Secao>('creditos')
+  const [secao, setSecao] = useState<Secao>('regras')
   const ativo = useSemestreAtivo()
   const { data: semestres } = useQuery({ queryKey: ['semestres'], queryFn: fetchSemestres })
 
@@ -344,7 +348,10 @@ function Celula({
 function Entregas({ semestreId }: { semestreId: string | null }) {
   const toast = useToast()
   const [busca, setBusca] = useState('')
-  const ord = useOrdenacao<'nome' | 'amigurumis' | 'faixas' | 'grannies' | 'total'>('total', 'desc')
+  const ord = useOrdenacao<'nome' | 'amigurumis' | 'faixas' | 'grannies' | 'feira' | 'total'>(
+    'total',
+    'desc',
+  )
   const participantes = useParticipantes(semestreId)
   const { data: integrantes } = useQuery({ queryKey: ['integrantes'], queryFn: fetchIntegrantes })
   const { data: entregas } = useQuery({ queryKey: ['entregas-light'], queryFn: fetchEntregasLight })
@@ -355,7 +362,7 @@ function Entregas({ semestreId }: { semestreId: string | null }) {
     nome: p.nome,
     ...(entregas
       ? entregasDe(p.id, entregas, semestreId)
-      : { amigurumis: 0, faixas: 0, grannies: 0, total: 0 }),
+      : { amigurumis: 0, faixas: 0, grannies: 0, feira: 0, total: 0 }),
   }))
 
   const visiveis = ord.ordenar(filtraLinhas(linhas, busca), (l, k) => (k === 'nome' ? l.nome : l[k]))
@@ -385,8 +392,15 @@ function Entregas({ semestreId }: { semestreId: string | null }) {
           className="pill ghost"
           onClick={() =>
             copiarTabela(
-              ['Integrante', 'Amigurumis', 'Faixas', 'Squares', 'Total'],
-              visiveis.map((l) => [l.nome, l.amigurumis, l.faixas, l.grannies, l.total]),
+              ['Integrante', 'Amigurumis', 'Faixas', 'Squares', 'Feira', 'Total'],
+              visiveis.map((l) => [
+                l.nome,
+                l.amigurumis,
+                l.faixas,
+                l.grannies,
+                l.feira,
+                l.total,
+              ]),
               toast,
             )
           }
@@ -397,7 +411,11 @@ function Entregas({ semestreId }: { semestreId: string | null }) {
 
       <CampoBusca valor={busca} aoMudar={setBusca} />
 
-      <div className="card" style={{ borderRadius: 14, overflow: 'hidden' }}>
+      <div
+        className="card"
+        /* cinco colunas de valor agora, não quatro */
+        style={{ borderRadius: 14, overflow: 'hidden', '--n-col': 5 } as CSSProperties}
+      >
         <div className="lbl linha-extensao cabecalho" role="row">
           <ColunaOrdenavel
             rotulo="INTEGRANTE"
@@ -410,6 +428,7 @@ function Entregas({ semestreId }: { semestreId: string | null }) {
               ['amigurumis', 'AMIGURUMIS'],
               ['faixas', 'FAIXAS'],
               ['grannies', 'SQUARES'],
+              ['feira', 'FEIRA'],
               ['total', 'TOTAL'],
             ] as const
           ).map(([k, rotulo]) => (
@@ -420,7 +439,13 @@ function Entregas({ semestreId }: { semestreId: string | null }) {
               ativa={ord.coluna === k}
               direcao={ord.direcao}
               aoClicar={() => ord.alternar(k, 'desc')}
-              extra={k === 'grannies' ? <AjudaCabecalho texto={AJUDA_SQUARES} /> : undefined}
+              extra={
+                k === 'grannies' ? (
+                  <AjudaCabecalho texto={AJUDA_SQUARES} />
+                ) : k === 'feira' ? (
+                  <AjudaCabecalho texto={AJUDA_FEIRA} />
+                ) : undefined
+              }
             />
           ))}
         </div>
@@ -438,6 +463,7 @@ function Entregas({ semestreId }: { semestreId: string | null }) {
             <Celula rotulo="AMIGURUMIS" valor={String(l.amigurumis)} />
             <Celula rotulo="FAIXAS" valor={String(l.faixas)} />
             <Celula rotulo="SQUARES" valor={fmtEntrega(l.grannies)} />
+            <Celula rotulo="FEIRA" valor={String(l.feira)} />
             <Celula rotulo="TOTAL" valor={fmtEntrega(l.total)} destaque />
           </div>
         ))}
@@ -968,7 +994,7 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
                 ariaLabel={`Marcas de ${p.nome}`}
                 acoes={[
                   {
-                    label: marca?.mentoria ? 'Tirar a mentoria' : 'Marcar mentoria',
+                    label: marca?.mentoria ? 'Remover mentoria' : 'Adicionar mentoria',
                     onSelect: () =>
                       marcar.mutate({
                         perfilId: p.id,

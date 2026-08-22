@@ -90,6 +90,11 @@ export interface EstoqueItem {
   custo_centavos: number | null
   capa_path: string | null
   arquivado_em: string | null
+  /** quem fez a peça — só em item de feira, e é o que vira entrega dela */
+  autoria_id: string | null
+  /** semestre em que a peça de feira entrou; a de projeto herda do projeto */
+  semestre_id: string | null
+  created_at?: string
 }
 
 /* O app só grava 'entrada' e 'saida'. Os cinco antigos continuam aqui porque o

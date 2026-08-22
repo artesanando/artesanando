@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { ReceitaCategoria, ReceitaConteudo } from '../types/database'
+import { tecnicaDoEsquema, type ReceitaCategoria, type ReceitaConteudo } from '../types/database'
 import { CAT_TAG } from '../features/biblioteca/meta'
 import { Lbl } from '../components/ui/bits'
 import { PreviaFaixas } from '../components/ui/PreviaFaixas'
@@ -77,6 +77,9 @@ export function DetalheView({
     const esquemaRows = conteudo.esquema
     const cells = conteudo.cells
     const modelos = conteudo.modelos
+    /* Manta serve as duas técnicas, mas aqui só o crochê era desenhado: a de
+       tricô guarda `seq` + `faixas`, não `cells`, e a caixa saía vazia. */
+    const trico = tecnicaDoEsquema(conteudo) === 'trico'
     body = (
       <>
         <div
@@ -108,7 +111,17 @@ export function DetalheView({
                 ))}
               </div>
             )}
-            {cells && modelos && <PreviaGrade celulas={cells} cores={modelos} celula={16} />}
+            {trico && conteudo.seq ? (
+              <div style={{ width: 150 }}>
+                <PreviaFaixas
+                  seq={conteudo.seq}
+                  faixas={conteudo.faixas ?? 8}
+                  livres={conteudo.faixasCores}
+                />
+              </div>
+            ) : (
+              cells && modelos && <PreviaGrade celulas={cells} cores={modelos} celula={16} />
+            )}
           </div>
           {conteudo.paleta && (
             <div>

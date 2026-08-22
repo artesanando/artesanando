@@ -8,10 +8,13 @@ import {
 } from './creditos'
 import { resumoDaLinha, type AcaoAuditoria } from './creditosApi'
 
-const entregas = (over: Partial<Record<'amigurumis' | 'faixas' | 'grannies', number>> = {}) => ({
+const entregas = (
+  over: Partial<Record<'amigurumis' | 'faixas' | 'grannies' | 'feira', number>> = {},
+) => ({
   amigurumis: 0,
   faixas: 0,
   grannies: 0,
+  feira: 0,
   total: 0,
   ...over,
 })

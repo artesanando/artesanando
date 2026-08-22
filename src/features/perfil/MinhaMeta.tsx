@@ -40,7 +40,7 @@ export function MinhaMeta() {
   const freq = frequenciaDe(profile.id, doSemestre, presencas ?? [], hoje, profile.turno)
   const minhas = entregas
     ? entregasDe(profile.id, entregas, semestre.id)
-    : { amigurumis: 0, faixas: 0, grannies: 0, total: 0 }
+    : { amigurumis: 0, faixas: 0, grannies: 0, feira: 0, total: 0 }
 
   const av = avaliaRegra(blocos, minhas, freq.total.pct, marcas?.get(profile.id) ?? null)
 

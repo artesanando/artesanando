@@ -32,6 +32,8 @@ const item = (over: Partial<EstoqueItem>): EstoqueItem => ({
   custo_centavos: null,
   capa_path: null,
   arquivado_em: null,
+  autoria_id: null,
+  semestre_id: null,
   ...over,
 })
 

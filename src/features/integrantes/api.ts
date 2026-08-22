@@ -38,24 +38,44 @@ interface Peca {
 /** O square guarda as duas metades separadas — ver `MEIO_SQUARE` */
 export type PecaSquare = Peca & { etapa: string; miolo_por: string | null; borda_por: string | null }
 
+/* Peça de feira: a única entrega que não sai de projeto. Não tem de quem herdar
+   semestre, então carrega o seu. `quantidade` é o que sobrou e `vendidos` o que
+   saiu — quem fez, fez as duas. */
+export interface PecaFeira {
+  autoria_id: string | null
+  quantidade: number
+  vendidos: number
+  semestre_id: string | null
+  arquivado_em: string | null
+}
+
 export interface EntregasLight {
   unidades: (Peca & { status: string })[]
   faixas: (Peca & { status: string })[]
   squares: PecaSquare[]
+  feira: PecaFeira[]
 }
 
 export async function fetchEntregasLight(): Promise<EntregasLight> {
   const projeto = 'projetos!inner(semestre_id)'
-  const [un, fx, sq] = await Promise.all([
+  const [un, fx, sq, fe] = await Promise.all([
     supabase.from('unidades').select(`responsavel_id, status, ${projeto}`),
     supabase.from('faixas').select(`responsavel_id, status, ${projeto}`),
     supabase.from('squares').select(`responsavel_id, etapa, miolo_por, borda_por, ${projeto}`),
+    supabase
+      .from('estoque_itens')
+      .select('autoria_id, quantidade, vendidos, semestre_id, arquivado_em')
+      .eq('categoria', 'feira')
+      .not('autoria_id', 'is', null),
   ])
-  if (un.error || fx.error || sq.error) throw un.error ?? fx.error ?? sq.error
+  if (un.error || fx.error || sq.error || fe.error) {
+    throw un.error ?? fx.error ?? sq.error ?? fe.error
+  }
   return {
     unidades: (un.data ?? []) as unknown as EntregasLight['unidades'],
     faixas: (fx.data ?? []) as unknown as EntregasLight['faixas'],
     squares: (sq.data ?? []) as unknown as EntregasLight['squares'],
+    feira: (fe.data ?? []) as unknown as EntregasLight['feira'],
   }
 }
 
@@ -109,6 +129,7 @@ export interface Entregas {
   amigurumis: number
   faixas: number
   grannies: number
+  feira: number
   total: number
 }
 
@@ -128,7 +149,26 @@ export function entregasDe(
   const amigurumis = dados.unidades.filter((u) => dela(u) && u.status === 'concluida').length
   const faixas = dados.faixas.filter((f) => dela(f) && f.status === 'feita').length
   const grannies = grannyDe(integranteId, dados.squares, semestreId)
-  return { amigurumis, faixas, grannies, total: amigurumis + faixas + grannies }
+  const feira = feiraDe(integranteId, dados.feira ?? [], semestreId)
+  return { amigurumis, faixas, grannies, feira, total: amigurumis + faixas + grannies + feira }
+}
+
+/* Uma entrega por peça feita, vendida ou não: quem fez cinco chaveiros fez
+   cinco, e `quantidade` só mostra o que ainda está na caixa. Item arquivado sai
+   da conta — arquivar é o jeito de dizer que aquilo não conta mais. */
+export function feiraDe(
+  integranteId: string,
+  itens: PecaFeira[],
+  semestreId: string | null = null,
+): number {
+  return itens
+    .filter(
+      (i) =>
+        i.autoria_id === integranteId &&
+        !i.arquivado_em &&
+        (!semestreId || i.semestre_id === semestreId),
+    )
+    .reduce((s, i) => s + i.quantidade + i.vendidos, 0)
 }
 
 /** Miolo e borda valem metade cada; square inteiro, um */

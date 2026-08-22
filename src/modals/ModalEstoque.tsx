@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Stepper } from '../components/ui/bits'
 import { Campo, LegendaObrigatorio, useFormulario } from '../components/ui/Campo'
-import { ColorPicker } from '../components/ui/controles'
+import { ColorPicker, Select } from '../components/ui/controles'
 import { useToast } from '../components/ui/Toast'
 import { CampoCapa } from '../components/ui/CampoCapa'
 import { subirCapa } from '../lib/capa'
@@ -18,6 +18,8 @@ import {
   lancarMovimento,
 } from '../features/estoque/api'
 import { fmtDataBarra } from '../lib/format'
+import { useSemestreAtivo } from '../lib/semestre'
+import { fetchIntegrantes } from '../features/integrantes/api'
 
 const CATS: [EstoqueCategoria, string][] = [
   ['novelos', 'Novelo'],
@@ -45,6 +47,14 @@ export function ModalMaterial() {
   const [quantidade, setQuantidade] = useState(12)
   const [capa, setCapa] = useState<Blob | null>(null)
 
+  /* Peça de feira é entrega de quem a fez. Novelo e agulha não têm autora, por
+     isso o campo só aparece na feira — e nasce com quem está cadastrando. */
+  const { profile } = useAuth()
+  const semestre = useSemestreAtivo()
+  const { data: pessoas } = useQuery({ queryKey: ['integrantes'], queryFn: fetchIntegrantes })
+  const [autoria, setAutoria] = useState(item?.autoria_id ?? profile?.id ?? '')
+  const daFeira = categoria === 'feira'
+
   const salvar = useMutation({
     mutationFn: async () => {
       const base = {
@@ -52,10 +62,17 @@ export function ModalMaterial() {
         nome: nome.trim(),
         detalhe: detalhe.trim() || null,
         cor_hex: categoria === 'novelos' ? cor : null,
+        autoria_id: daFeira ? autoria || null : null,
         ...(capa ? { capa_path: await subirCapa(capa) } : {}),
       }
       if (item) await atualizarItemEstoque(item.id, base)
-      else await criarItemEstoque({ ...base, quantidade })
+      else
+        await criarItemEstoque({
+          ...base,
+          quantidade,
+          // o semestre é carimbado no cadastro: é quando a peça entrou
+          semestre_id: daFeira ? (semestre?.id ?? null) : null,
+        })
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['estoque'] })
@@ -130,6 +147,21 @@ export function ModalMaterial() {
           {categoria === 'novelos' && (
             <Campo label="COR">
               {() => <ColorPicker value={cor} onChange={setCor} ariaLabel="Cor do novelo" />}
+            </Campo>
+          )}
+          {daFeira && (
+            <Campo label="QUEM FEZ" dica="Conta como entrega dela no relatório de extensão.">
+              {() => (
+                <Select
+                  value={autoria}
+                  onChange={setAutoria}
+                  ariaLabel="Quem fez a peça"
+                  options={[
+                    ['', 'Ninguém em especial'],
+                    ...(pessoas ?? []).map((p) => [p.id, p.nome] as [string, string]),
+                  ]}
+                />
+              )}
             </Campo>
           )}
           {!editando && (
