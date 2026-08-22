@@ -10,10 +10,10 @@ import { useZoomGrade } from '../../components/ui/ZoomGrade'
 import { coordenada } from '../../lib/grade'
 import { fmtMedida, tamanhoManta } from '../../lib/medida'
 import { Comentarios, Historico } from './Comentarios'
+import { BotoesEtapa, ETAPA_COR, QuadroEtapas } from './QuadroEtapas'
 import { IconChevron } from '../../components/ui/icons'
 import { SquareGranny, coresDoModelo } from '../../components/ui/SquareGranny'
 import {
-  ETAPAS,
   ETAPA_LABEL,
   fetchIntegrantesAtivas,
   fetchModelos,
@@ -21,7 +21,6 @@ import {
   marcarSquares,
   pintarSquares,
   progressoSquares,
-  resumoPorEtapa,
   trocarSquares,
   type MantaModelo,
   type Projeto,
@@ -35,27 +34,22 @@ const MODOS: [ModoGrade, string, string][] = [
   ['pintar', 'Pintar', 'escolha um modelo e arraste pela grade'],
 ]
 
-const seg = (on: boolean): CSSProperties => ({
-  padding: '7px 16px',
+/* Vista e ferramenta eram duas fileiras da mesma pílula preenchida em cor de
+   marca — dois níveis diferentes com o mesmo peso. Agora as duas são
+   segmentadas (escolher não é agir), e a ferramenta vem menor, subordinada. */
+const seg = (on: boolean, miudo = false): CSSProperties => ({
+  padding: miudo ? '5px 12px' : '7px 16px',
   borderRadius: 99,
-  fontSize: 12.5,
+  fontSize: miudo ? 12 : 12.5,
   cursor: 'pointer',
   whiteSpace: 'nowrap',
-  border: on ? '1px solid var(--primary)' : '1px solid var(--field-border)',
-  background: on ? 'var(--primary)' : 'transparent',
-  color: on ? '#fff' : 'var(--ink-soft)',
+  border: '1px solid var(--field-border)',
+  background: on ? 'var(--chip-soft)' : 'transparent',
+  color: on ? 'var(--primary-dark)' : 'var(--muted)',
   fontWeight: on ? 800 : 700,
   fontFamily: 'inherit',
   transition: 'background var(--dur-rapida) var(--ease-saida), color var(--dur-rapida)',
 })
-
-const ETAPA_COR: Record<SquareEtapa, string> = {
-  afazer: 'var(--faint-2)',
-  miolo: 'var(--blue-dark)',
-  aguardando_borda: 'var(--gold-dark)',
-  borda: 'var(--lilac)',
-  pronto: 'var(--green-dark)',
-}
 
 /* ---------- Mapa ---------- */
 
@@ -152,8 +146,16 @@ function Mapa({
       <div
         style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}
       >
+        <span className="lbl" style={{ marginRight: 2 }}>
+          FERRAMENTA
+        </span>
         {MODOS.map(([m, label]) => (
-          <button key={m} onClick={() => setModo(m)} style={seg(modo === m)} disabled={!podeEditar}>
+          <button
+            key={m}
+            onClick={() => setModo(m)}
+            style={seg(modo === m, true)}
+            disabled={!podeEditar}
+          >
             {label}
           </button>
         ))}
@@ -341,70 +343,30 @@ function Mapa({
                 ]}
               />
             </div>
-            <button className="pill ghost" onClick={() => setSel(new Set())}>
+            <button
+              type="button"
+              onClick={() => setSel(new Set())}
+              style={{
+                border: 'none',
+                background: 'none',
+                fontFamily: 'inherit',
+                fontSize: 12.5,
+                fontWeight: 700,
+                color: 'var(--muted)',
+                cursor: 'pointer',
+              }}
+            >
               Limpar
             </button>
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-            {ETAPAS.map((etapa) => (
-              <button
-                key={etapa}
-                className="pill ghost"
-                style={{ borderColor: ETAPA_COR[etapa], color: ETAPA_COR[etapa] }}
-                disabled={marcar.isPending}
-                onClick={() => marcar.mutate(etapa)}
-              >
-                {ETAPA_LABEL[etapa]}
-              </button>
-            ))}
-          </div>
+          <BotoesEtapa
+            squares={[...sel].map((p) => porPosicao.get(p)).filter((s): s is Square => !!s)}
+            pendente={marcar.isPending}
+            aoEscolher={(etapa) => marcar.mutate(etapa)}
+          />
         </div>
       )}
 
-    </>
-  )
-}
-
-/* ---------- Panorama por etapa (substitui o kanban de lotes) ---------- */
-
-function PorEtapa({ squares, modelos }: { squares: Square[]; modelos: MantaModelo[] }) {
-  const resumo = resumoPorEtapa(squares, modelos)
-  return (
-    <>
-      <div
-        className="pgrid"
-        style={{ '--cols': 'repeat(auto-fit,minmax(150px,1fr))', '--gap': '12px', marginBottom: 26 } as CSSProperties}
-      >
-        {resumo.map(({ etapa, total, porModelo }) => (
-          <div key={etapa} style={{ background: 'var(--sand-soft)', borderRadius: 14, padding: 12 }}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: 11,
-                fontWeight: 800,
-                color: ETAPA_COR[etapa],
-                marginBottom: 10,
-              }}
-            >
-              <span>{ETAPA_LABEL[etapa].toUpperCase()}</span>
-              <span>{total}</span>
-            </div>
-            {porModelo.length === 0 && (
-              <div style={{ fontSize: 11.5, color: 'var(--faint)' }}>—</div>
-            )}
-            {porModelo.map((m) => (
-              <div
-                key={m.letra}
-                className="card"
-                style={{ padding: '9px 11px', marginBottom: 7, fontSize: 12.5 }}
-              >
-                <b>Modelo {m.letra}</b> ×{m.total}
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
     </>
   )
 }
@@ -468,7 +430,7 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
           Mapa de montagem
         </button>
         <button onClick={() => setView('etapas')} style={seg(view === 'etapas')}>
-          Por etapa
+          Quadro de etapas
         </button>
       </div>
       {view === 'mapa' ? (
@@ -479,7 +441,12 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
           colunas={colunas}
         />
       ) : (
-        <PorEtapa squares={lista} modelos={modelos ?? []} />
+        <QuadroEtapas
+          projeto={projeto}
+          squares={lista}
+          modelos={modelos ?? []}
+          colunas={colunas}
+        />
       )}
       <div className="pgrid" style={{ '--cols': '1fr 1fr', '--gap': '24px' } as CSSProperties}>
         <Comentarios projetoId={projeto.id} />
