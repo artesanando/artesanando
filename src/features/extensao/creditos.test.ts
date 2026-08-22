@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   avaliaRegra,
-  detalheDaLinha,
   textoDaLinha,
   textoDoAlvo,
   type BlocoRegra,
@@ -132,14 +131,9 @@ describe('textoDaLinha', () => {
     expect(textoDaLinha(linha({ feito: 3.5 }))).toBe('3,5/5 granny squares')
   })
 
-  it('não passa do alvo, e guarda o número cheio no detalhe', () => {
+  it('a conta não para no alvo — quem fez 14 vê 14, não "3/3"', () => {
     const l = linha({ tipo: 'amigurumi', feito: 14, alvo: 3, cumpriu: true })
-    expect(textoDaLinha(l)).toBe('3/3 amigurumis')
-    expect(detalheDaLinha(l)).toBe('entregou 14, a regra pede 3')
-  })
-
-  it('não inventa detalhe quando ela ainda não chegou lá', () => {
-    expect(detalheDaLinha(linha({ feito: 2 }))).toBeUndefined()
+    expect(textoDaLinha(l)).toBe('14/3 amigurumis')
   })
 
   it('diz se a mentoria foi marcada ou não', () => {

@@ -140,16 +140,10 @@ export function avaliaRegra(
 }
 
 /* "3/5 granny squares" — o texto de cada forma de cumprir na linha da pessoa.
-   O feito é limitado ao alvo: "14/3 amigurumis" só faz o olho tropeçar, e o
-   número cheio continua disponível em `detalheDaLinha`, no title. */
+   A conta não para no alvo: quem entregou 14 de uma exigência de 3 vê 14, e não
+   "3/3". O que ela fez continua sendo o que ela fez depois de bater a meta. */
 export function textoDaLinha(l: LinhaAvaliada): string {
   if (l.tipo === 'mentoria') return l.cumpriu ? 'mentoria marcada' : 'mentoria não marcada'
   if (l.tipo === 'frequencia') return `${l.feito}% de ${l.alvo}%`
-  return `${fmtEntrega(Math.min(l.feito, l.alvo))}/${textoDoAlvo(l.tipo, l.alvo)}`
-}
-
-/** Só quando ela passou do alvo: "entregou 14, a regra pede 3" */
-export function detalheDaLinha(l: LinhaAvaliada): string | undefined {
-  if (l.tipo === 'mentoria' || l.tipo === 'frequencia' || l.feito <= l.alvo) return undefined
-  return `entregou ${fmtEntrega(l.feito)}, a regra pede ${fmtEntrega(l.alvo)}`
+  return `${fmtEntrega(l.feito)}/${textoDoAlvo(l.tipo, l.alvo)}`
 }

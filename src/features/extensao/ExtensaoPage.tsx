@@ -10,7 +10,7 @@ import { fmtDataCurta, fmtDataLonga, fmtEntrega, hojeIso } from '../../lib/forma
 import { fetchSemestres, useSemestreAtivo } from '../../lib/semestre'
 import { NIVEL_LABEL, TURNO_LABEL } from '../../types/database'
 import { entregasDe, fetchEntregasLight, fetchIntegrantes } from '../integrantes/api'
-import { detalheDaLinha, textoDaLinha } from './creditos'
+import { textoDaLinha } from './creditos'
 import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
 import { AjudaCabecalho } from '../../components/ui/AjudaCabecalho'
 import { fetchRas, raOuTraco } from './api'
@@ -1050,7 +1050,7 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
                       {b.cumpriu ? '✓' : '·'}
                     </span>
                     {b.linhas.map((l, k) => (
-                      <span key={l.tipo + k} title={detalheDaLinha(l)}>
+                      <span key={l.tipo + k}>
                         {k > 0 && <span style={{ fontWeight: 600 }}> ou </span>}
                         {textoDaLinha(l)}
                       </span>
