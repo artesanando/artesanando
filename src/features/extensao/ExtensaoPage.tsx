@@ -152,7 +152,7 @@ export function ExtensaoPage() {
         {secao === 'entregas' && <Entregas semestreId={semestreId} />}
         {secao === 'chamadas' && <Chamadas semestreId={semestreId} />}
         {secao === 'arquivos' && <Arquivos semestreId={semestreId} />}
-        {secao === 'auditoria' && <Auditoria />}
+        {secao === 'auditoria' && <Auditoria semestreId={semestreId} />}
       </div>
       </div>
     </div>
@@ -1044,11 +1044,17 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
 
 /* Diário do que mexe em quem leva crédito, ou em quem pode dar crédito. As
    linhas vêm de gatilhos do banco: não há como escrever nelas pela API. */
-function Auditoria() {
+function Auditoria({ semestreId }: { semestreId: string | null }) {
   const [acao, setAcao] = useState<AcaoAuditoria | 'todas'>('todas')
   const [pessoa, setPessoa] = useState<string>('todas')
 
-  const { data: linhas } = useQuery({ queryKey: ['auditoria'], queryFn: () => fetchAuditoria() })
+  const { data: semestres } = useQuery({ queryKey: ['semestres'], queryFn: fetchSemestres })
+  const sem = (semestres ?? []).find((s) => s.id === semestreId)
+
+  const { data: linhas } = useQuery({
+    queryKey: ['auditoria', semestreId],
+    queryFn: () => fetchAuditoria(sem ? { inicio: sem.inicio, fim: sem.fim } : undefined),
+  })
   const { data: integrantes } = useQuery({ queryKey: ['integrantes'], queryFn: fetchIntegrantes })
 
   const lista = filtraAuditoria(linhas ?? [], acao, pessoa)
@@ -1086,7 +1092,7 @@ function Auditoria() {
       <div className="card" style={{ overflow: 'hidden' }}>
         {lista.length === 0 && (
           <div style={{ padding: '14px 16px', fontSize: 12.5, color: 'var(--muted)' }}>
-            Nada registrado ainda.
+            Nada registrado {sem ? `em ${sem.label}` : 'ainda'}.
           </div>
         )}
         {lista.map((l, i) => (

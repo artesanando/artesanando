@@ -138,14 +138,31 @@ export interface LinhaAuditoria {
   alvo?: { nome: string } | null
 }
 
-export async function fetchAuditoria(limite = 300): Promise<LinhaAuditoria[]> {
-  const { data, error } = await supabase
+/* A seção fica debaixo do seletor de semestre da página e ignorava-o: trocar o
+   semestre não mudava uma linha. `auditoria` não tem `semestre_id` — o recorte é
+   pelas datas do semestre, que é o que a pessoa espera ao trocar. */
+export async function fetchAuditoria(
+  periodo?: { inicio: string | null; fim: string | null },
+  limite = 300,
+): Promise<LinhaAuditoria[]> {
+  let q = supabase
     .from('auditoria')
     .select('*, autor:profiles!autor_id(nome), alvo:profiles!alvo_id(nome)')
     .order('created_at', { ascending: false })
     .limit(limite)
+  if (periodo?.inicio) q = q.gte('created_at', periodo.inicio)
+  // o fim é um dia, e `created_at` é um instante: soma um dia para incluí-lo
+  if (periodo?.fim) q = q.lt('created_at', diaSeguinte(periodo.fim))
+  const { data, error } = await q
   if (error) throw error
   return (data ?? []) as unknown as LinhaAuditoria[]
+}
+
+/** '2026-12-15' → '2026-12-16' */
+export function diaSeguinte(dia: string): string {
+  const d = new Date(`${dia}T12:00:00`)
+  d.setDate(d.getDate() + 1)
+  return d.toISOString().slice(0, 10)
 }
 
 /* ---------- Derivados (unit-testados) ---------- */
