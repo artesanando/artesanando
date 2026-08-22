@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase'
-import type { Nivel } from '../../types/database'
-import type { BlocoRegra, TipoLinha } from './creditos'
+import { NIVEL_LABEL, type Nivel } from '../../types/database'
+import { TIPO_LABEL, type BlocoRegra, type TipoLinha } from './creditos'
 
 /* ---------- Regras ---------- */
 
@@ -150,26 +150,44 @@ export async function fetchAuditoria(limite = 300): Promise<LinhaAuditoria[]> {
 
 /* ---------- Derivados (unit-testados) ---------- */
 
+/* O `detalhe` guarda o que o gatilho viu no banco: nome de coluna e valor de
+   enum. Jogado direto na tela virava "ganhou presenca" (sem acento) e "mudou de
+   experiente para iniciante". */
+const PERM_LABEL: Record<string, string> = {
+  progresso: 'registrar progresso',
+  devolucoes: 'registrar devoluções',
+  financeiro: 'ver o financeiro',
+  presenca: 'marcar chamada',
+}
+
+const rotulo = (mapa: Record<string, string>, v: unknown) =>
+  typeof v === 'string' ? (mapa[v] ?? v) : String(v)
+
 /** Frase curta do que aconteceu, montada do `detalhe` que o gatilho gravou */
 export function resumoDaLinha(l: Pick<LinhaAuditoria, 'acao' | 'detalhe'>): string {
   const d = l.detalhe ?? {}
   switch (l.acao) {
     case 'nivel':
-      return `mudou de ${d.de} para ${d.para}`
+      return `mudou de ${rotulo(NIVEL_LABEL, d.de).toLowerCase()} para ${rotulo(
+        NIVEL_LABEL,
+        d.para,
+      ).toLowerCase()}`
     case 'presenca':
       return d.presente ? 'marcada presente' : 'marcada ausente'
     case 'entrega':
-      return `concluiu ${d.tipo}`
+      return `concluiu ${rotulo(TIPO_LABEL as Record<TipoLinha, string>, d.tipo)}`
     case 'permissao':
-      return `${d.para ? 'ganhou' : 'perdeu'} ${d.chave}`
+      return `${d.para ? 'ganhou' : 'perdeu'} "${rotulo(PERM_LABEL, d.chave)}"`
     case 'credito':
-      return [
-        d.cumprido ? 'dada como cumprida' : null,
-        d.mentoria ? 'mentoria marcada' : null,
-        d.motivo ? `— ${d.motivo}` : null,
-      ]
-        .filter(Boolean)
-        .join(' · ') || 'marca removida'
+      return (
+        [
+          d.cumprido ? 'dada como cumprida' : null,
+          d.mentoria ? 'mentoria marcada' : null,
+          d.motivo ? `— ${d.motivo}` : null,
+        ]
+          .filter(Boolean)
+          .join(' ') || 'marca removida'
+      )
   }
 }
 

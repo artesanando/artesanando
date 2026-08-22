@@ -6,6 +6,7 @@ import {
   textoDoAlvo,
   type BlocoRegra,
 } from './creditos'
+import { resumoDaLinha, type AcaoAuditoria } from './creditosApi'
 
 const entregas = (over: Partial<Record<'amigurumis' | 'faixas' | 'grannies', number>> = {}) => ({
   amigurumis: 0,
@@ -143,5 +144,35 @@ describe('textoDaLinha', () => {
       'mentoria marcada',
     )
     expect(textoDaLinha(linha({ tipo: 'mentoria', alvo: 1 }))).toBe('mentoria não marcada')
+  })
+})
+
+describe('resumoDaLinha', () => {
+  const linha = (acao: AcaoAuditoria, detalhe: Record<string, unknown>) => ({ acao, detalhe })
+
+  it('traduz o nível em vez de mostrar o enum do banco', () => {
+    expect(resumoDaLinha(linha('nivel', { de: 'experiente', para: 'iniciante' }))).toBe(
+      'mudou de experiente para iniciante',
+    )
+  })
+
+  it('traduz a chave da permissão, que é nome de coluna', () => {
+    expect(resumoDaLinha(linha('permissao', { para: true, chave: 'presenca' }))).toBe(
+      'ganhou "marcar chamada"',
+    )
+    expect(resumoDaLinha(linha('permissao', { para: false, chave: 'progresso' }))).toBe(
+      'perdeu "registrar progresso"',
+    )
+  })
+
+  it('traduz o tipo da entrega', () => {
+    expect(resumoDaLinha(linha('entrega', { tipo: 'granny' }))).toBe('concluiu granny squares')
+  })
+
+  it('junta a marca e o motivo sem repetir o rótulo', () => {
+    expect(resumoDaLinha(linha('credito', { cumprido: true, motivo: 'entregou atrasada' }))).toBe(
+      'dada como cumprida — entregou atrasada',
+    )
+    expect(resumoDaLinha(linha('credito', {}))).toBe('marca removida')
   })
 })

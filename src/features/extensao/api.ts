@@ -72,15 +72,10 @@ export async function urlsDosArquivos(paths: string[]): Promise<Map<string, stri
 /* ---------- Derivados (unit-testados) ---------- */
 
 /** Uma linha por integrante, pronta para copiar para o relatório do semestre */
-export function linhasDoRelatorio(
-  linhas: { nome: string; diurno: string; noturno: string; total: string; entregas: number }[],
-): string {
-  const cab = ['Integrante', 'Diurno', 'Noturno', 'Total', 'Entregas'].join('\t')
+export function linhasDoRelatorio(colunas: string[], linhas: (string | number)[][]): string {
   // vírgula decimal: a planilha daqui é pt-BR, e "3.5" entraria como texto
-  const corpo = linhas.map((l) =>
-    [l.nome, l.diurno, l.noturno, l.total, String(l.entregas).replace('.', ',')].join('\t'),
-  )
-  return [cab, ...corpo].join('\n')
+  const celula = (v: string | number) => String(v).replace('.', ',')
+  return [colunas.join('\t'), ...linhas.map((l) => l.map(celula).join('\t'))].join('\n')
 }
 
 /* O RA de todo mundo, para a área de extensão mostrar ao lado do nome. A policy

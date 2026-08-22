@@ -62,6 +62,15 @@ const SECOES: [Secao, string][] = [
 /* O que entra em cada coluna. O total não é a soma dos dois turnos, e entrega
    virou número quebrado quando o square passou a contar por metade — as duas
    coisas confundiram quem lê o relatório. */
+async function copiarTabela(
+  colunas: string[],
+  linhas: (string | number)[][],
+  toast: (t: string) => void,
+) {
+  await navigator.clipboard?.writeText(linhasDoRelatorio(colunas, linhas))
+  toast('Tabela copiada')
+}
+
 const AJUDA_TOTAL =
   'Presenças sobre os encontros do turno dela: quem é só do noturno não leva falta por encontro diurno. Por isso não é a soma de diurno e noturno.'
 const AJUDA_ENTREGAS =
@@ -126,7 +135,9 @@ export function ExtensaoPage() {
         }
       />
       <div className="pgrid" style={{ '--cols': '180px 1fr', '--gap': '34px' } as CSSProperties}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {/* sete botões empilhados ocupavam quase uma tela antes do conteúdo no
+          celular; lá o menu vira uma faixa que rola de lado */}
+      <div className="menu-extensao">
         {SECOES.map(([k, label]) => (
           <button key={k} style={item(secao === k)} onClick={() => setSecao(k)}>
             {label}
@@ -186,18 +197,19 @@ function Frequencia({ semestreId }: { semestreId: string | null }) {
           : l.f[k].pct,
   )
 
+  /* Copiava `linhas`: quem buscava um nome e clicava levava a tabela inteira. */
   const copiar = async () => {
-    const texto = linhasDoRelatorio(
-      linhas.map((l) => ({
-        nome: l.nome,
-        diurno: `${l.f.diurno.pct}%`,
-        noturno: `${l.f.noturno.pct}%`,
-        total: `${l.f.total.pct}%`,
-        entregas: l.entregas,
-      })),
+    await copiarTabela(
+      ['Integrante', 'Diurno', 'Noturno', 'Total', 'Entregas'],
+      visiveis.map((l) => [
+        l.nome,
+        `${l.f.diurno.pct}%`,
+        `${l.f.noturno.pct}%`,
+        `${l.f.total.pct}%`,
+        l.entregas,
+      ]),
+      toast,
     )
-    await navigator.clipboard?.writeText(texto)
-    toast('Tabela copiada')
   }
 
   return (
@@ -330,6 +342,7 @@ function Celula({
 /* ---------- Entregas ---------- */
 
 function Entregas({ semestreId }: { semestreId: string | null }) {
+  const toast = useToast()
   const [busca, setBusca] = useState('')
   const ord = useOrdenacao<'nome' | 'amigurumis' | 'faixas' | 'grannies' | 'total'>('total', 'desc')
   const participantes = useParticipantes(semestreId)
@@ -350,11 +363,36 @@ function Entregas({ semestreId }: { semestreId: string | null }) {
 
   return (
     <>
-      <div className="h" style={{ fontSize: 18, marginBottom: 4 }}>
-        Entregas do semestre
-      </div>
-      <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 16 }}>
-        {fmtEntrega(soma)} peças entregues no total
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
+          gap: 12,
+          marginBottom: 16,
+          flexWrap: 'wrap',
+        }}
+      >
+        <div>
+          <div className="h" style={{ fontSize: 18, marginBottom: 4 }}>
+            Entregas do semestre
+          </div>
+          <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
+            {fmtEntrega(soma)} peças entregues no total
+          </div>
+        </div>
+        <button
+          className="pill ghost"
+          onClick={() =>
+            copiarTabela(
+              ['Integrante', 'Amigurumis', 'Faixas', 'Squares', 'Total'],
+              visiveis.map((l) => [l.nome, l.amigurumis, l.faixas, l.grannies, l.total]),
+              toast,
+            )
+          }
+        >
+          Copiar tabela
+        </button>
       </div>
 
       <CampoBusca valor={busca} aoMudar={setBusca} />
@@ -386,6 +424,11 @@ function Entregas({ semestreId }: { semestreId: string | null }) {
             />
           ))}
         </div>
+        {visiveis.length === 0 && (
+          <div style={{ padding: 18, fontSize: 13, color: 'var(--muted)' }}>
+            {busca ? 'Ninguém com esse nome.' : 'Nenhuma integrante neste semestre ainda.'}
+          </div>
+        )}
         {visiveis.map((l) => (
           <div key={l.id} className="linha-extensao">
             <div style={{ minWidth: 0 }}>

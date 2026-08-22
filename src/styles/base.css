@@ -611,6 +611,25 @@ textarea.field::placeholder {
   }
 }
 
+.menu-extensao {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+@media (max-width: 900px) {
+  .menu-extensao {
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .menu-extensao > button {
+    width: auto !important;
+    flex: none;
+    white-space: nowrap;
+  }
+}
+
 /* quadro de etapas da manta de crochê — colunas rolam na horizontal, cada uma
    rola por dentro: uma manta de sessenta squares empilha muito cartão em
    "A fazer" e sem isso a página estica sem fim */
