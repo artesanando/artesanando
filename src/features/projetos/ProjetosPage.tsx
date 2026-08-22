@@ -35,6 +35,12 @@ export function ProjetosPage() {
   const { data: prog } = useQuery({ queryKey: ['progresso-geral'], queryFn: fetchProgressoGeral })
 
   const { ativos, arquivados } = separaArquivados(projetos ?? [])
+  /* Os contadores das abas e o subtítulo falam sempre do que está ativo. Saíam
+     do conjunto da aba, então abrir "Arquivados" fazia o cabeçalho dizer
+     "1 manta" com um projeto de outro semestre na tela. */
+  const mantasAtivas = ativos.filter((p) => p.tipo !== 'amigurumi')
+  const amigsAtivos = ativos.filter((p) => p.tipo === 'amigurumi')
+
   const todos = aba === 'arquivados' ? arquivados : ativos
   const mantas = todos.filter((p) => p.tipo !== 'amigurumi')
   const amigurumis = todos.filter((p) => p.tipo === 'amigurumi')
@@ -54,10 +60,17 @@ export function ProjetosPage() {
   const pct = ({ done, total }: { done: number; total: number }) =>
     total === 0 ? 0 : Math.round((done / total) * 100)
 
-  const tabStyle = (on: boolean) =>
-    on
-      ? { padding: '8px 2px', borderBottom: '2px solid var(--primary)', cursor: 'pointer' }
-      : { padding: '8px 2px', color: 'var(--muted)', cursor: 'pointer' }
+  const tabStyle = (on: boolean): React.CSSProperties => ({
+    padding: '8px 2px',
+    border: 'none',
+    background: 'none',
+    fontFamily: 'inherit',
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: 'pointer',
+    borderBottom: on ? '2px solid var(--primary)' : '2px solid transparent',
+    color: on ? 'var(--ink)' : 'var(--muted)',
+  })
 
   const mostraMantas = aba !== 'amigurumis'
   const mostraAmigs = aba !== 'mantas'
@@ -66,7 +79,11 @@ export function ProjetosPage() {
     <div className="pagina">
       <CabecalhoPagina
         titulo="Projetos"
-        sub={`${semestre} · ${mantas.length} mantas · ${amigurumis.length} tipos de amigurumi`}
+        sub={`${semestre} · ${plural(mantasAtivas.length, 'manta', 'mantas')} · ${plural(
+          amigsAtivos.length,
+          'tipo de amigurumi',
+          'tipos de amigurumi',
+        )}`}
         acoes={
           isAdmin && (
             <button className="pill" onClick={() => open('projeto')}>
@@ -75,35 +92,55 @@ export function ProjetosPage() {
           )
         }
       />
+      {/* eram <div onClick>: sem foco, sem teclado e sem estado para leitor de tela */}
       <div
+        role="tablist"
+        aria-label="Filtrar projetos"
         style={{
           display: 'flex',
           gap: 22,
           borderBottom: '1px solid var(--border-strong)',
           marginBottom: 18,
-          fontSize: 13,
-          fontWeight: 700,
         }}
       >
-        <div onClick={() => setAba('todos')} style={tabStyle(aba === 'todos')}>
-          Todos
-        </div>
-        <div onClick={() => setAba('mantas')} style={tabStyle(aba === 'mantas')}>
-          Mantas <span style={{ color: 'var(--green-dark)' }}>{mantas.length}</span>
-        </div>
-        <div onClick={() => setAba('amigurumis')} style={tabStyle(aba === 'amigurumis')}>
-          Amigurumis <span style={{ color: 'var(--amber)' }}>{amigurumis.length}</span>
-        </div>
-        {arquivados.length > 0 && (
-          <div onClick={() => setAba('arquivados')} style={tabStyle(aba === 'arquivados')}>
-            Arquivados <span style={{ color: 'var(--faint)' }}>{arquivados.length}</span>
-          </div>
-        )}
+        {(
+          [
+            ['todos', 'Todos', null, null],
+            ['mantas', 'Mantas', mantasAtivas.length, 'var(--green-dark)'],
+            ['amigurumis', 'Amigurumis', amigsAtivos.length, 'var(--amber)'],
+            ...(arquivados.length > 0
+              ? [['arquivados', 'Arquivados', arquivados.length, 'var(--faint)'] as const]
+              : []),
+          ] as [Aba, string, number | null, string | null][]
+        ).map(([k, label, n, cor]) => (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={aba === k}
+            onClick={() => setAba(k)}
+            style={tabStyle(aba === k)}
+          >
+            {label}
+            {n !== null && <span style={{ color: cor ?? undefined }}> {n}</span>}
+          </button>
+        ))}
       </div>
       {isLoading && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>}
       {isError && (
         <div style={{ fontSize: 13, color: 'var(--accent)' }}>
           Não foi possível carregar os projetos. Recarregue a página.
+        </div>
+      )}
+      {!isLoading && !isError && mantas.length === 0 && amigurumis.length === 0 && (
+        <div style={{ fontSize: 13, color: 'var(--muted)', padding: '10px 0' }}>
+          {aba === 'arquivados'
+            ? 'Nenhum projeto arquivado.'
+            : aba === 'mantas'
+              ? 'Nenhuma manta em produção.'
+              : aba === 'amigurumis'
+                ? 'Nenhum tipo de amigurumi em produção.'
+                : 'Nenhum projeto ainda — comece pelo botão acima.'}
         </div>
       )}
       {mostraMantas && mantas.length > 0 && (
@@ -145,6 +182,7 @@ export function ProjetosPage() {
                       >
                         {croche ? 'crochê' : 'tricô'}
                       </span>
+                      <SeloArquivado projeto={p} />
                     </div>
                     <span
                       style={{ display: 'flex', alignItems: 'center', gap: 4 }}
@@ -215,13 +253,14 @@ export function ProjetosPage() {
                       <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>
                         {p.destino ?? ''}
                       </div>
+                      <SeloArquivado projeto={p} />
                     </div>
                   </div>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700 }}>
-                      {pr.done} und{' '}
+                      {pr.done}
                       <span style={{ color: 'var(--muted)', fontWeight: 600 }}>
-                        · meta {p.meta ?? pr.total}
+                        /{p.meta ?? pr.total} unidades
                       </span>
                     </div>
                     <Progress
@@ -255,6 +294,23 @@ export function ProjetosPage() {
     </div>
   )
 }
+
+/* Na aba de arquivados o cartão era igualzinho a um ativo: mesma barra em cor
+   de destaque, sem dizer que estava fora do ar nem de que semestre veio. */
+function SeloArquivado({ projeto }: { projeto: Projeto }) {
+  if (!projeto.arquivado_em) return null
+  return (
+    <span
+      className="tag"
+      style={{ background: 'var(--chip-soft)', color: 'var(--muted)', marginLeft: 4 }}
+    >
+      ARQUIVADO
+    </span>
+  )
+}
+
+/** "1 manta" / "2 mantas" — o cabeçalho escrevia "1 mantas" */
+const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`
 
 const iconeDoTipo = (tipo: ProjetoTipo) =>
   tipo === 'manta_croche' ? <IconCroche /> : tipo === 'manta_trico' ? <IconTrico /> : <IconAmigurumi />
