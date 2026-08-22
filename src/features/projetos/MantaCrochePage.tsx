@@ -129,7 +129,14 @@ function Mapa({
   })
 
   const linhas = Math.ceil(squares.length / colunas)
-  const selecionado = sel.size === 1 ? porPosicao.get([...sel][0]) : undefined
+  /* No "mover" a peça pega no ar é a que interessa; no "pintar", a única
+     selecionada durante o arrasto. O painel some quando não há nenhuma. */
+  const selecionado =
+    arrastado !== null
+      ? porPosicao.get(arrastado)
+      : sel.size === 1
+        ? porPosicao.get([...sel][0])
+        : undefined
   const modeloSel = selecionado ? porModelo.get(selecionado.modelo_id) : undefined
 
   return (
@@ -294,7 +301,7 @@ function Mapa({
 
           {selecionado && modeloSel && (
             <div className="card" style={{ padding: '12px 14px' }}>
-              <Lbl style={{ marginBottom: 8 }}>PEÇA ESCOLHIDA</Lbl>
+              <Lbl style={{ marginBottom: 8 }}>PEÇA NA MÃO</Lbl>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <SquareGranny
                   cores={coresDoModelo(modeloSel)}
