@@ -213,9 +213,7 @@ export function InicioPage() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {(atividades ?? []).length === 0 && (
-              <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
-                Nada registrado ainda — as ações das integrantes aparecem aqui.
-              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Nada registrado ainda.</div>
             )}
             {(atividades ?? []).map((a, i, arr) => (
               <div

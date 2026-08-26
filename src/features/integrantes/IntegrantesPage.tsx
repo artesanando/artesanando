@@ -81,9 +81,7 @@ export function IntegrantesPage() {
 
   /* Frequência e entregas passam a ser do semestre ativo. Antes somavam desde o
      começo do app, e a ficha dizia "no semestre" mostrando o acumulado de anos. */
-  const doSemestre = (encontros ?? []).filter(
-    (e) => !semestre || e.semestre_id === semestre.id,
-  )
+  const doSemestre = (encontros ?? []).filter((e) => !semestre || e.semestre_id === semestre.id)
 
   /* A lista também é do semestre ativo, como em Atividade de extensão. Antes
      misturava quem só participou de semestres passados — aparecendo com 0% de
@@ -158,506 +156,518 @@ export function IntegrantesPage() {
         className="pgrid"
         style={{ '--cols': '1.1fr 1fr', '--gap': '40px' } as React.CSSProperties}
       >
-      <div>
-        <input
-          className="field"
-          style={{ borderRadius: 99, marginBottom: 14 }}
-          placeholder="Buscar integrante…"
-          aria-label="Buscar integrante"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-        />
-        {isAdmin && semConta.length > 0 && (
-          <div
-            style={{
-              background: 'var(--chip-warn)',
-              border: '1px solid #E7D6B8',
-              borderRadius: 12,
-              padding: '11px 14px',
-              marginBottom: 14,
-              fontSize: 12.5,
-              color: 'var(--gold-dark)',
-            }}
-          >
-            {/* Nasce recolhido: é um lembrete permanente enquanto alguém estiver
-                sem perfil, e aberto ele empurrava a lista para fora da tela. */}
-            <button
-              type="button"
-              aria-expanded={avisoAberto}
-              onClick={() => setAvisoAberto((v) => !v)}
+        <div>
+          <input
+            className="field"
+            style={{ borderRadius: 99, marginBottom: 14 }}
+            placeholder="Buscar integrante…"
+            aria-label="Buscar integrante"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+          {isAdmin && semConta.length > 0 && (
+            <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                width: '100%',
-                border: 'none',
-                background: 'none',
-                padding: 0,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
+                background: 'var(--chip-warn)',
+                border: '1px solid #E7D6B8',
+                borderRadius: 12,
+                padding: '11px 14px',
+                marginBottom: 14,
                 fontSize: 12.5,
-                color: 'inherit',
-                textAlign: 'left',
+                color: 'var(--gold-dark)',
               }}
             >
-              <IconChevron size={11} para={avisoAberto ? 'cima' : 'baixo'} />
-              <b>
-                {semConta.length}{' '}
-                {semConta.length === 1 ? 'pessoa na chamada' : 'pessoas na chamada'} ainda sem
-                perfil
-              </b>
-            </button>
-            {avisoAberto && (
-              <div style={{ marginTop: 8 }}>
-                Convide para o app, ou junte a ficha a uma integrante que já existe.
-              </div>
-            )}
-            {avisoAberto &&
-              semConta.map((p) => (
-              <div
-                key={p.id}
+              {/* Nasce recolhido: é um lembrete permanente enquanto alguém estiver
+                sem perfil, e aberto ele empurrava a lista para fora da tela. */}
+              <button
+                type="button"
+                aria-expanded={avisoAberto}
+                onClick={() => setAvisoAberto((v) => !v)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
-                  marginTop: 8,
-                  flexWrap: 'wrap',
+                  width: '100%',
+                  border: 'none',
+                  background: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  fontSize: 12.5,
+                  color: 'inherit',
+                  textAlign: 'left',
                 }}
               >
-                <b style={{ flex: 1, minWidth: 100 }}>{p.nome}</b>
-                {vinculando === p.id ? (
-                  <>
-                    <span style={{ minWidth: 170, flex: 1 }}>
+                <IconChevron size={11} para={avisoAberto ? 'cima' : 'baixo'} />
+                <b>
+                  {semConta.length}{' '}
+                  {semConta.length === 1 ? 'pessoa na chamada' : 'pessoas na chamada'} ainda sem
+                  perfil
+                </b>
+              </button>
+              {avisoAberto && (
+                <div style={{ marginTop: 8 }}>
+                  Convide para o app, ou junte a ficha a uma integrante que já existe.
+                </div>
+              )}
+              {avisoAberto &&
+                semConta.map((p) => (
+                  <div
+                    key={p.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      marginTop: 8,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <b style={{ flex: 1, minWidth: 100 }}>{p.nome}</b>
+                    {vinculando === p.id ? (
+                      <>
+                        <span style={{ minWidth: 170, flex: 1 }}>
+                          <Select
+                            ariaLabel={`Juntar ${p.nome} a qual integrante`}
+                            value={destino}
+                            onChange={setDestino}
+                            options={[
+                              ['', 'Juntar com…'],
+                              ...comConta.map((d) => [d.id, d.nome] as [string, string]),
+                            ]}
+                          />
+                        </span>
+                        <button
+                          className="pill"
+                          style={{ padding: '7px 14px', fontSize: 12 }}
+                          disabled={!destino || vincular.isPending}
+                          onClick={() => vincular.mutate({ origem: p.id, para: destino })}
+                        >
+                          Juntar
+                        </button>
+                        <button
+                          className="pill ghost"
+                          style={{ padding: '7px 14px', fontSize: 12 }}
+                          onClick={() => setVinculando(null)}
+                        >
+                          Cancelar
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          className="pill ghost"
+                          style={{ padding: '7px 14px', fontSize: 12 }}
+                          onClick={() => openIntegrante(p.id)}
+                        >
+                          Convidar
+                        </button>
+                        <button
+                          className="pill ghost"
+                          style={{ padding: '7px 14px', fontSize: 12 }}
+                          onClick={() => setVinculando(p.id)}
+                        >
+                          Juntar a outra
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))}
+            </div>
+          )}
+          <div style={{ borderTop: '1px solid var(--border)' }}>
+            {isLoading && (
+              <div style={{ padding: '12px 8px', fontSize: 13, color: 'var(--muted)' }}>
+                Carregando…
+              </div>
+            )}
+            {lista.length === 0 && !isLoading && (
+              <div style={{ padding: '12px 8px', fontSize: 13, color: 'var(--muted)' }}>
+                {busca ? `Ninguém encontrado para "${busca}".` : 'Ninguém no semestre ativo ainda.'}
+              </div>
+            )}
+            {lista.map((p) => {
+              const selected = p.id === sel?.id
+              const emprestados = emprestadosDe(p.id, loans ?? [])
+              const ent = entregas ? entregasDe(p.id, entregas, semestre?.id ?? null).total : 0
+              const sub = `${fmtEntrega(ent)} ${ent === 1 ? 'entrega' : 'entregas'}${
+                emprestados > 0 ? ` · ${emprestados} itens em casa` : ''
+              }`
+              const freq = freqDe(p)
+              return (
+                <div key={p.id}>
+                  <div
+                    onClick={() => navigate(`/integrantes/${p.id}`)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '12px 8px',
+                      cursor: 'pointer',
+                      /* a divisória e a altura não mudam com a seleção: trocar a
+                     borda por margem fazia a linha crescer e a lista pular */
+                      borderBottom: '1px solid var(--border)',
+                      background: selected ? 'var(--chip-rose)' : undefined,
+                    }}
+                  >
+                    <AvatarPerfil
+                      nome={p.nome}
+                      avatarColor={p.avatar_color}
+                      avatarUrl={p.avatar_url}
+                      size={32}
+                      fontSize={12}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: 14 }}>
+                        {p.nome}
+                        {!p.user_id && (
+                          <span
+                            className="tag"
+                            style={{
+                              background: 'var(--chip-warn)',
+                              color: 'var(--gold-dark)',
+                              fontSize: 9.5,
+                              marginLeft: 6,
+                            }}
+                          >
+                            SEM PERFIL
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11.5,
+                          color: selected ? 'var(--accent)' : 'var(--muted)',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {sub}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11.5,
+                        fontWeight: 800,
+                        color: selected ? 'var(--accent)' : 'var(--muted)',
+                      }}
+                    >
+                      {freq.total.pct}%
+                    </div>
+                    {isAdmin && (
+                      <span onClick={(e) => e.stopPropagation()}>
+                        <MenuKebab
+                          ariaLabel={`Ações de ${p.nome}`}
+                          acoes={[
+                            { label: 'Editar ficha', onSelect: () => openIntegrante(p.id) },
+                            ...(p.user_id
+                              ? [
+                                  {
+                                    label: 'Gerar link de nova senha',
+                                    onSelect: async () => {
+                                      setLinkSenha(null)
+                                      setLinkSenhaPara(p.id)
+                                      setGerandoLink(true)
+                                      const { data, error } = await supabase.functions.invoke(
+                                        'reset-password-link',
+                                        {
+                                          body: {
+                                            profileId: p.id,
+                                            redirectTo: window.location.origin + '/redefinir-senha',
+                                          },
+                                        },
+                                      )
+                                      setGerandoLink(false)
+                                      const corpo = data as {
+                                        error?: string
+                                        link?: string | null
+                                      } | null
+                                      if (error || corpo?.error) {
+                                        toast(
+                                          corpo?.error ?? 'Não foi possível gerar o link.',
+                                          'erro',
+                                        )
+                                        setLinkSenhaPara(null)
+                                        return
+                                      }
+                                      setLinkSenha(corpo?.link ?? null)
+                                    },
+                                  },
+                                ]
+                              : []),
+                            {
+                              label: 'Desativar',
+                              perigo: true,
+                              onSelect: async () => {
+                                const ok = await confirmar({
+                                  titulo: `Desativar ${p.nome}?`,
+                                  okLabel: 'Desativar',
+                                  perigo: true,
+                                })
+                                if (ok) desativar.mutate({ pid: p.id, ativo: false })
+                              },
+                            },
+                          ]}
+                        />
+                      </span>
+                    )}
+                  </div>
+                  {linkSenhaPara === p.id && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ padding: '10px 8px 14px', borderBottom: '1px solid var(--border)' }}
+                    >
+                      {gerandoLink && (
+                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>Gerando link…</div>
+                      )}
+                      {linkSenha && (
+                        <>
+                          <div
+                            style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}
+                          >
+                            <input
+                              className="field"
+                              readOnly
+                              value={linkSenha}
+                              aria-label={`Link de nova senha de ${p.nome}`}
+                              onFocus={(e) => e.currentTarget.select()}
+                              style={{ flex: 1, minWidth: 180, fontSize: 12 }}
+                            />
+                            <button
+                              type="button"
+                              className="pill"
+                              onClick={async () => {
+                                await navigator.clipboard?.writeText(linkSenha)
+                                setCopiadoSenha(true)
+                                setTimeout(() => setCopiadoSenha(false), 2500)
+                              }}
+                            >
+                              {copiadoSenha ? 'Copiado' : 'Copiar'}
+                            </button>
+                            <button
+                              type="button"
+                              className="pill ghost"
+                              onClick={() => {
+                                setLinkSenhaPara(null)
+                                setLinkSenha(null)
+                              }}
+                            >
+                              Fechar
+                            </button>
+                          </div>
+                          <div style={{ fontSize: 11.5, color: 'var(--gold-dark)' }}>
+                            Esse link vale como senha — mande só em conversa privada.
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        {sel && (
+          <div className="card" style={{ borderRadius: 16, padding: '24px 26px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+              <AvatarPerfil
+                nome={sel.nome}
+                avatarColor={sel.avatar_color}
+                avatarUrl={sel.avatar_url}
+                size={52}
+                fontSize={18}
+              />
+              <div>
+                <div
+                  className="h"
+                  style={{ fontSize: 19, display: 'flex', alignItems: 'center', gap: 8 }}
+                >
+                  {sel.nome}
+                  {/* o selo estava só na lista: aberta a ficha, nada dizia que ela
+                    não tem acesso ao app, e o convite morava dentro do aviso
+                    recolhido lá em cima */}
+                  {!sel.user_id && (
+                    <span
+                      className="tag"
+                      style={{ background: 'var(--chip-warn)', color: 'var(--gold-dark)' }}
+                    >
+                      SEM PERFIL
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                  {/* o usuário de quem entrou só pela chamada é gerado com sufixo
+                    aleatório ("ana.prado.k3f1") — não é nome de ninguém */}
+                  {sel.user_id ? `@${sel.usuario} · ` : ''}
+                  {sel.desde ? `desde ${fmtDataLonga(sel.desde)} · ` : ''}
+                  {PREFERENCIA_LABEL[sel.preferencia].toLowerCase()}
+                  {/* o RA nem chega ao front de quem não é admin: a policy de
+                    `perfis_academico` só devolve a linha da própria dona */}
+                  {isAdmin && selRa ? ` · RA ${selRa}` : ''}
+                </div>
+                {isAdmin && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      marginTop: 8,
+                      fontSize: 11.5,
+                      color: 'var(--muted)',
+                    }}
+                  >
+                    <span className="lbl">NÍVEL</span>
+                    <span style={{ minWidth: 132 }}>
                       <Select
-                        ariaLabel={`Juntar ${p.nome} a qual integrante`}
-                        value={destino}
-                        onChange={setDestino}
-                        options={[
-                          ['', 'Juntar com…'],
-                          ...comConta.map((d) => [d.id, d.nome] as [string, string]),
-                        ]}
+                        value={sel.nivel}
+                        onChange={(n) => mudarNivel.mutate({ id: sel.id, nivel: n })}
+                        options={NIVEIS}
+                        ariaLabel={`Nível de ${sel.nome}`}
                       />
                     </span>
+                    {/* papel e permissões ficam em Ajustes; sem esta pista, quem
+                      quer promover alguém procura aqui e não acha */}
                     <button
-                      className="pill"
-                      style={{ padding: '7px 14px', fontSize: 12 }}
-                      disabled={!destino || vincular.isPending}
-                      onClick={() => vincular.mutate({ origem: p.id, para: destino })}
+                      type="button"
+                      onClick={() => navigate('/configuracoes')}
+                      style={{
+                        border: 'none',
+                        background: 'none',
+                        padding: 0,
+                        fontFamily: 'inherit',
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        color: 'var(--accent)',
+                        cursor: 'pointer',
+                      }}
                     >
-                      Juntar
+                      Papel e permissões em Ajustes
                     </button>
-                    <button
-                      className="pill ghost"
-                      style={{ padding: '7px 14px', fontSize: 12 }}
-                      onClick={() => setVinculando(null)}
-                    >
-                      Cancelar
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      className="pill ghost"
-                      style={{ padding: '7px 14px', fontSize: 12 }}
-                      onClick={() => openIntegrante(p.id)}
-                    >
-                      Convidar
-                    </button>
-                    <button
-                      className="pill ghost"
-                      style={{ padding: '7px 14px', fontSize: 12 }}
-                      onClick={() => setVinculando(p.id)}
-                    >
-                      Juntar a outra
-                    </button>
-                  </>
+                  </div>
                 )}
-                </div>
-              ))}
-          </div>
-        )}
-        <div style={{ borderTop: '1px solid var(--border)' }}>
-          {isLoading && (
-            <div style={{ padding: '12px 8px', fontSize: 13, color: 'var(--muted)' }}>
-              Carregando…
+                {isAdmin && !sel.user_id && (
+                  <button
+                    className="pill ghost"
+                    style={{ padding: '6px 14px', fontSize: 12, marginTop: 10 }}
+                    onClick={() => openIntegrante(sel.id)}
+                  >
+                    Convidar para o app
+                  </button>
+                )}
+              </div>
             </div>
-          )}
-          {lista.length === 0 && !isLoading && (
-            <div style={{ padding: '12px 8px', fontSize: 13, color: 'var(--muted)' }}>
-              {busca ? `Ninguém encontrado para "${busca}".` : 'Ninguém no semestre ativo ainda.'}
-            </div>
-          )}
-          {lista.map((p) => {
-            const selected = p.id === sel?.id
-            const emprestados = emprestadosDe(p.id, loans ?? [])
-            const ent = entregas ? entregasDe(p.id, entregas, semestre?.id ?? null).total : 0
-            const sub = `${fmtEntrega(ent)} ${ent === 1 ? 'entrega' : 'entregas'}${
-              emprestados > 0 ? ` · ${emprestados} itens em casa` : ''
-            }`
-            const freq = freqDe(p)
-            return (
-              <div key={p.id}>
+            <Lbl style={{ marginBottom: 12 }}>ENTREGAS NO SEMESTRE</Lbl>
+            <div
+              style={{
+                border: '1px solid var(--border)',
+                borderRadius: 12,
+                overflow: 'hidden',
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px' }}>
+                <span style={{ width: 12, height: 12, borderRadius: 3, background: '#C08A2E' }} />
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>
+                  Amigurumis concluídos
+                </span>
+                <b style={{ fontSize: 15 }}>{fmtEntrega(selEntregas.amigurumis)}</b>
+              </div>
               <div
-                onClick={() => navigate(`/integrantes/${p.id}`)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 12,
-                  padding: '12px 8px',
-                  cursor: 'pointer',
-                  /* a divisória e a altura não mudam com a seleção: trocar a
-                     borda por margem fazia a linha crescer e a lista pular */
-                  borderBottom: '1px solid var(--border)',
-                  background: selected ? 'var(--chip-rose)' : undefined,
+                  padding: '11px 14px',
+                  borderTop: '1px solid var(--border)',
                 }}
               >
-                <AvatarPerfil
-                  nome={p.nome}
-                  avatarColor={p.avatar_color}
-                  avatarUrl={p.avatar_url}
-                  size={32}
-                  fontSize={12}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: 14 }}>
-                    {p.nome}
-                    {!p.user_id && (
-                      <span
-                        className="tag"
-                        style={{
-                          background: 'var(--chip-warn)',
-                          color: 'var(--gold-dark)',
-                          fontSize: 9.5,
-                          marginLeft: 6,
-                        }}
-                      >
-                        SEM PERFIL
-                      </span>
-                    )}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 11.5,
-                      color: selected ? 'var(--accent)' : 'var(--muted)',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {sub}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    fontSize: 11.5,
-                    fontWeight: 800,
-                    color: selected ? 'var(--accent)' : 'var(--muted)',
-                  }}
-                >
-                  {freq.total.pct}%
-                </div>
-                {isAdmin && (
-                  <span onClick={(e) => e.stopPropagation()}>
-                    <MenuKebab
-                      ariaLabel={`Ações de ${p.nome}`}
-                      acoes={[
-                        { label: 'Editar ficha', onSelect: () => openIntegrante(p.id) },
-                        ...(p.user_id
-                          ? [
-                              {
-                                label: 'Gerar link de nova senha',
-                                onSelect: async () => {
-                                  setLinkSenha(null)
-                                  setLinkSenhaPara(p.id)
-                                  setGerandoLink(true)
-                                  const { data, error } = await supabase.functions.invoke(
-                                    'reset-password-link',
-                                    {
-                                      body: {
-                                        profileId: p.id,
-                                        redirectTo: window.location.origin + '/redefinir-senha',
-                                      },
-                                    },
-                                  )
-                                  setGerandoLink(false)
-                                  const corpo = data as { error?: string; link?: string | null } | null
-                                  if (error || corpo?.error) {
-                                    toast(corpo?.error ?? 'Não foi possível gerar o link.', 'erro')
-                                    setLinkSenhaPara(null)
-                                    return
-                                  }
-                                  setLinkSenha(corpo?.link ?? null)
-                                },
-                              },
-                            ]
-                          : []),
-                        {
-                          label: 'Desativar',
-                          perigo: true,
-                          onSelect: async () => {
-                            const ok = await confirmar({
-                              titulo: `Desativar ${p.nome}?`,
-                              okLabel: 'Desativar',
-                              perigo: true,
-                            })
-                            if (ok) desativar.mutate({ pid: p.id, ativo: false })
-                          },
-                        },
-                      ]}
-                    />
-                  </span>
-                )}
+                <span style={{ width: 12, height: 12, borderRadius: 3, background: '#7D9B76' }} />
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>
+                  Faixas de tricô feitas
+                </span>
+                <b style={{ fontSize: 15 }}>{fmtEntrega(selEntregas.faixas)}</b>
               </div>
-              {linkSenhaPara === p.id && (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  style={{ padding: '10px 8px 14px', borderBottom: '1px solid var(--border)' }}
-                >
-                  {gerandoLink && (
-                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>Gerando link…</div>
-                  )}
-                  {linkSenha && (
-                    <>
-                      <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                        <input
-                          className="field"
-                          readOnly
-                          value={linkSenha}
-                          aria-label={`Link de nova senha de ${p.nome}`}
-                          onFocus={(e) => e.currentTarget.select()}
-                          style={{ flex: 1, minWidth: 180, fontSize: 12 }}
-                        />
-                        <button
-                          type="button"
-                          className="pill"
-                          onClick={async () => {
-                            await navigator.clipboard?.writeText(linkSenha)
-                            setCopiadoSenha(true)
-                            setTimeout(() => setCopiadoSenha(false), 2500)
-                          }}
-                        >
-                          {copiadoSenha ? 'Copiado' : 'Copiar'}
-                        </button>
-                        <button
-                          type="button"
-                          className="pill ghost"
-                          onClick={() => {
-                            setLinkSenhaPara(null)
-                            setLinkSenha(null)
-                          }}
-                        >
-                          Fechar
-                        </button>
-                      </div>
-                      <div style={{ fontSize: 11.5, color: 'var(--gold-dark)' }}>
-                        Esse link vale como senha — mande só em conversa privada.
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
-      {sel && (
-        <div className="card" style={{ borderRadius: 16, padding: '24px 26px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
-            <AvatarPerfil
-              nome={sel.nome}
-              avatarColor={sel.avatar_color}
-              avatarUrl={sel.avatar_url}
-              size={52}
-              fontSize={18}
-            />
-            <div>
-              <div
-                className="h"
-                style={{ fontSize: 19, display: 'flex', alignItems: 'center', gap: 8 }}
-              >
-                {sel.nome}
-                {/* o selo estava só na lista: aberta a ficha, nada dizia que ela
-                    não tem acesso ao app, e o convite morava dentro do aviso
-                    recolhido lá em cima */}
-                {!sel.user_id && (
-                  <span
-                    className="tag"
-                    style={{ background: 'var(--chip-warn)', color: 'var(--gold-dark)' }}
-                  >
-                    SEM PERFIL
-                  </span>
-                )}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                {/* o usuário de quem entrou só pela chamada é gerado com sufixo
-                    aleatório ("ana.prado.k3f1") — não é nome de ninguém */}
-                {sel.user_id ? `@${sel.usuario} · ` : ''}
-                {sel.desde ? `desde ${fmtDataLonga(sel.desde)} · ` : ''}
-                {PREFERENCIA_LABEL[sel.preferencia].toLowerCase()}
-                {/* o RA nem chega ao front de quem não é admin: a policy de
-                    `perfis_academico` só devolve a linha da própria dona */}
-                {isAdmin && selRa ? ` · RA ${selRa}` : ''}
-              </div>
-              {isAdmin && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    marginTop: 8,
-                    fontSize: 11.5,
-                    color: 'var(--muted)',
-                  }}
-                >
-                  <span className="lbl">NÍVEL</span>
-                  <span style={{ minWidth: 132 }}>
-                    <Select
-                      value={sel.nivel}
-                      onChange={(n) => mudarNivel.mutate({ id: sel.id, nivel: n })}
-                      options={NIVEIS}
-                      ariaLabel={`Nível de ${sel.nome}`}
-                    />
-                  </span>
-                  {/* papel e permissões ficam em Ajustes; sem esta pista, quem
-                      quer promover alguém procura aqui e não acha */}
-                  <button
-                    type="button"
-                    onClick={() => navigate('/configuracoes')}
-                    style={{
-                      border: 'none',
-                      background: 'none',
-                      padding: 0,
-                      fontFamily: 'inherit',
-                      fontSize: 11.5,
-                      fontWeight: 700,
-                      color: 'var(--accent)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Papel e permissões em Ajustes
-                  </button>
-                </div>
-              )}
-              {isAdmin && !sel.user_id && (
-                <button
-                  className="pill ghost"
-                  style={{ padding: '6px 14px', fontSize: 12, marginTop: 10 }}
-                  onClick={() => openIntegrante(sel.id)}
-                >
-                  Convidar para o app
-                </button>
-              )}
-            </div>
-          </div>
-          <Lbl style={{ marginBottom: 12 }}>ENTREGAS NO SEMESTRE</Lbl>
-          <div
-            style={{
-              border: '1px solid var(--border)',
-              borderRadius: 12,
-              overflow: 'hidden',
-              marginBottom: 12,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px' }}>
-              <span style={{ width: 12, height: 12, borderRadius: 3, background: '#C08A2E' }} />
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>Amigurumis concluídos</span>
-              <b style={{ fontSize: 15 }}>{fmtEntrega(selEntregas.amigurumis)}</b>
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '11px 14px',
-                borderTop: '1px solid var(--border)',
-              }}
-            >
-              <span style={{ width: 12, height: 12, borderRadius: 3, background: '#7D9B76' }} />
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>Faixas de tricô feitas</span>
-              <b style={{ fontSize: 15 }}>{fmtEntrega(selEntregas.faixas)}</b>
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '11px 14px',
-                borderTop: '1px solid var(--border)',
-              }}
-            >
-              <span style={{ width: 12, height: 12, borderRadius: 3, background: '#C4798A' }} />
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>
-                Granny squares (metades contam meio)
-              </span>
-              <b style={{ fontSize: 15 }}>{fmtEntrega(selEntregas.grannies)}</b>
-            </div>
-          </div>
-          {selEmprestados > 0 && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                background: 'var(--chip-rose)',
-                borderRadius: 10,
-                padding: '9px 12px',
-                fontSize: 11.5,
-                color: 'var(--primary-dark)',
-                marginBottom: 16,
-              }}
-            >
-              {selEmprestados} {selEmprestados === 1 ? 'item emprestado' : 'itens emprestados'}{' '}
-              em casa — veja no Estoque.
-            </div>
-          )}
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 190 }}>
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 10,
-                  marginBottom: 6,
+                  gap: 12,
+                  padding: '11px 14px',
+                  borderTop: '1px solid var(--border)',
                 }}
               >
-                <Lbl>FREQUÊNCIA</Lbl>
-                <span style={{ width: 118 }}>
-                  <Select
-                    value={vistaFreq}
-                    onChange={setVistaFreq}
-                    options={VISTAS}
-                    ariaLabel="Turno da frequência"
-                  />
+                <span style={{ width: 12, height: 12, borderRadius: 3, background: '#C4798A' }} />
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>
+                  Granny squares (metades contam meio)
                 </span>
-              </div>
-              <Progress pct={`${selFreq?.[vista].pct ?? 0}%`} />
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                {/* o total dela não é a soma dos dois turnos: quem é de um turno
-                    só não tem o outro no denominador — daí dizer de quais são */}
-                {selFreq?.[vista].presentes ?? 0}/{selFreq?.[vista].total ?? 0} encontros
-                {vistaFreq === 'ambos'
-                  ? sel.turno === 'ambos'
-                    ? ''
-                    : ` ${TURNO_LABEL[sel.turno].toLowerCase()}s`
-                  : ` ${vistaFreq}s`}{' '}
-                · {selFreq?.[vista].pct ?? 0}%
+                <b style={{ fontSize: 15 }}>{fmtEntrega(selEntregas.grannies)}</b>
               </div>
             </div>
-            <div
-              style={{
-                textAlign: 'center',
-                borderLeft: '1px solid var(--border)',
-                paddingLeft: 16,
-              }}
-            >
-              <div className="h" style={{ fontSize: 24, color: 'var(--accent)' }}>
-                {fmtEntrega(selEntregas.total)}
+            {selEmprestados > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: 'var(--chip-rose)',
+                  borderRadius: 10,
+                  padding: '9px 12px',
+                  fontSize: 11.5,
+                  color: 'var(--primary-dark)',
+                  marginBottom: 16,
+                }}
+              >
+                {selEmprestados} {selEmprestados === 1 ? 'item emprestado' : 'itens emprestados'} em
+                casa
               </div>
-              <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>entregas no semestre</div>
+            )}
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 190 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 10,
+                    marginBottom: 6,
+                  }}
+                >
+                  <Lbl>FREQUÊNCIA</Lbl>
+                  <span style={{ width: 118 }}>
+                    <Select
+                      value={vistaFreq}
+                      onChange={setVistaFreq}
+                      options={VISTAS}
+                      ariaLabel="Turno da frequência"
+                    />
+                  </span>
+                </div>
+                <Progress pct={`${selFreq?.[vista].pct ?? 0}%`} />
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+                  {/* o total dela não é a soma dos dois turnos: quem é de um turno
+                    só não tem o outro no denominador — daí dizer de quais são */}
+                  {selFreq?.[vista].presentes ?? 0}/{selFreq?.[vista].total ?? 0} encontros
+                  {vistaFreq === 'ambos'
+                    ? sel.turno === 'ambos'
+                      ? ''
+                      : ` ${TURNO_LABEL[sel.turno].toLowerCase()}s`
+                    : ` ${vistaFreq}s`}{' '}
+                  · {selFreq?.[vista].pct ?? 0}%
+                </div>
+              </div>
+              <div
+                style={{
+                  textAlign: 'center',
+                  borderLeft: '1px solid var(--border)',
+                  paddingLeft: 16,
+                }}
+              >
+                <div className="h" style={{ fontSize: 24, color: 'var(--accent)' }}>
+                  {fmtEntrega(selEntregas.total)}
+                </div>
+                <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>entregas no semestre</div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     </div>
   )

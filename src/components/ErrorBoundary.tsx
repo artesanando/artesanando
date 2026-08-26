@@ -31,8 +31,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
           <div
             style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--ink-soft)', marginBottom: 18 }}
           >
-            Pode ser a conexão ou um erro passageiro. Seus dados estão seguros no servidor — é só
-            recarregar.
+            Pode ser a conexão ou um erro passageiro.
           </div>
           <button className="pill" onClick={() => window.location.reload()}>
             Recarregar a página

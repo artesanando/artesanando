@@ -28,7 +28,11 @@ export function ProjetosPage() {
   const semestre = useLabelSemestre()
   const acoesProjeto = useAcoesProjeto()
 
-  const { data: projetos, isLoading, isError } = useQuery({
+  const {
+    data: projetos,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ['projetos'],
     queryFn: fetchProjetos,
   })
@@ -140,7 +144,7 @@ export function ProjetosPage() {
               ? 'Nenhuma manta em produção.'
               : aba === 'amigurumis'
                 ? 'Nenhum tipo de amigurumi em produção.'
-                : 'Nenhum projeto ainda — comece pelo botão acima.'}
+                : 'Nenhum projeto ainda.'}
         </div>
       )}
       {mostraMantas && mantas.length > 0 && (
@@ -150,7 +154,9 @@ export function ProjetosPage() {
           </div>
           <div
             className="pgrid"
-            style={{ '--cols': '1fr 1fr', '--gap': '12px', marginBottom: 26 } as React.CSSProperties}
+            style={
+              { '--cols': '1fr 1fr', '--gap': '12px', marginBottom: 26 } as React.CSSProperties
+            }
           >
             {mantas.map((p) => {
               const pr = progressoDe(p)
@@ -313,4 +319,10 @@ function SeloArquivado({ projeto }: { projeto: Projeto }) {
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`
 
 const iconeDoTipo = (tipo: ProjetoTipo) =>
-  tipo === 'manta_croche' ? <IconCroche /> : tipo === 'manta_trico' ? <IconTrico /> : <IconAmigurumi />
+  tipo === 'manta_croche' ? (
+    <IconCroche />
+  ) : tipo === 'manta_trico' ? (
+    <IconTrico />
+  ) : (
+    <IconAmigurumi />
+  )

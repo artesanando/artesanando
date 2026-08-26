@@ -167,8 +167,7 @@ function NivelRegra({
             marginBottom: 10,
           }}
         >
-          Sem exigência nenhuma, ninguém do nível {rotulo} recebe crédito automático — só quem a
-          coordenação der como cumprida à mão.
+          Sem exigência, o crédito de {rotulo} só sai à mão pela coordenação.
         </div>
       ) : (
         <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', marginBottom: 10 }}>
@@ -199,7 +198,9 @@ function NivelRegra({
         type="button"
         className="pill ghost"
         style={{ padding: '7px 16px', fontSize: 12, marginTop: blocos.length > 0 ? 14 : 0 }}
-        onClick={() => mudar(() => criarBloco(semestreId, nivel, blocos.length), 'Exigência criada')}
+        onClick={() =>
+          mudar(() => criarBloco(semestreId, nivel, blocos.length), 'Exigência criada')
+        }
       >
         + Exigência
       </button>
@@ -281,7 +282,7 @@ function Exigencia({
 
       {bloco.linhas.length === 0 && (
         <div style={{ fontSize: 12, color: 'var(--faint)', marginBottom: 4 }}>
-          Nenhuma forma de cumprir ainda — do jeito que está, ninguém fecha esta exigência.
+          Nenhuma forma de cumprir ainda.
         </div>
       )}
 
@@ -290,7 +291,13 @@ function Exigencia({
         return (
           <div
             key={l.id}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '3px 0' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 13,
+              padding: '3px 0',
+            }}
           >
             <span style={{ flex: 1 }}>
               {/* o "ou" já diz que basta uma; não é preciso rotular a exigência */}

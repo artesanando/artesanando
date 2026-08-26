@@ -91,9 +91,8 @@ export function NovaSenhaPage({ modo }: { modo: 'redefinir' | 'definir' }) {
               marginBottom: 18,
             }}
           >
-            Daqui em diante você entra com o usuário{' '}
-            <b style={{ color: 'var(--accent)' }}>{profile.usuario}</b> e a senha que criar
-            agora. Anote.
+            Você entra no app com o usuário{' '}
+            <b style={{ color: 'var(--accent)' }}>{profile.usuario}</b>.
           </div>
         )}
         <Lbl style={{ marginBottom: 7 }}>NOVA SENHA</Lbl>

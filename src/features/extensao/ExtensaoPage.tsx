@@ -47,7 +47,8 @@ import {
   type TipoArquivo,
 } from './api'
 
-type Secao = 'regras' | 'creditos' | 'frequencia' | 'entregas' | 'chamadas' | 'arquivos' | 'auditoria'
+type Secao =
+  'regras' | 'creditos' | 'frequencia' | 'entregas' | 'chamadas' | 'arquivos' | 'auditoria'
 
 /* A regra vem antes de quem cumpriu: é ela que define o resto da página, e é a
    primeira coisa a montar quando o semestre começa. */
@@ -74,9 +75,9 @@ async function copiarTabela(
 }
 
 const AJUDA_TOTAL =
-  'Presenças sobre os encontros do turno dela: quem é só do noturno não leva falta por encontro diurno. Por isso não é a soma de diurno e noturno.'
+  'Não é a soma de diurno e noturno: conta só os encontros do turno dela, então quem é só do noturno não leva falta por encontro diurno.'
 const AJUDA_ENTREGAS =
-  'Peças entregues no semestre: cada amigurumi concluído e cada faixa feita valem 1; no granny square, o miolo vale 0,5 e a borda 0,5.'
+  'Cada amigurumi concluído e cada faixa feita valem 1. No granny square, o miolo vale 0,5 e a borda 0,5.'
 type Situacao = 'todas' | 'cumpriu' | 'andamento'
 
 const SITUACOES: [Situacao, string][] = [
@@ -85,10 +86,9 @@ const SITUACOES: [Situacao, string][] = [
   ['andamento', 'Em andamento'],
 ]
 
-const AJUDA_SQUARES =
-  'O square costuma ser dividido: quem faz o miolo leva 0,5 e quem faz a borda leva 0,5. Quem fez as duas metades leva 1.'
+const AJUDA_SQUARES = 'O square costuma ser dividido: o miolo vale 0,5 e a borda vale 0,5.'
 const AJUDA_FEIRA =
-  'Peças que ela fez e foram para a feira, contadas uma a uma — as que ainda estão na caixa e as já vendidas. Item de feira arquivado sai da conta.'
+  'Peças que ela fez e foram para a feira, na caixa ou já vendidas. Item de feira arquivado sai da conta.'
 
 const item = (on: boolean): CSSProperties => ({
   padding: '9px 12px',
@@ -139,25 +139,25 @@ export function ExtensaoPage() {
         }
       />
       <div className="pgrid" style={{ '--cols': '180px 1fr', '--gap': '34px' } as CSSProperties}>
-      {/* sete botões empilhados ocupavam quase uma tela antes do conteúdo no
+        {/* sete botões empilhados ocupavam quase uma tela antes do conteúdo no
           celular; lá o menu vira uma faixa que rola de lado */}
-      <div className="menu-extensao">
-        {SECOES.map(([k, label]) => (
-          <button key={k} style={item(secao === k)} onClick={() => setSecao(k)}>
-            {label}
-          </button>
-        ))}
-      </div>
+        <div className="menu-extensao">
+          {SECOES.map(([k, label]) => (
+            <button key={k} style={item(secao === k)} onClick={() => setSecao(k)}>
+              {label}
+            </button>
+          ))}
+        </div>
 
-      <div>
-        {secao === 'creditos' && <Creditos semestreId={semestreId} />}
-        {secao === 'regras' && <RegrasDoSemestre semestreId={semestreId} />}
-        {secao === 'frequencia' && <Frequencia semestreId={semestreId} />}
-        {secao === 'entregas' && <Entregas semestreId={semestreId} />}
-        {secao === 'chamadas' && <Chamadas semestreId={semestreId} />}
-        {secao === 'arquivos' && <Arquivos semestreId={semestreId} />}
-        {secao === 'auditoria' && <Auditoria semestreId={semestreId} />}
-      </div>
+        <div>
+          {secao === 'creditos' && <Creditos semestreId={semestreId} />}
+          {secao === 'regras' && <RegrasDoSemestre semestreId={semestreId} />}
+          {secao === 'frequencia' && <Frequencia semestreId={semestreId} />}
+          {secao === 'entregas' && <Entregas semestreId={semestreId} />}
+          {secao === 'chamadas' && <Chamadas semestreId={semestreId} />}
+          {secao === 'arquivos' && <Arquivos semestreId={semestreId} />}
+          {secao === 'auditoria' && <Auditoria semestreId={semestreId} />}
+        </div>
       </div>
     </div>
   )
@@ -365,7 +365,9 @@ function Entregas({ semestreId }: { semestreId: string | null }) {
       : { amigurumis: 0, faixas: 0, grannies: 0, feira: 0, total: 0 }),
   }))
 
-  const visiveis = ord.ordenar(filtraLinhas(linhas, busca), (l, k) => (k === 'nome' ? l.nome : l[k]))
+  const visiveis = ord.ordenar(filtraLinhas(linhas, busca), (l, k) =>
+    k === 'nome' ? l.nome : l[k],
+  )
   const soma = linhas.reduce((s, l) => s + l.total, 0)
 
   return (
@@ -393,14 +395,7 @@ function Entregas({ semestreId }: { semestreId: string | null }) {
           onClick={() =>
             copiarTabela(
               ['Integrante', 'Amigurumis', 'Faixas', 'Squares', 'Feira', 'Total'],
-              visiveis.map((l) => [
-                l.nome,
-                l.amigurumis,
-                l.faixas,
-                l.grannies,
-                l.feira,
-                l.total,
-              ]),
+              visiveis.map((l) => [l.nome, l.amigurumis, l.faixas, l.grannies, l.feira, l.total]),
               toast,
             )
           }
@@ -934,7 +929,12 @@ function Creditos({ semestreId }: { semestreId: string | null }) {
           <CampoBusca valor={busca} aoMudar={setBusca} />
         </span>
         <span style={{ width: 168 }}>
-          <Select value={situacao} onChange={setSituacao} options={SITUACOES} ariaLabel="Situação" />
+          <Select
+            value={situacao}
+            onChange={setSituacao}
+            options={SITUACOES}
+            ariaLabel="Situação"
+          />
         </span>
         <span style={{ width: 156 }}>
           <Select

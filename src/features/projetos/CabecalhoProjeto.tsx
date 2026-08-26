@@ -29,8 +29,7 @@ export function AvisoArquivado({ projeto }: { projeto: Projeto }) {
         color: 'var(--gold-dark)',
       }}
     >
-      <b>Projeto arquivado.</b> Ele continua editável, mas fica fora das contas do semestre —
-      restaure pelo menu se voltar a produzir.
+      <b>Projeto arquivado.</b> Fora das contas do semestre, mas ainda editável.
     </div>
   )
 }

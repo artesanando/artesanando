@@ -732,7 +732,7 @@ describe('atividade de extensão', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Frequência' }))
     expect(screen.getByLabelText('Buscar integrante')).toBeInTheDocument()
     // o total não é a soma dos turnos, e a entrega virou fracionária
-    expect(screen.getByRole('button', { name: /não é a soma de diurno e noturno/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Não é a soma de diurno e noturno/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /o miolo vale 0,5 e a borda 0,5/ })).toBeInTheDocument()
   })
 

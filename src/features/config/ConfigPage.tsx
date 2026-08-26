@@ -6,7 +6,12 @@ import { DatePicker } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirmar } from '../../components/ui/Confirm'
 import { hojeIso } from '../../lib/format'
-import { ativarSemestre, atualizarSemestre, criarSemestre, fetchSemestres } from '../../lib/semestre'
+import {
+  ativarSemestre,
+  atualizarSemestre,
+  criarSemestre,
+  fetchSemestres,
+} from '../../lib/semestre'
 import { useAuth } from '../../state/auth'
 import { definirPapel } from '../integrantes/api'
 import { fetchPermissoes, togglePermissao, type PermCol } from './api'
@@ -57,19 +62,19 @@ export function ConfigPage() {
     <div className="pagina">
       <CabecalhoPagina titulo="Ajustes" sub="Permissões e semestre" />
       <div className="pgrid" style={{ '--cols': '180px 1fr', '--gap': '34px' } as CSSProperties}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <button style={item(secao === 'permissoes')} onClick={() => setSecao('permissoes')}>
-          Permissões
-        </button>
-        <button style={item(secao === 'projeto')} onClick={() => setSecao('projeto')}>
-          Semestre
-        </button>
-      </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <button style={item(secao === 'permissoes')} onClick={() => setSecao('permissoes')}>
+            Permissões
+          </button>
+          <button style={item(secao === 'projeto')} onClick={() => setSecao('projeto')}>
+            Semestre
+          </button>
+        </div>
 
-      <div>
-        {secao === 'permissoes' && <Permissoes />}
-        {secao === 'projeto' && <SecaoProjeto />}
-      </div>
+        <div>
+          {secao === 'permissoes' && <Permissoes />}
+          {secao === 'projeto' && <SecaoProjeto />}
+        </div>
       </div>
     </div>
   )
@@ -129,9 +134,7 @@ function Permissoes() {
       return
     }
     const ok = await confirmar({
-      titulo: admin
-        ? `${nome} deixa de ser administradora?`
-        : `Tornar ${nome} administradora?`,
+      titulo: admin ? `${nome} deixa de ser administradora?` : `Tornar ${nome} administradora?`,
       okLabel: admin ? 'Tornar integrante' : 'Tornar administradora',
       perigo: admin,
     })
@@ -194,84 +197,84 @@ function Permissoes() {
         {ordenados.map((p) => {
           const admin = p.papel === 'admin'
           return (
-          <div key={p.id} className="linha-perm" style={colunas}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-              <AvatarPerfil
-                nome={p.nome}
-                avatarColor={p.avatar_color}
-                avatarUrl={p.avatar_url}
-                size={28}
-                fontSize={10}
-              />
-              <div style={{ minWidth: 0 }}>
-                <b style={{ fontSize: 13 }}>{p.nome}</b>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: 'var(--muted)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {admin
-                    ? 'administradora — acesso total'
-                    : p.user_id
-                      ? `@${p.usuario}`
-                      : 'ainda sem conta'}
-                </div>
-              </div>
-            </div>
-            {COLS.map(([col, label]) => {
-              const value = admin || (p.permissoes?.[col] ?? false)
-              return (
-                <div key={col} className="cel-perm">
-                  <span className="rotulo-perm">{label}</span>
-                  <button
-                    type="button"
-                    className="sw"
-                    role="switch"
-                    aria-checked={value}
-                    aria-label={`${label} de ${p.nome}`}
-                    disabled={admin}
-                    onClick={() => toggle.mutate({ id: p.id, col, value: !value })}
+            <div key={p.id} className="linha-perm" style={colunas}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                <AvatarPerfil
+                  nome={p.nome}
+                  avatarColor={p.avatar_color}
+                  avatarUrl={p.avatar_url}
+                  size={28}
+                  fontSize={10}
+                />
+                <div style={{ minWidth: 0 }}>
+                  <b style={{ fontSize: 13 }}>{p.nome}</b>
+                  <div
                     style={{
-                      background: value ? 'var(--primary)' : '#E7DCCF',
-                      cursor: admin ? 'default' : 'pointer',
-                      border: 'none',
-                      padding: 0,
-                      opacity: admin ? 0.45 : toggle.isPending ? 0.6 : 1,
-                      transition: 'background var(--dur-rapida) var(--ease-suave)',
+                      fontSize: 11,
+                      color: 'var(--muted)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
                     }}
                   >
-                    <span style={value ? { right: 2 } : { left: 2 }} />
-                  </button>
+                    {admin
+                      ? 'administradora — acesso total'
+                      : p.user_id
+                        ? `@${p.usuario}`
+                        : 'ainda sem conta'}
+                  </div>
                 </div>
-              )
-            })}
-            <div className="cel-perm">
-              <span className="rotulo-perm">{COL_ADMIN}</span>
-              <button
-                type="button"
-                className="sw"
-                role="switch"
-                aria-checked={admin}
-                aria-label={`${COL_ADMIN} de ${p.nome}`}
-                disabled={p.id === meuId || papel.isPending}
-                onClick={() => promover(p.id, p.nome, admin)}
-                style={{
-                  background: admin ? 'var(--primary)' : '#E7DCCF',
-                  cursor: p.id === meuId ? 'default' : 'pointer',
-                  border: 'none',
-                  padding: 0,
-                  opacity: p.id === meuId ? 0.45 : papel.isPending ? 0.6 : 1,
-                  transition: 'background var(--dur-rapida) var(--ease-suave)',
-                }}
-              >
-                <span style={admin ? { right: 2 } : { left: 2 }} />
-              </button>
+              </div>
+              {COLS.map(([col, label]) => {
+                const value = admin || (p.permissoes?.[col] ?? false)
+                return (
+                  <div key={col} className="cel-perm">
+                    <span className="rotulo-perm">{label}</span>
+                    <button
+                      type="button"
+                      className="sw"
+                      role="switch"
+                      aria-checked={value}
+                      aria-label={`${label} de ${p.nome}`}
+                      disabled={admin}
+                      onClick={() => toggle.mutate({ id: p.id, col, value: !value })}
+                      style={{
+                        background: value ? 'var(--primary)' : '#E7DCCF',
+                        cursor: admin ? 'default' : 'pointer',
+                        border: 'none',
+                        padding: 0,
+                        opacity: admin ? 0.45 : toggle.isPending ? 0.6 : 1,
+                        transition: 'background var(--dur-rapida) var(--ease-suave)',
+                      }}
+                    >
+                      <span style={value ? { right: 2 } : { left: 2 }} />
+                    </button>
+                  </div>
+                )
+              })}
+              <div className="cel-perm">
+                <span className="rotulo-perm">{COL_ADMIN}</span>
+                <button
+                  type="button"
+                  className="sw"
+                  role="switch"
+                  aria-checked={admin}
+                  aria-label={`${COL_ADMIN} de ${p.nome}`}
+                  disabled={p.id === meuId || papel.isPending}
+                  onClick={() => promover(p.id, p.nome, admin)}
+                  style={{
+                    background: admin ? 'var(--primary)' : '#E7DCCF',
+                    cursor: p.id === meuId ? 'default' : 'pointer',
+                    border: 'none',
+                    padding: 0,
+                    opacity: p.id === meuId ? 0.45 : papel.isPending ? 0.6 : 1,
+                    transition: 'background var(--dur-rapida) var(--ease-suave)',
+                  }}
+                >
+                  <span style={admin ? { right: 2 } : { left: 2 }} />
+                </button>
+              </div>
             </div>
-          </div>
           )
         })}
       </div>
@@ -330,14 +333,13 @@ function SecaoProjeto() {
         Semestre do projeto
       </div>
       <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 18 }}>
-        O semestre ativo é o que aparece em Projetos e no Financeiro, e o que os projetos e
-        encontros novos recebem.
+        Vale para Projetos, Financeiro e tudo que for criado novo.
       </div>
 
       <div className="card" style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 24 }}>
         {(semestres ?? []).length === 0 && (
           <div style={{ padding: 18, fontSize: 13, color: 'var(--muted)' }}>
-            Nenhum semestre cadastrado — crie o primeiro abaixo.
+            Nenhum semestre cadastrado.
           </div>
         )}
         {(semestres ?? []).map((s) => (

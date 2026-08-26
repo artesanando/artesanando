@@ -77,8 +77,7 @@ export function QuadroEtapas({
         mioloPor: v.mioloPor,
         bordaPor: v.bordaPor,
         autorId: profile!.id,
-        quemNome:
-          porPessoa.get(v.mioloPor ?? v.bordaPor ?? v.responsavelId ?? '')?.nome ?? null,
+        quemNome: porPessoa.get(v.mioloPor ?? v.bordaPor ?? v.responsavelId ?? '')?.nome ?? null,
       }),
     /* Sem isso o cartão fica parado até a resposta chegar e o arrasto parece
        não ter pegado. */
@@ -113,7 +112,7 @@ export function QuadroEtapas({
   const quemEsta = (metade: 'miolo' | 'borda') =>
     perguntarQuem(
       metade === 'miolo' ? 'Quem vai fazer o miolo?' : 'Quem vai fazer a borda?',
-      'Fica no cartão enquanto a peça estiver com ela. A entrega só conta quando a metade ficar pronta.',
+      'Fica no cartão enquanto a peça estiver com ela.',
       'QUEM PEGOU',
     )
 
