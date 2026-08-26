@@ -76,46 +76,45 @@ export function BibliotecaPage() {
           )
         }
       />
-      <div style={{ display: 'flex', gap: 10, marginBottom: 22, alignItems: 'center' }}>
+      {/* No celular a busca ficava na mesma linha dos cinco chips, que nao
+          quebram: sobravam 30px de campo, onde nao cabe nem uma letra. Agora a
+          busca tem a linha dela e os chips rolam de lado. */}
+      <div className="barra-filtros">
         <input
           className="field"
-          style={{ flex: 1, borderRadius: 99 }}
+          style={{ borderRadius: 99 }}
           placeholder="Buscar receita ou padrão…"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           aria-label="Buscar receita ou padrão"
         />
-        {CHIPS.map(([k, label]) => (
-          <span
-            key={k}
-            className="tag"
-            onClick={() => setCat(k)}
-            style={{
-              cursor: 'pointer',
-              padding: '6px 14px',
-              whiteSpace: 'nowrap',
-              ...(cat === k
-                ? { background: 'var(--primary)', color: '#fff' }
-                : { border: '1px solid var(--field-border)', color: 'var(--ink-soft)' }),
-            }}
-          >
-            {label}
-          </span>
-        ))}
-        {arquivados.length > 0 && (
-          <button
-            className="crumb"
-            style={{
-              border: 'none',
-              background: 'none',
-              fontFamily: 'inherit',
-              whiteSpace: 'nowrap',
-            }}
-            onClick={() => setVerArquivadas((v) => !v)}
-          >
-            {verArquivadas ? 'Voltar às ativas' : `Arquivadas (${arquivados.length})`}
-          </button>
-        )}
+        <div className="chips-filtros">
+          {CHIPS.map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              className="chip"
+              aria-pressed={cat === k}
+              onClick={() => setCat(k)}
+            >
+              {label}
+            </button>
+          ))}
+          {arquivados.length > 0 && (
+            <button
+              className="crumb"
+              style={{
+                border: 'none',
+                background: 'none',
+                fontFamily: 'inherit',
+                whiteSpace: 'nowrap',
+              }}
+              onClick={() => setVerArquivadas((v) => !v)}
+            >
+              {verArquivadas ? 'Voltar às ativas' : `Arquivadas (${arquivados.length})`}
+            </button>
+          )}
+        </div>
       </div>
       {isLoading && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Carregando…</div>}
       {isError && (

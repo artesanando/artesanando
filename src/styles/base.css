@@ -321,6 +321,65 @@ textarea.field::placeholder {
   align-items: start;
 }
 
+/* faixa de números da Início */
+.faixa-kpi {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
+  padding: 18px 0;
+  margin-bottom: 30px;
+}
+.faixa-kpi > div {
+  min-width: 0;
+  padding: 0 22px;
+}
+.faixa-kpi > div + div {
+  border-left: 1px solid var(--border);
+}
+.kpi-numero {
+  font-size: 30px;
+}
+.kpi-rotulo {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* busca + chips de categoria: uma linha no computador, duas no celular */
+.barra-filtros {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 22px;
+}
+.barra-filtros > .field {
+  flex: 1;
+  min-width: 0;
+}
+.chips-filtros {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.chip {
+  border: 1px solid var(--field-border);
+  background: none;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  padding: 7px 14px;
+  border-radius: 99px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.chip[aria-pressed='true'] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
 /* ---------- Pop-ups próprios (substituem os controles do navegador) ---------- */
 
 .pop {
@@ -1021,11 +1080,30 @@ textarea.field::placeholder {
     display: block;
   }
 
+  /* `1fr` sozinho tem mínimo automático: a trilha inchava até o min-content do
+     conteúdo (363px numa tela de 320) e a lista saía pela direita. */
   .pgrid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: minmax(0, 1fr) !important;
   }
   .grid2 {
     grid-template-columns: 1fr;
+  }
+  .barra-filtros {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  /* os chips não quebram linha: rolam de lado, como o menu da extensão */
+  .chips-filtros {
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .chips-filtros::-webkit-scrollbar {
+    display: none;
+  }
+  .chips-filtros > * {
+    flex: none;
   }
   .ov {
     padding: 20px 12px;
@@ -1037,6 +1115,26 @@ textarea.field::placeholder {
 
 /* Celular: alvos de toque confortáveis e tabelas viram cartão. */
 @media (max-width: 640px) {
+  /* cinco números não cabem lado a lado num celular; em duas colunas a
+     divisória vertical só vale para quem está à direita na linha. */
+  .faixa-kpi {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 0;
+    padding: 16px 0;
+    margin-bottom: 24px;
+  }
+  .faixa-kpi > div {
+    padding: 0 14px;
+  }
+  .faixa-kpi > div + div {
+    border-left: none;
+  }
+  .faixa-kpi > div:nth-child(2n) {
+    border-left: 1px solid var(--border);
+  }
+  .kpi-numero {
+    font-size: 26px;
+  }
   .pill {
     padding: 11px 18px;
   }

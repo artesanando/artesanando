@@ -469,10 +469,19 @@ export function IntegrantesPage() {
                 size={52}
                 fontSize={18}
               />
-              <div>
+              {/* sem `minWidth: 0` o item de flex nao encolhe abaixo do proprio
+                  min-content: numa tela de 320 o nome empurrava a ficha inteira
+                  para fora da direita */}
+              <div style={{ minWidth: 0 }}>
                 <div
                   className="h"
-                  style={{ fontSize: 19, display: 'flex', alignItems: 'center', gap: 8 }}
+                  style={{
+                    fontSize: 19,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    flexWrap: 'wrap',
+                  }}
                 >
                   {sel.nome}
                   {/* o selo estava só na lista: aberta a ficha, nada dizia que ela
@@ -502,6 +511,7 @@ export function IntegrantesPage() {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
+                      flexWrap: 'wrap',
                       gap: 8,
                       marginTop: 8,
                       fontSize: 11.5,

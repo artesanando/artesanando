@@ -101,28 +101,15 @@ export function InicioPage() {
           )
         }
       />
-      <div
-        style={{
-          display: 'flex',
-          borderTop: '1px solid var(--border-strong)',
-          borderBottom: '1px solid var(--border-strong)',
-          padding: '18px 0',
-          marginBottom: 30,
-        }}
-      >
-        {kpis.map(([n, l], i) => (
-          <div
-            key={l}
-            style={{
-              flex: 1,
-              padding: '0 22px',
-              borderRight: i < kpis.length - 1 ? '1px solid var(--border)' : undefined,
-            }}
-          >
-            <div className="h" style={{ fontSize: 30 }}>
-              {n}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700 }}>{l}</div>
+      {/* Grade, e nao flex: cinco itens em `flex: 1` com minimo automatico nao
+          encolhiam, somavam 549px numa tela de 320 e punham o app inteiro para
+          rolar de lado. As divisorias vivem no CSS, que sabe quem e vizinho de
+          quem depois da quebra de linha. */}
+      <div className="faixa-kpi">
+        {kpis.map(([n, l]) => (
+          <div key={l}>
+            <div className="h kpi-numero">{n}</div>
+            <div className="kpi-rotulo">{l}</div>
           </div>
         ))}
       </div>
