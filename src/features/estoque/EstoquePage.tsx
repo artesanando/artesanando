@@ -270,6 +270,7 @@ export function EstoquePage() {
                 {can('devolucoes') && (
                   <button
                     style={{
+                      minHeight: 'var(--toque)',
                       fontSize: 11.5,
                       fontWeight: 800,
                       color: 'var(--accent)',

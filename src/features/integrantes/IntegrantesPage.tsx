@@ -189,6 +189,7 @@ export function IntegrantesPage() {
                   alignItems: 'center',
                   gap: 8,
                   width: '100%',
+                  minHeight: 'var(--toque)',
                   border: 'none',
                   background: 'none',
                   padding: 0,

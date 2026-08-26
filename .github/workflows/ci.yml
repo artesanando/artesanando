@@ -19,3 +19,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      # a checagem de celular roda contra o fake do Supabase: sem credencial e
+      # sem rede, só o navegador
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check:mobile

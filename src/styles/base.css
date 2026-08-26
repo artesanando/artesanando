@@ -177,6 +177,21 @@ a:hover {
   border-radius: 50%;
   background: #fff;
 }
+.campo-senha {
+  font-size: 13px;
+}
+/* o olho de mostrar senha tinha 16x16 de área clicável */
+.olho-senha {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--faint);
+  display: flex;
+  flex: none;
+  position: relative;
+}
+
 /* o − e o + do Stepper */
 .passo {
   border: none;
@@ -1360,6 +1375,14 @@ textarea.field::placeholder {
     content: '';
     position: absolute;
     inset: -13px -10px;
+  }
+  .olho-senha::after {
+    content: '';
+    position: absolute;
+    inset: -14px;
+  }
+  .campo-senha {
+    font-size: 16px; /* mesmo motivo do .field: menos que isso, o iOS dá zoom */
   }
   .field {
     padding: 12px 14px;

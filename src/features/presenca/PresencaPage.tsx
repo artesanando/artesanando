@@ -225,6 +225,7 @@ export function PresencaPage() {
                   style={{
                     flex: 1,
                     minWidth: 0,
+                    minHeight: 'var(--toque)',
                     textAlign: 'left',
                     border: 'none',
                     background: 'none',

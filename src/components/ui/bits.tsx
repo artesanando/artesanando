@@ -42,13 +42,13 @@ export function PasswordField({
         onChange={(e) => onChange(e.target.value)}
         autoComplete={autoComplete}
         aria-label={ariaLabel}
+        className="campo-senha"
         style={{
           flex: 1,
           border: 'none',
           outline: 'none',
           background: 'none',
           fontFamily: 'inherit',
-          fontSize: 13,
           color: 'var(--ink)',
           padding: 0,
           width: '100%',
@@ -58,15 +58,7 @@ export function PasswordField({
         type="button"
         onClick={() => setMostrar((m) => !m)}
         aria-label={mostrar ? 'Ocultar senha' : 'Mostrar senha'}
-        style={{
-          background: 'none',
-          border: 'none',
-          padding: 0,
-          cursor: 'pointer',
-          color: 'var(--faint)',
-          display: 'flex',
-          flex: 'none',
-        }}
+        className="olho-senha"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path

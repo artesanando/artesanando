@@ -3,9 +3,33 @@
 import type { Profile } from '../types/database'
 
 type Listener = (event: string, session: unknown) => void
+type Sessao = { user: { id: string } } | null
+
+/* A sessão sobrevive ao recarregamento, como no cliente de verdade. Sem isto o
+   `npm run check:mobile`, que abre cada rota pela URL, caía na tela de login em
+   todas elas e media a tela errada. */
+const CHAVE = 'artesanando:fake-sessao'
+
+const leSessao = (): Sessao => {
+  try {
+    const cru = localStorage.getItem(CHAVE)
+    return cru ? (JSON.parse(cru) as Sessao) : null
+  } catch {
+    return null
+  }
+}
+
+const gravaSessao = (s: Sessao) => {
+  try {
+    if (s) localStorage.setItem(CHAVE, JSON.stringify(s))
+    else localStorage.removeItem(CHAVE)
+  } catch {
+    /* modo privado, ou sem localStorage: a sessão só vive na memória */
+  }
+}
 
 let listeners: Listener[] = []
-let currentSession: { user: { id: string } } | null = null
+let currentSession: Sessao = leSessao()
 
 export const ADMIN_PROFILE: Profile = {
   id: 'u1',
@@ -534,10 +558,12 @@ const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
 
 export function __login(profile: Profile = ADMIN_PROFILE) {
   currentSession = { user: { id: profile.id } }
+  gravaSessao(currentSession)
 }
 
 export function __reset() {
   currentSession = null
+  gravaSessao(null)
   listeners = []
 }
 
@@ -584,7 +610,7 @@ function builder(table: string) {
 
 export const supabase = {
   auth: {
-    getSession: async () => ({ data: { session: currentSession } }),
+    getSession: async () => ({ data: { session: currentSession ?? leSessao() } }),
     onAuthStateChange: (cb: Listener) => {
       listeners.push(cb)
       return { data: { subscription: { unsubscribe() {} } } }
@@ -599,6 +625,7 @@ export const supabase = {
     },
     signOut: async () => {
       currentSession = null
+      gravaSessao(null)
       listeners.forEach((cb) => cb('SIGNED_OUT', null))
       return { error: null }
     },
