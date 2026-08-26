@@ -129,7 +129,7 @@ export function ModalIntegrante() {
                 </button>
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--gold-dark)', marginBottom: 20 }}>
-                Vale uma vez e expira — mande só em conversa privada.
+                Vale como senha. Mande só em conversa privada.
               </div>
             </>
           )}

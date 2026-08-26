@@ -14,9 +14,9 @@ function motivoDoLink(): string | null {
   if (!p.get('error') && !p.get('error_code')) return null
   const codigo = p.get('error_code') ?? ''
   if (codigo.includes('expired')) {
-    return 'Este link expirou. Peça um novo à administradora — cada link vale uma vez só.'
+    return 'Este link expirou. Peça um novo à administradora.'
   }
-  return 'Este link não vale mais: ou já foi aberto uma vez, ou expirou. Peça outro à administradora.'
+  return 'Este link não vale mais. Peça outro à administradora.'
 }
 
 /* Usada tanto em /redefinir-senha (link do "esqueci") quanto em

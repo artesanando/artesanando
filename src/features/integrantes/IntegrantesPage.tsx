@@ -454,7 +454,7 @@ export function IntegrantesPage() {
                             </button>
                           </div>
                           <div style={{ fontSize: 11.5, color: 'var(--gold-dark)' }}>
-                            Esse link vale como senha — mande só em conversa privada.
+                            Vale como senha. Mande só em conversa privada.
                           </div>
                         </>
                       )}
