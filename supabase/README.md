@@ -57,8 +57,8 @@ Nada de rodar SQL na mão no painel.
    versão antiga no servidor continua procurando por `profiles.id`.
 
 8. **URLs de autenticação** — *Authentication → URL Configuration*: Site URL = URL da
-   Vercel; adicione `/redefinir-senha` e `/definir-senha` às Redirect URLs. O `site_url`
-   do `config.toml` aponta para o dev local e não substitui esta configuração.
+   Vercel. Não há Redirect URL para cadastrar: o acesso não passa por link nenhum,
+   e sim por usuário + senha provisória gerada pela administradora.
 
 9. **Nada de email** — o projeto não manda mensagem nenhuma, então não há SMTP para
    configurar. O Auth exige um email por conta, e ele é só o identificador interno

@@ -8,7 +8,6 @@ import { ToastProvider } from './components/ui/Toast'
 import { ConfirmProvider } from './components/ui/Confirm'
 import { AppShell } from './components/layout/AppShell'
 import { LoginPage } from './features/auth/LoginPage'
-import { NovaSenhaPage } from './features/auth/NovaSenhaPage'
 import { InicioPage } from './features/inicio/InicioPage'
 import { ProjetosPage } from './features/projetos/ProjetosPage'
 import { ProjetoDetalhePage } from './features/projetos/ProjetoDetalhePage'
@@ -101,8 +100,6 @@ function AppRoutes() {
       <StoreProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/redefinir-senha" element={<NovaSenhaPage modo="redefinir" />} />
-          <Route path="/definir-senha" element={<NovaSenhaPage modo="definir" />} />
           <Route
             element={
               <RequireAuth>

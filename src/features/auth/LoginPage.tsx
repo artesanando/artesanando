@@ -49,7 +49,7 @@ export function LoginPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 7 }}>
           <span className="lbl">SENHA</span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-            esqueceu? peça o link a uma administradora
+            esqueceu? peça uma senha à administradora
           </span>
         </div>
         <PasswordField
