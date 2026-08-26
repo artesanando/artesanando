@@ -112,6 +112,19 @@ a:hover {
   animation: fade var(--dur-media) var(--ease-saida) reverse forwards;
   pointer-events: none;
 }
+.modal-topo {
+  margin-bottom: 20px;
+}
+.modal-rodape {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.modal-rodape.com-legenda {
+  justify-content: space-between;
+}
 @keyframes fade {
   from {
     opacity: 0;
@@ -1368,6 +1381,32 @@ textarea.field::placeholder {
   .ov {
     align-items: flex-end;
     padding: 0;
+  }
+  /* Só o miolo rola: título e botões ficam onde o polegar espera achá-los.
+     Funciona porque no celular quem rola é a própria .modal. */
+  .modal-topo {
+    position: sticky;
+    top: -20px;
+    z-index: 2;
+    background: var(--bg);
+    padding: 20px 0 12px;
+    margin: -20px 0 8px;
+  }
+  .modal-rodape {
+    position: sticky;
+    bottom: calc(-20px - env(safe-area-inset-bottom));
+    z-index: 2;
+    background: var(--bg);
+    border-top: 1px solid var(--divider);
+    padding: 12px 0 calc(20px + env(safe-area-inset-bottom));
+    margin: 12px 0 calc(-20px - env(safe-area-inset-bottom));
+  }
+  /* Formulário que quase enche a tela enche por inteiro — ver ModalBox. O
+     seletor duplo é para ganhar do max-height da folha, logo abaixo. */
+  .modal.modal-tela {
+    border-radius: 0;
+    height: 100dvh;
+    max-height: 100dvh;
   }
   .modal {
     border-radius: 18px 18px 0 0;

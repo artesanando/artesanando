@@ -354,7 +354,8 @@ export function ModalProjeto() {
               type="button"
               onClick={() => openLayout('projeto')}
               style={{
-                marginTop: 10,
+                marginTop: 4,
+                minHeight: 'var(--toque)',
                 fontSize: 12,
                 fontWeight: 800,
                 color: croche ? 'var(--accent)' : 'var(--green-dark)',
@@ -362,7 +363,8 @@ export function ModalProjeto() {
                 border: 'none',
                 background: 'none',
                 fontFamily: 'inherit',
-                padding: 0,
+                padding: '4px 0',
+                textAlign: 'left',
               }}
             >
               + Criar esquema
@@ -492,15 +494,7 @@ export function ModalProjeto() {
           </div>
         )}
 
-        <div
-          style={{
-            display: 'flex',
-            gap: 10,
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-          }}
-        >
+        <div className="modal-rodape com-legenda">
           <LegendaObrigatorio />
           <div style={{ display: 'flex', gap: 10 }}>
             <button type="button" className="pill ghost" onClick={close}>

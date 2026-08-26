@@ -463,7 +463,7 @@ export function ModalLayout() {
               </button>
             ))}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div className="modal-rodape">
             <button type="button" className="pill ghost" onClick={backToProjeto}>
               Voltar
             </button>
@@ -1102,7 +1102,7 @@ export function ModalLayout() {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <div className="modal-rodape">
             <button type="button" className="pill ghost" onClick={backToProjeto}>
               Voltar
             </button>

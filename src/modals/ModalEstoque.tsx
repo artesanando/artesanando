@@ -191,15 +191,7 @@ export function ModalMaterial() {
           />
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            gap: 10,
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-          }}
-        >
+        <div className="modal-rodape com-legenda">
           <LegendaObrigatorio />
           <div style={{ display: 'flex', gap: 10 }}>
             <button type="button" className="pill ghost" onClick={close}>
@@ -386,7 +378,7 @@ export function ModalMovimentoEstoque() {
           </>
         )}
 
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+        <div className="modal-rodape">
           <button type="button" className="pill ghost" onClick={close}>
             Cancelar
           </button>

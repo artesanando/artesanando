@@ -131,7 +131,7 @@ export function ModalIntegrante() {
             </>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div className="modal-rodape">
             <button className="pill" onClick={close}>
               Fechar
             </button>
@@ -264,15 +264,7 @@ export function ModalIntegrante() {
             </div>
           )}
 
-          <div
-            style={{
-              display: 'flex',
-              gap: 10,
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-            }}
-          >
+          <div className="modal-rodape com-legenda">
             <LegendaObrigatorio />
             <div style={{ display: 'flex', gap: 10 }}>
               <button type="button" className="pill ghost" onClick={close}>

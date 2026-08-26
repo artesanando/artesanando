@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useStore } from '../state/store'
 import { usePrendeFoco } from '../components/ui/Popover'
 import { IconX } from '../components/ui/icons'
@@ -15,13 +15,14 @@ export function ModalHeader({ title, sub }: { title: string; sub?: string }) {
   const { close } = useStore()
   const id = useContext(IdTitulo)
   return (
-    <>
+    /* um bloco só, e não dois irmãos soltos: no celular ele gruda no topo da
+       folha, e o título precisa continuar visível enquanto o formulário rola */
+    <div className="modal-topo">
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: sub ? 4 : 20,
         }}
       >
         <div id={id} className="h" style={{ fontSize: 22 }}>
@@ -31,23 +32,7 @@ export function ModalHeader({ title, sub }: { title: string; sub?: string }) {
           <IconX size={15} />
         </button>
       </div>
-      {sub && (
-        <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 20 }}>{sub}</div>
-      )}
-    </>
-  )
-}
-
-export function ModalFooter({ okLabel, cancelLabel }: { okLabel: string; cancelLabel?: string }) {
-  const { close } = useStore()
-  return (
-    <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-      <button className="pill ghost" onClick={close}>
-        {cancelLabel || 'Cancelar'}
-      </button>
-      <button className="pill" onClick={close}>
-        {okLabel}
-      </button>
+      {sub && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 4 }}>{sub}</div>}
     </div>
   )
 }
@@ -68,8 +53,27 @@ export function ModalBox({
 }) {
   const caixa = useRef<HTMLDivElement>(null)
   const id = useRef(`modal-titulo-${++seq}`)
+  const [tela, setTela] = useState(false)
 
   usePrendeFoco(caixa, true)
+
+  /* Formulário que ocupa quase a tela toda vira tela cheia de verdade: a folha
+     de 816px numa tela de 844 deixava uma tira do cabeçalho aparecendo atrás,
+     que parece acidente. Medido, e não decidido modal a modal, porque o
+     conteúdo cresce sozinho — o de projeto ganha campos ao escolher crochê. */
+  useEffect(() => {
+    const el = caixa.current
+    if (!el) return
+    const medir = () => setTela(el.scrollHeight > window.innerHeight * 0.85)
+    medir()
+    const ro = new ResizeObserver(medir)
+    ro.observe(el)
+    window.addEventListener('resize', medir)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', medir)
+    }
+  }, [])
 
   // o fundo não deve rolar enquanto o modal está aberto
   useEffect(() => {
@@ -84,7 +88,7 @@ export function ModalBox({
     <IdTitulo.Provider value={titulo ? undefined : id.current}>
       <div
         ref={caixa}
-        className="modal"
+        className={`modal${tela ? ' modal-tela' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={titulo}

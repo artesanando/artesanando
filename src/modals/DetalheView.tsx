@@ -335,14 +335,8 @@ export function DetalheView({
           </div>
         )}
         <div
-          style={{
-            display: 'flex',
-            gap: 10,
-            justifyContent: 'flex-end',
-            marginTop: 24,
-            paddingTop: 18,
-            borderTop: '1px solid var(--border)',
-          }}
+          className="modal-rodape"
+          style={{ marginTop: 24, paddingTop: 18, borderTop: '1px solid var(--border)' }}
         >
           <button className="pill ghost" onClick={onClose}>
             Fechar

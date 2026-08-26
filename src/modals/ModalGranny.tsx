@@ -251,7 +251,7 @@ export function ModalGranny() {
           {erro}
         </div>
       )}
-      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 22 }}>
+      <div className="modal-rodape" style={{ marginTop: 22 }}>
         <button className="pill ghost" onClick={backToProjeto}>
           Voltar
         </button>

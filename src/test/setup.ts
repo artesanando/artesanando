@@ -16,3 +16,13 @@ if (!window.matchMedia) {
       dispatchEvent: () => false,
     }) as MediaQueryList
 }
+
+/* Mesma história do ResizeObserver: o ModalBox mede o próprio conteúdo para
+   decidir entre folha e tela cheia, e o jsdom não tem o observador. */
+if (!globalThis.ResizeObserver) {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver
+}

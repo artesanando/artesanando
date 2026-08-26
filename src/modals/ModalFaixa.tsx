@@ -307,7 +307,7 @@ export function ModalFaixa() {
           {erro}
         </div>
       )}
-      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+      <div className="modal-rodape">
         <button className="pill ghost" onClick={backToProjeto}>
           Voltar
         </button>
