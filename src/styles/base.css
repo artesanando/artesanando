@@ -295,6 +295,41 @@ textarea.field::placeholder {
 }
 
 /* barra de topo com o hambúrguer — só existe no celular */
+/* Barra de abas do celular: as telas do dia a dia embaixo, ao alcance do
+   polegar. Some no computador, onde quem navega é a barra lateral. */
+.barra-abas {
+  display: none;
+}
+.aba-tab svg {
+  width: 20px;
+  height: 20px;
+}
+.aba-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 58px;
+  padding: 6px 2px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color var(--dur-rapida) var(--ease-suave);
+}
+.aba-tab[aria-current='page'],
+.aba-tab.acesa {
+  color: var(--primary);
+}
+
+.toasts {
+  bottom: 20px;
+}
+
 .topo-movel {
   display: none;
   align-items: center;
@@ -305,21 +340,6 @@ textarea.field::placeholder {
   top: 0;
   background: var(--bg);
   z-index: 40;
-}
-.hamburguer {
-  border: 1px solid var(--field-border);
-  background: none;
-  border-radius: 10px;
-  font-size: 17px;
-  line-height: 1;
-  padding: 8px 11px;
-  cursor: pointer;
-  color: var(--ink-soft);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--toque);
-  min-width: var(--toque);
 }
 .gaveta-fundo {
   position: fixed;
@@ -1113,6 +1133,28 @@ textarea.field::placeholder {
   .topo-movel {
     display: flex;
   }
+  .barra-abas {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    background: var(--bg);
+    border-top: 1px solid var(--border-strong);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* o rodapé da página não pode terminar embaixo da barra */
+  main {
+    padding-bottom: calc(58px + env(safe-area-inset-bottom));
+  }
+  .toasts {
+    bottom: calc(20px + 58px + env(safe-area-inset-bottom));
+    left: 16px;
+    right: 16px;
+  }
   .sidebar {
     position: fixed;
     top: 0;
@@ -1123,13 +1165,20 @@ textarea.field::placeholder {
     align-items: stretch !important;
     z-index: 50;
     transform: translateX(-100%);
-    transition: transform var(--dur-lenta) var(--ease-suave);
+    /* fechada ela sai de cena de verdade: só o transform a tirava da vista, e
+       leitor de tela e busca do teclado continuavam passando pelo menu inteiro
+       por cima da página */
+    visibility: hidden;
+    transition:
+      transform var(--dur-lenta) var(--ease-suave),
+      visibility var(--dur-lenta);
     box-shadow: 0 0 40px rgba(59, 52, 47, 0.18);
     height: 100dvh;
     overflow-y: auto;
   }
   .gaveta-aberta .sidebar {
     transform: translateX(0);
+    visibility: visible;
   }
   /* na gaveta o menu está sempre inteiro — encolher não faz sentido aqui */
   .sidebar-encolher {

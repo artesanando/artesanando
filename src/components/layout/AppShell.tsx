@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar, useMenuEncolhido } from './Sidebar'
+import { BarraAbas } from './BarraAbas'
 import { ModalRoot } from '../../modals/ModalRoot'
 import { ModalPrimeiraSenha } from '../../modals/ModalPrimeiraSenha'
 import { useAuth } from '../../state/auth'
-import { IconMenu } from '../ui/icons'
 
 export function AppShell() {
   const { profile } = useAuth()
@@ -23,16 +23,9 @@ export function AppShell() {
 
   return (
     <>
+      {/* o hambúrguer saiu: quem abre a gaveta agora é o "Mais" da barra de
+          abas, e ter os dois era o mesmo caminho em dois lugares */}
       <header className="topo-movel">
-        <button
-          type="button"
-          className="hamburguer"
-          aria-label="Abrir menu"
-          aria-expanded={gaveta}
-          onClick={() => setGaveta(true)}
-        >
-          <IconMenu />
-        </button>
         <span className="h" style={{ fontSize: 17 }}>
           Artesanando<span style={{ color: 'var(--primary)' }}>.</span>
         </span>
@@ -55,6 +48,7 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
+      <BarraAbas aoAbrirMais={() => setGaveta(true)} gavetaAberta={gaveta} />
       <ModalRoot />
       {profile?.senha_provisoria && <ModalPrimeiraSenha />}
     </>

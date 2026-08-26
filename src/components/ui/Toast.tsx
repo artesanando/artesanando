@@ -26,9 +26,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={{ toast }}>
       {children}
       <div
+        className="toasts"
         style={{
           position: 'fixed',
-          bottom: 20,
           right: 20,
           display: 'flex',
           flexDirection: 'column',

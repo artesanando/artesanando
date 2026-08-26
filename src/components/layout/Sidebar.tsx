@@ -18,7 +18,7 @@ import {
 
 /* `perm` esconde o item de quem não tem a permissão — o caixa do projeto não é
    assunto de todo mundo, e um item que sempre leva a um aviso é ruído. */
-const ITEMS: { to: string; label: string; Icon: () => ReactElement; perm?: Perm }[] = [
+export const ITEMS: { to: string; label: string; Icon: () => ReactElement; perm?: Perm }[] = [
   { to: '/', label: 'Início', Icon: IconDash },
   { to: '/mural', label: 'Mural', Icon: IconGaleria },
   { to: '/projetos', label: 'Projetos', Icon: IconProj },
