@@ -18,6 +18,11 @@ const ROTAS = [
   '/presenca', '/financeiro', '/perfil', '/configuracoes', '/extensao',
 ]
 
+/* Conferidas ANTES de entrar: logada elas redirecionam para dentro do app, e
+   nunca chegariam a ser medidas. O cadastro é o caso que mais importa — o link
+   vai no grupo do WhatsApp e quase todo mundo abre pelo celular. */
+const ROTAS_PUBLICAS = ['/cadastro']
+
 const TOQUE_ALTURA = 44
 /* A largura mínima cede onde a geometria não deixa: sete colunas de calendário
    em 320px dão 35px por dia, e nenhum app resolve isso. */
@@ -87,9 +92,23 @@ function sobeServidor() {
   })
 }
 
+const problemas = []
+
+async function confere(pg, rota, width) {
+  await pg.goto(BASE + rota)
+  await pg.waitForLoadState('networkidle')
+  await pg.waitForTimeout(300)
+  const r = await pg.evaluate(`(${JS})()`)
+  if (r.scrollW > r.vw + 1) {
+    problemas.push(`${width}px ${rota} rola de lado (${r.scrollW} numa tela de ${r.vw}): ${r.fora.join(' | ')}`)
+  }
+  for (const alvo of r.pequenos) {
+    problemas.push(`${width}px ${rota} alvo pequeno: ${alvo}`)
+  }
+}
+
 const servidor = await sobeServidor()
 const navegador = await chromium.launch()
-const problemas = []
 
 try {
   for (const width of LARGURAS) {
@@ -101,24 +120,16 @@ try {
       locale: 'pt-BR',
     })
     const pg = await ctx.newPage()
+
+    for (const rota of ROTAS_PUBLICAS) await confere(pg, rota, width)
+
     await pg.goto(`${BASE}/login`)
     await pg.getByLabel('Usuário').fill('candida.prof')
     await pg.getByRole('textbox', { name: 'Senha' }).fill('12345678')
     await pg.getByRole('button', { name: 'Entrar' }).click()
     await pg.waitForSelector('main', { timeout: 20_000 })
 
-    for (const rota of ROTAS) {
-      await pg.goto(BASE + rota)
-      await pg.waitForLoadState('networkidle')
-      await pg.waitForTimeout(300)
-      const r = await pg.evaluate(`(${JS})()`)
-      if (r.scrollW > r.vw + 1) {
-        problemas.push(`${width}px ${rota} rola de lado (${r.scrollW} numa tela de ${r.vw}): ${r.fora.join(' | ')}`)
-      }
-      for (const alvo of r.pequenos) {
-        problemas.push(`${width}px ${rota} alvo pequeno: ${alvo}`)
-      }
-    }
+    for (const rota of ROTAS) await confere(pg, rota, width)
     await ctx.close()
     console.log(`${width}px conferida`)
   }
