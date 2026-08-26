@@ -500,6 +500,60 @@ textarea.field::placeholder {
   }
 }
 
+/* Folha de ações do celular — o mesmo Popover, servido pelo rodapé. */
+.pop-fundo {
+  position: fixed;
+  inset: 0;
+  background: rgba(59, 52, 47, 0.34);
+  z-index: 75;
+}
+.pop-folha {
+  top: auto;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  min-width: 0 !important;
+  max-height: 85dvh;
+  border: none;
+  border-radius: 18px 18px 0 0;
+  padding: 10px 14px calc(14px + env(safe-area-inset-bottom));
+  box-shadow: 0 -8px 40px rgba(59, 52, 47, 0.24);
+  background: var(--bg);
+}
+.folha-alca {
+  display: block;
+  width: 40px;
+  height: 4px;
+  margin: 2px auto 12px;
+  border-radius: 99px;
+  background: var(--border-strong);
+}
+.folha-titulo {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 8px 10px;
+}
+.folha-cancelar {
+  width: 100%;
+  margin-top: 10px;
+}
+.folha-entrando {
+  animation: folha-entra var(--dur-lenta) var(--ease-entrada);
+}
+.folha-saindo {
+  animation: folha-entra var(--dur-media) var(--ease-saida) reverse forwards;
+  pointer-events: none;
+}
+@keyframes folha-entra {
+  from {
+    transform: translateY(100%);
+  }
+}
+
 /* opção de lista dentro de um pop-up */
 .opcao {
   display: flex;
@@ -1262,6 +1316,12 @@ textarea.field::placeholder {
   .nav,
   .dia-cal {
     min-height: var(--toque);
+  }
+  .pop-folha .opcao {
+    min-height: var(--toque-lista);
+    font-size: 15px;
+    padding: 9px 14px;
+    border-radius: 12px;
   }
   .aba {
     min-width: var(--toque);

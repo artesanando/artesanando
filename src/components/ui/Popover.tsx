@@ -14,6 +14,23 @@ import { createPortal } from 'react-dom'
    painéis nossos, todos com o mesmo comportamento: Esc fecha, clique fora fecha,
    foco preso enquanto aberto, entrada e saída animadas. */
 
+/* No celular um menu ancorado de 130 a 220px é um controle de computador
+   transplantado: nasce por cima justamente do que se está editando e tem linhas
+   de 36px. Abaixo desta largura o mesmo pop-up vira folha subindo do rodapé,
+   com largura cheia e fundo escurecido — como o seletor do próprio celular. */
+const CELULAR = '(max-width: 640px)'
+
+export function useEhCelular() {
+  const [ehCelular, setEhCelular] = useState(() => window.matchMedia(CELULAR).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(CELULAR)
+    const ouvir = (e: MediaQueryListEvent) => setEhCelular(e.matches)
+    mq.addEventListener('change', ouvir)
+    return () => mq.removeEventListener('change', ouvir)
+  }, [])
+  return ehCelular
+}
+
 /** Mantém o nó montado durante a animação de saída. */
 export function useMontagemAnimada(aberto: boolean, ms = 200) {
   const [montado, setMontado] = useState(aberto)
@@ -86,6 +103,8 @@ interface PopoverProps {
   largura?: number
   alinhamento?: 'inicio' | 'fim'
   ariaLabel?: string
+  /** título da folha no celular; por padrão usa o ariaLabel */
+  titulo?: string
 }
 
 export function Popover({
@@ -96,15 +115,18 @@ export function Popover({
   largura,
   alinhamento = 'inicio',
   ariaLabel,
+  titulo,
 }: PopoverProps) {
   const painel = useRef<HTMLDivElement>(null)
   const { montado, saindo } = useMontagemAnimada(aberto)
+  const ehCelular = useEhCelular()
   const [pos, setPos] = useState({ top: 0, left: 0, minWidth: 0 })
 
   usePrendeFoco(painel, montado && !saindo)
 
   useLayoutEffect(() => {
-    if (!montado || !ancora) return
+    // a folha não é ancorada em nada: ela ocupa o rodapé inteiro
+    if (!montado || !ancora || ehCelular) return
     const posicionar = () => {
       const r = ancora.getBoundingClientRect()
       const w = largura ?? r.width
@@ -127,7 +149,17 @@ export function Popover({
       window.removeEventListener('resize', posicionar)
       window.removeEventListener('scroll', posicionar, true)
     }
-  }, [montado, ancora, largura, alinhamento])
+  }, [montado, ancora, largura, alinhamento, ehCelular])
+
+  // com a folha aberta o fundo não rola junto
+  useEffect(() => {
+    if (!montado || !ehCelular) return
+    const antes = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = antes
+    }
+  }, [montado, ehCelular])
 
   useEffect(() => {
     if (!montado) return
@@ -151,6 +183,33 @@ export function Popover({
   }, [montado, aoFechar, ancora])
 
   if (!montado) return null
+
+  if (ehCelular) {
+    return createPortal(
+      <>
+        <div
+          className={`pop-fundo ${saindo ? 'ov-saindo' : 'ov-entrando'}`}
+          aria-hidden="true"
+          onClick={aoFechar}
+        />
+        <div
+          ref={painel}
+          className={`pop pop-folha ${saindo ? 'folha-saindo' : 'folha-entrando'}`}
+          role="dialog"
+          aria-modal="true"
+          aria-label={ariaLabel}
+        >
+          <span className="folha-alca" aria-hidden="true" />
+          {(titulo ?? ariaLabel) && <div className="folha-titulo">{titulo ?? ariaLabel}</div>}
+          {children}
+          <button type="button" className="pill ghost folha-cancelar" onClick={aoFechar}>
+            Cancelar
+          </button>
+        </div>
+      </>,
+      document.body,
+    )
+  }
 
   return createPortal(
     <div
