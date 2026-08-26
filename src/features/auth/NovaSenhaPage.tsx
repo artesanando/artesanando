@@ -2,25 +2,18 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../state/auth'
 import { Lbl, PasswordField } from '../../components/ui/bits'
-import { salvarRa } from '../perfil/api'
-import { RA_VALIDO } from '../../types/database'
 import { AuthShell } from './AuthShell'
 
 /* Usada tanto em /redefinir-senha (link do "esqueci") quanto em
    /definir-senha (primeiro acesso via convite) — o link que a administradora
    mandou autentica a sessão e aqui só gravamos a nova senha. */
 export function NovaSenhaPage({ modo }: { modo: 'redefinir' | 'definir' }) {
-  const { session, profile, updatePassword } = useAuth()
+  const { session, updatePassword } = useAuth()
   const navigate = useNavigate()
   const [senha, setSenha] = useState('')
   const [confirma, setConfirma] = useState('')
-  const [ra, setRa] = useState('')
   const [erro, setErro] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
-
-  /* O RA só se pede no primeiro acesso: quem redefine a senha já entrou um dia,
-     e o semestre inteiro depende de ele estar preenchido para o relatório. */
-  const pedeRa = modo === 'definir'
 
   const titulo = modo === 'definir' ? 'Defina sua senha' : 'Redefinir senha'
   const sub =
@@ -39,14 +32,9 @@ export function NovaSenhaPage({ modo }: { modo: 'redefinir' | 'definir' }) {
       setErro('As senhas não coincidem.')
       return
     }
-    if (pedeRa && !RA_VALIDO.test(ra.trim())) {
-      setErro('O RA tem seis números.')
-      return
-    }
     setEnviando(true)
     try {
       await updatePassword(senha)
-      if (pedeRa && profile) await salvarRa(profile.id, ra.trim())
       navigate('/')
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível salvar.')
@@ -76,27 +64,6 @@ export function NovaSenhaPage({ modo }: { modo: 'redefinir' | 'definir' }) {
             Abra esta página pelo link que a administradora te mandou — sem ele não dá para
             validar quem você é.
           </div>
-        )}
-        {pedeRa && (
-          <>
-            <Lbl style={{ marginBottom: 7 }}>
-              RA
-              <span aria-hidden="true" style={{ color: 'var(--accent)', marginLeft: 3 }}>
-                *
-              </span>
-              <span className="so-leitor"> (obrigatório)</span>
-            </Lbl>
-            <input
-              className="field"
-              inputMode="numeric"
-              maxLength={6}
-              value={ra}
-              aria-label="RA"
-              onChange={(e) => setRa(e.target.value.replace(/[^0-9]/g, ''))}
-              placeholder="815162"
-              style={{ marginBottom: 18, width: '100%' }}
-            />
-          </>
         )}
         <Lbl style={{ marginBottom: 7 }}>NOVA SENHA</Lbl>
         <PasswordField
@@ -131,12 +98,12 @@ export function NovaSenhaPage({ modo }: { modo: 'redefinir' | 'definir' }) {
         <button
           type="submit"
           className="pill"
-          disabled={enviando || !session || (pedeRa && !profile)}
+          disabled={enviando || !session}
           style={{
             width: '100%',
             padding: 13,
             fontSize: 14,
-            opacity: enviando || !session || (pedeRa && !profile) ? 0.7 : 1,
+            opacity: enviando || !session ? 0.7 : 1,
           }}
         >
           {enviando ? 'Salvando…' : 'Salvar senha'}
