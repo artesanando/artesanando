@@ -86,9 +86,16 @@ export function IntegrantesPage() {
 
   /* A lista também é do semestre ativo, como em Atividade de extensão. Antes
      misturava quem só participou de semestres passados — aparecendo com 0% de
-     frequência ao lado de entregas de anos atrás. */
+     frequência ao lado de entregas de anos atrás.
+     O label entra junto para segurar quem se cadastrou agora e ainda não foi a
+     encontro nenhum: é aqui que se confere se o cadastro chegou. */
   const participantes = useParticipantes(semestre?.id ?? null)
-  const doSemestreAtivo = soDoSemestre(integrantes ?? [], participantes, semestre?.id ?? null)
+  const doSemestreAtivo = soDoSemestre(
+    integrantes ?? [],
+    participantes,
+    semestre?.id ?? null,
+    semestre?.label,
+  )
   const lista = filtraIntegrantes(doSemestreAtivo, busca)
   const sel = (integrantes ?? []).find((p) => p.id === id) ?? lista[0]
 
