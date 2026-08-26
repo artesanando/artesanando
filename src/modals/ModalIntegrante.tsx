@@ -4,6 +4,7 @@ import { Campo, LegendaObrigatorio, useFormulario } from '../components/ui/Campo
 import { Select } from '../components/ui/controles'
 import { ModalBox, ModalHeader } from './shared'
 import { supabase } from '../lib/supabase'
+import { linkDeAcesso } from '../lib/acesso'
 import { useStore } from '../state/store'
 import { fetchIntegrantes } from '../features/integrantes/api'
 import { TURNO_LABEL, type Papel, type Preferencia, type Turno } from '../types/database'
@@ -80,7 +81,7 @@ export function ModalIntegrante() {
 
   const copiar = async () => {
     if (!acesso) return
-    await navigator.clipboard?.writeText(acesso.senha)
+    await navigator.clipboard?.writeText(linkDeAcesso(acesso.usuario, acesso.senha))
     setCopiado(true)
     setTimeout(() => setCopiado(false), 2500)
   }
@@ -107,36 +108,25 @@ export function ModalIntegrante() {
             Acesso criado para <b>{convidando ? (alvo?.nome ?? '') : nome.trim()}</b>.
           </div>
 
-          {/* Era um link de uso único, e o preview do WhatsApp gastava o token
-              antes de a pessoa tocar nele — o convite chegava expirado. Usuário
-              e senha atravessam qualquer conversa sem se gastar. */}
+          {/* A administradora manda o link; usuário e senha aparecem para a
+              integrante do outro lado, na página que ele abre. */}
           {acesso && (
             <>
               <div className="lbl" style={{ marginBottom: 7 }}>
-                USUÁRIO
+                LINK DE ACESSO
               </div>
-              <div className="field" style={{ marginBottom: 12, fontWeight: 700 }}>
-                {acesso.usuario}
-              </div>
-              <div className="lbl" style={{ marginBottom: 7 }}>
-                SENHA PROVISÓRIA
-              </div>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
                 <input
                   className="field"
                   readOnly
-                  value={acesso.senha}
-                  aria-label="Senha provisória"
+                  value={linkDeAcesso(acesso.usuario, acesso.senha)}
+                  aria-label="Link de acesso"
                   onFocus={(e) => e.currentTarget.select()}
-                  style={{ flex: 1, minWidth: 180, fontWeight: 700, letterSpacing: 1 }}
+                  style={{ flex: 1, minWidth: 180, fontSize: 12 }}
                 />
                 <button type="button" className="pill" onClick={copiar}>
                   {copiado ? 'Copiado' : 'Copiar'}
                 </button>
-              </div>
-              <div style={{ fontSize: 11.5, color: 'var(--gold-dark)', marginBottom: 20 }}>
-                Mande os dois só em conversa privada. Ela troca a senha em Meu perfil depois de
-                entrar.
               </div>
             </>
           )}

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
 import { supabase } from '../../lib/supabase'
+import { linkDeAcesso } from '../../lib/acesso'
 import { Lbl, Progress } from '../../components/ui/bits'
 import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
 import { MenuKebab, Select } from '../../components/ui/controles'
@@ -361,7 +362,7 @@ export function IntegrantesPage() {
                             ...(p.user_id
                               ? [
                                   {
-                                    label: 'Gerar senha provisória',
+                                    label: 'Gerar link de acesso',
                                     onSelect: async () => {
                                       setLinkSenha(null)
                                       setLinkSenhaPara(p.id)
@@ -373,17 +374,18 @@ export function IntegrantesPage() {
                                       setGerandoLink(false)
                                       const corpo = data as {
                                         error?: string
+                                        usuario?: string
                                         senha?: string
                                       } | null
                                       if (error || corpo?.error || !corpo?.senha) {
                                         toast(
-                                          corpo?.error ?? 'Não foi possível gerar a senha.',
+                                          corpo?.error ?? 'Não foi possível gerar o link.',
                                           'erro',
                                         )
                                         setLinkSenhaPara(null)
                                         return
                                       }
-                                      setLinkSenha(corpo.senha)
+                                      setLinkSenha(linkDeAcesso(corpo.usuario ?? p.usuario, corpo.senha))
                                     },
                                   },
                                 ]
@@ -411,7 +413,7 @@ export function IntegrantesPage() {
                       style={{ padding: '10px 8px 14px', borderBottom: '1px solid var(--border)' }}
                     >
                       {gerandoLink && (
-                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>Gerando senha…</div>
+                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>Gerando link…</div>
                       )}
                       {linkSenha && (
                         <>
@@ -422,9 +424,9 @@ export function IntegrantesPage() {
                               className="field"
                               readOnly
                               value={linkSenha}
-                              aria-label={`Senha provisória de ${p.nome}`}
+                              aria-label={`Link de acesso de ${p.nome}`}
                               onFocus={(e) => e.currentTarget.select()}
-                              style={{ flex: 1, minWidth: 180, fontWeight: 700, letterSpacing: 1 }}
+                              style={{ flex: 1, minWidth: 180, fontSize: 12 }}
                             />
                             <button
                               type="button"
@@ -447,10 +449,6 @@ export function IntegrantesPage() {
                             >
                               Fechar
                             </button>
-                          </div>
-                          <div style={{ fontSize: 11.5, color: 'var(--gold-dark)' }}>
-                            Mande com o usuário <b>{p.usuario}</b>, só em conversa privada. Ela
-                            troca a senha em Meu perfil.
                           </div>
                         </>
                       )}

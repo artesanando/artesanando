@@ -42,6 +42,23 @@ describe('auth', () => {
     expect(await screen.findByText(/, Cândida$/)).toBeInTheDocument()
   })
 
+  it('o link de acesso mostra usuário e senha sem precisar de sessão', async () => {
+    renderAt('/acesso#u=camila&s=xf7k2m9p')
+    expect(await screen.findByText('camila')).toBeInTheDocument()
+    expect(screen.getByLabelText('Senha provisória')).toHaveValue('xf7k2m9p')
+  })
+
+  it('do link de acesso dá para ir direto ao login', async () => {
+    renderAt('/acesso#u=camila&s=xf7k2m9p')
+    await userEvent.click(await screen.findByRole('button', { name: 'Entrar' }))
+    expect(await screen.findByLabelText('Usuário')).toBeInTheDocument()
+  })
+
+  it('link de acesso pela metade avisa em vez de mostrar campo vazio', async () => {
+    renderAt('/acesso')
+    expect(await screen.findByText('Link incompleto')).toBeInTheDocument()
+  })
+
   it('senha errada mostra erro e não loga', async () => {
     renderAt('/login')
     await userEvent.type(screen.getByLabelText('Usuário'), 'candida.prof')
