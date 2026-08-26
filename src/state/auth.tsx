@@ -16,6 +16,7 @@ interface AuthCtx {
   /** permissão efetiva: admin sempre pode; integrante depende da flag */
   can: (perm: Perm) => boolean
   login: (usuario: string, senha: string, manter: boolean) => Promise<void>
+  cadastrar: (nome: string, usuario: string, senha: string) => Promise<void>
   logout: () => Promise<void>
   updatePassword: (senha: string) => Promise<void>
   refreshProfile: () => Promise<void>
@@ -113,6 +114,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw new Error('Usuário ou senha incorretos.')
   }
 
+  /* Cadastro público (/cadastro). Mesmo identificador interno do convite —
+     `usuario@artesanando.local`, domínio que não existe — porque é ele que
+     garante usuário único lá no Auth. Papel não vai no metadata: o trigger só
+     aceita papel vindo da service role, e daqui sai sempre integrante. */
+  const cadastrar = async (nome: string, usuario: string, senha: string) => {
+    const nomeUsuario = usuario.trim().toLowerCase()
+
+    /* `profiles.usuario` é unique, e uma ficha de chamada com esse nome estoura
+       o unique dentro do trigger — erro que chega como "Database error saving
+       new user" e não diz o que mudar. Perguntar antes custa uma ida e devolve
+       a frase certa. */
+    const { data: livre } = await supabase.rpc('usuario_livre', {
+      usuario_input: nomeUsuario,
+    })
+    if (livre === false) throw new Error('Esse usuário já existe. Escolha outro.')
+
+    setKeepConnected(true)
+    const { data, error } = await supabase.auth.signUp({
+      email: `${nomeUsuario}@artesanando.local`,
+      password: senha,
+      options: { data: { nome: nome.trim(), usuario: nomeUsuario } },
+    })
+    if (error) throw new Error('Não foi possível criar a conta. Tente de novo.')
+
+    /* Perdeu a corrida para outro cadastro no mesmo instante: o Supabase não
+       diz que o email já existe (seria um oráculo de enumeração) — devolve um
+       usuário sem identidade nenhuma. Sem esta checagem, a tela comemorava e
+       ninguém entrava. */
+    if (data.user && data.user.identities?.length === 0) {
+      throw new Error('Esse usuário já existe. Escolha outro.')
+    }
+  }
+
   const logout = async () => {
     await supabase.auth.signOut()
   }
@@ -138,6 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         semPerfil,
         can: (perm) => isAdmin || Boolean(perms?.[perm]),
         login,
+        cadastrar,
         logout,
         updatePassword,
         refreshProfile,

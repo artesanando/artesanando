@@ -9,6 +9,7 @@ import { ConfirmProvider } from './components/ui/Confirm'
 import { AppShell } from './components/layout/AppShell'
 import { LoginPage } from './features/auth/LoginPage'
 import { AcessoPage } from './features/auth/AcessoPage'
+import { CadastroPage } from './features/auth/CadastroPage'
 import { AuthShell } from './features/auth/AuthShell'
 import { InicioPage } from './features/inicio/InicioPage'
 import { ProjetosPage } from './features/projetos/ProjetosPage'
@@ -127,6 +128,8 @@ function AppRoutes() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/acesso" element={<AcessoPage />} />
+          {/* sem entrada no menu: chega-se por ela pelo link que vai no grupo */}
+          <Route path="/cadastro" element={<CadastroPage />} />
           <Route
             element={
               <RequireAuth>

@@ -25,3 +25,23 @@ export function AuthShell({ children }: { children: ReactNode }) {
     </div>
   )
 }
+
+/* Mesma caixa de erro nas duas telas de fora do app: entrar e cadastrar. */
+export function ErroAuth({ children }: { children: ReactNode }) {
+  return (
+    <div
+      role="alert"
+      style={{
+        background: 'var(--chip-soft)',
+        border: '1px solid var(--chip-rose-border)',
+        borderRadius: 10,
+        padding: '9px 13px',
+        fontSize: 12.5,
+        color: 'var(--primary-dark)',
+        marginBottom: 14,
+      }}
+    >
+      {children}
+    </div>
+  )
+}

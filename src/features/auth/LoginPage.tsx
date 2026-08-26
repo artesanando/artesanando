@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../state/auth'
 import { Lbl, PasswordField } from '../../components/ui/bits'
-import { AuthShell } from './AuthShell'
+import { AuthShell, ErroAuth } from './AuthShell'
 import { IconCheck } from '../../components/ui/icons'
 
 export function LoginPage() {
@@ -94,22 +94,7 @@ export function LoginPage() {
           </span>
           Manter conectada
         </label>
-        {erro && (
-          <div
-            role="alert"
-            style={{
-              background: 'var(--chip-soft)',
-              border: '1px solid var(--chip-rose-border)',
-              borderRadius: 10,
-              padding: '9px 13px',
-              fontSize: 12.5,
-              color: 'var(--primary-dark)',
-              marginBottom: 14,
-            }}
-          >
-            {erro}
-          </div>
-        )}
+        {erro && <ErroAuth>{erro}</ErroAuth>}
         <button
           type="submit"
           className="pill"

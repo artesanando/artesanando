@@ -112,6 +112,51 @@ describe('auth', () => {
     expect(screen.queryByText(/, Cândida$/)).not.toBeInTheDocument()
   })
 
+  it('o cadastro abre sem sessão, sem passar por lugar nenhum do app', async () => {
+    renderAt('/cadastro')
+    expect(await screen.findByRole('button', { name: 'Criar conta' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Nome completo')).toBeInTheDocument()
+  })
+
+  it('quem já está logada não volta para o cadastro', async () => {
+    __login()
+    renderAt('/cadastro')
+    expect(await screen.findByText(/, Cândida$/)).toBeInTheDocument()
+  })
+
+  it('cadastrar-se cria a conta e já entra no app', async () => {
+    renderAt('/cadastro')
+    await userEvent.type(screen.getByLabelText('Nome completo'), 'Grace Hopper')
+    await userEvent.type(screen.getByLabelText('Usuário'), 'grace.h')
+    await userEvent.type(screen.getByLabelText('Senha'), 'senhaboa1')
+    await userEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+    expect(await screen.findByText(/, Grace$/)).toBeInTheDocument()
+  })
+
+  it('o usuário digitado vira minúsculas e perde o que não cabe num email', async () => {
+    renderAt('/cadastro')
+    await userEvent.type(screen.getByLabelText('Usuário'), 'Ada Lovelace')
+    expect(screen.getByLabelText('Usuário')).toHaveValue('adalovelace')
+  })
+
+  it('usuário já existente é recusado antes de criar conta nenhuma', async () => {
+    renderAt('/cadastro')
+    await userEvent.type(screen.getByLabelText('Nome completo'), 'Outra Ada')
+    await userEvent.type(screen.getByLabelText('Usuário'), 'ada.lovelace')
+    await userEvent.type(screen.getByLabelText('Senha'), 'senhaboa1')
+    await userEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Esse usuário já existe')
+  })
+
+  it('senha curta demais não chega no servidor', async () => {
+    renderAt('/cadastro')
+    await userEvent.type(screen.getByLabelText('Nome completo'), 'Grace Hopper')
+    await userEvent.type(screen.getByLabelText('Usuário'), 'grace.h')
+    await userEvent.type(screen.getByLabelText('Senha'), 'curta')
+    await userEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('A senha precisa de 8 caracteres.')
+  })
+
   it('sidebar mostra a usuária logada', async () => {
     __login()
     renderAt('/')
@@ -489,6 +534,14 @@ describe('integrantes (M4)', () => {
     __login()
     renderAt('/integrantes')
     expect(await screen.findByText('Granny squares')).toBeInTheDocument()
+  })
+
+  it('quem entrou neste semestre aparece antes de ir a encontro nenhum', async () => {
+    __login()
+    renderAt('/integrantes')
+    /* A Hedy entrou em 2026.2 e não consta na participação — sem isso, quem se
+       cadastra em /cadastro sumia da lista até alguém marcar presença nela. */
+    expect(await screen.findByText('Hedy Lamarr')).toBeInTheDocument()
   })
 
   it('avisa quem ainda precisa ser vinculada a um perfil', async () => {

@@ -524,11 +524,21 @@ export const PROVISORIA_PROFILE: Profile = {
   senha_provisoria: true,
 }
 
+/* Mutável de propósito: o cadastro público acrescenta uma linha aqui, como o
+   trigger faz no banco. `__reset` corta de volta ao tamanho original. */
+const PROFILES_FAKE: Profile[] = [
+  ADMIN_PROFILE,
+  ADMIN2_PROFILE,
+  INTEGRANTE_PROFILE,
+  SEM_CONTA_PROFILE,
+  PROVISORIA_PROFILE,
+]
+const PERFIS_BASE = PROFILES_FAKE.length
+
+const usuarioOcupado = (u: string) => PROFILES_FAKE.some((p) => p.usuario === u)
+
 const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
-  profiles: {
-    single: ADMIN_PROFILE,
-    list: [ADMIN_PROFILE, ADMIN2_PROFILE, INTEGRANTE_PROFILE, SEM_CONTA_PROFILE, PROVISORIA_PROFILE],
-  },
+  profiles: { single: ADMIN_PROFILE, list: PROFILES_FAKE },
   estoque_itens: { single: ESTOQUE_FAKE[0], list: ESTOQUE_FAKE },
   emprestimos: { single: EMPRESTIMOS_FAKE[0], list: EMPRESTIMOS_FAKE },
   devolucoes: { single: null, list: [] },
@@ -565,6 +575,7 @@ export function __reset() {
   currentSession = null
   gravaSessao(null)
   listeners = []
+  PROFILES_FAKE.length = PERFIS_BASE
 }
 
 export const supabaseConfigured = true
@@ -630,9 +641,44 @@ export const supabase = {
       return { error: null }
     },
     updateUser: async () => ({ data: {}, error: null }),
+    /* Cadastro público: sem confirmação por email, o signUp já devolve sessão.
+       O perfil nasce junto, como faz o trigger `handle_new_user` — e com o
+       semestre ativo em `desde`, que é o que o põe na lista de Integrantes. */
+    signUp: async ({
+      email,
+      options,
+    }: {
+      email: string
+      password: string
+      options?: { data?: { nome?: string; usuario?: string } }
+    }) => {
+      const usuario = email.split('@')[0]
+      if (usuarioOcupado(usuario)) {
+        // o Supabase não denuncia email repetido: devolve usuário sem identidade
+        return { data: { user: { id: 'novo', identities: [] }, session: null }, error: null }
+      }
+      const perfil: Profile = {
+        ...INTEGRANTE_PROFILE,
+        id: 'novo',
+        user_id: 'novo',
+        nome: options?.data?.nome ?? usuario,
+        usuario,
+        papel: 'integrante',
+        desde: SEMESTRES_FAKE[0].label,
+      }
+      PROFILES_FAKE.push(perfil)
+      __login(perfil)
+      listeners.forEach((cb) => cb('SIGNED_IN', currentSession))
+      return { data: { user: { id: 'novo', identities: [{ id: 'novo' }] } }, error: null }
+    },
   },
   from: (table: string) => builder(table),
-  rpc: async () => ({ data: 'candida.prof@artesanando.local', error: null }),
+  rpc: async (fn: string, args?: Record<string, unknown>) => {
+    if (fn === 'usuario_livre') {
+      return { data: !usuarioOcupado(String(args?.usuario_input ?? '')), error: null }
+    }
+    return { data: 'candida.prof@artesanando.local', error: null }
+  },
   functions: { invoke: async () => ({ data: { ok: true }, error: null }) },
   storage: {
     from: () => ({

@@ -182,7 +182,7 @@ enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 6
+minimum_password_length = 8
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
 password_requirements = ""
@@ -220,9 +220,10 @@ web3 = 30
 # secret = ""
 
 [auth.email]
-# Ninguém se cadastra sozinha: as contas nascem do convite da administradora,
-# pela Edge Function (service role, que não passa por aqui).
-enable_signup = false
+# Aberto para a página /cadastro, cujo link a coordenação manda no grupo. O
+# convite da administradora continua existindo, pela Edge Function (service
+# role, que não passa por aqui). Para fechar o cadastro, é aqui que se desliga.
+enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
