@@ -225,7 +225,7 @@ export function ModalIntegrante() {
               </div>
 
               <div className="lbl" style={{ marginBottom: 7 }}>
-                PERFIL
+                PAPEL
               </div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
                 <button
@@ -281,11 +281,7 @@ export function ModalIntegrante() {
               <button type="button" className="pill ghost" onClick={close}>
                 Cancelar
               </button>
-              <button
-                type="submit"
-                className="pill"
-                disabled={enviando || (convidando && !alvo)}
-              >
+              <button type="submit" className="pill" disabled={enviando || (convidando && !alvo)}>
                 {enviando ? 'Gerando…' : 'Gerar convite'}
               </button>
             </div>

@@ -8,7 +8,7 @@ export function NotFoundPage() {
         Página não encontrada
       </div>
       <Link to="/" style={{ fontWeight: 800, fontSize: 13 }}>
-        <IconChevron size={12} para="esquerda" /> Voltar ao Dashboard
+        <IconChevron size={12} para="esquerda" /> Voltar ao Início
       </Link>
     </div>
   )

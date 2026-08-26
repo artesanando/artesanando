@@ -32,9 +32,7 @@ const ITEMS: { to: string; label: string; Icon: () => ReactElement; perm?: Perm 
 const CHAVE = 'artesanando:menu-encolhido'
 
 export function useMenuEncolhido() {
-  const [encolhido, setEncolhido] = useState(
-    () => localStorage.getItem(CHAVE) === '1',
-  )
+  const [encolhido, setEncolhido] = useState(() => localStorage.getItem(CHAVE) === '1')
   useEffect(() => {
     localStorage.setItem(CHAVE, encolhido ? '1' : '0')
   }, [encolhido])
@@ -90,11 +88,7 @@ export function Sidebar({
               {on && <span className="nav-marca" />}
             </button>
           )
-          return (
-            <div key={to}>
-              {encolhido ? <Dica texto={label}>{botao}</Dica> : botao}
-            </div>
-          )
+          return <div key={to}>{encolhido ? <Dica texto={label}>{botao}</Dica> : botao}</div>
         })}
       </div>
 
@@ -131,7 +125,7 @@ export function Sidebar({
             ...(isAdmin
               ? [
                   { label: 'Atividade de extensão', onSelect: () => go('/extensao') },
-                  { label: 'Configurações', onSelect: () => go('/configuracoes') },
+                  { label: 'Ajustes', onSelect: () => go('/configuracoes') },
                 ]
               : []),
             { label: 'Sair', onSelect: () => void logout(), perigo: true },

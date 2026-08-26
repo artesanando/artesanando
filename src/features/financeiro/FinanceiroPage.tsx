@@ -197,9 +197,7 @@ export function FinanceiroPage() {
 
       <div
         className="pgrid"
-        style={
-          { '--cols': '1.4fr 1fr 1fr', '--gap': '14px', marginBottom: 28 } as CSSProperties
-        }
+        style={{ '--cols': '1.4fr 1fr 1fr', '--gap': '14px', marginBottom: 28 } as CSSProperties}
       >
         <div
           style={{
@@ -249,7 +247,7 @@ export function FinanceiroPage() {
             style={{ border: 'none', background: 'none', fontFamily: 'inherit' }}
             onClick={() => setVerArquivadas((v) => !v)}
           >
-            {verArquivadas ? 'Voltar às ativas' : `Ver arquivadas (${arquivados.length})`}
+            {verArquivadas ? 'Voltar às ativas' : `Arquivadas (${arquivados.length})`}
           </button>
         )}
       </div>

@@ -162,7 +162,7 @@ function Mapa({
       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
         {podeEditar
           ? MODOS.find(([m]) => m === modo)?.[2]
-          : 'você não tem permissão para registrar progresso — fale com a administradora'}
+          : 'Você não tem permissão para registrar progresso — fale com a administradora.'}
       </div>
 
       {modo === 'pintar' && (
@@ -403,7 +403,7 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
       )}
       <div className="pgrid" style={{ '--cols': '1fr 1fr', '--gap': '24px' } as CSSProperties}>
         <Comentarios projetoId={projeto.id} />
-        <Historico projetoId={projeto.id} titulo="Histórico de alterações" />
+        <Historico projetoId={projeto.id} titulo="Histórico" />
       </div>
     </div>
   )

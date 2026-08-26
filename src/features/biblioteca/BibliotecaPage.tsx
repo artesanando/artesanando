@@ -30,7 +30,11 @@ export function BibliotecaPage() {
   const acoesArquivo = useAcoesArquivo()
   const [params, setParams] = useSearchParams()
 
-  const { data: receitas, isLoading, isError } = useQuery({
+  const {
+    data: receitas,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ['receitas'],
     queryFn: fetchReceitas,
   })
@@ -101,10 +105,15 @@ export function BibliotecaPage() {
         {arquivados.length > 0 && (
           <button
             className="crumb"
-            style={{ border: 'none', background: 'none', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+            style={{
+              border: 'none',
+              background: 'none',
+              fontFamily: 'inherit',
+              whiteSpace: 'nowrap',
+            }}
             onClick={() => setVerArquivadas((v) => !v)}
           >
-            {verArquivadas ? 'Ativas' : `Arquivadas (${arquivados.length})`}
+            {verArquivadas ? 'Voltar às ativas' : `Arquivadas (${arquivados.length})`}
           </button>
         )}
       </div>
@@ -117,7 +126,10 @@ export function BibliotecaPage() {
       <div
         className="pgrid"
         style={
-          { '--cols': 'repeat(auto-fill, minmax(190px, 1fr))', '--gap': '16px' } as React.CSSProperties
+          {
+            '--cols': 'repeat(auto-fill, minmax(190px, 1fr))',
+            '--gap': '16px',
+          } as React.CSSProperties
         }
       >
         {filtradas.map((r) => {
@@ -139,7 +151,12 @@ export function BibliotecaPage() {
                 <img
                   src={capa}
                   alt=""
-                  style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', display: 'block' }}
+                  style={{
+                    width: '100%',
+                    aspectRatio: '4 / 3',
+                    objectFit: 'cover',
+                    display: 'block',
+                  }}
                 />
               ) : (
                 <div style={{ height: 5, background: c.accent }} />
@@ -224,12 +241,12 @@ export function BibliotecaPage() {
                           ? [{ label: 'Editar', onSelect: () => openReceita(r.id) }]
                           : []),
                         ...acoesArquivo({
-                        tabela: 'receitas',
-                        id: r.id,
-                        nome: `"${r.nome}"`,
-                        motivoHistorico: 'Os projetos que usam esta receita',
-                        arquivado: Boolean(r.arquivado_em),
-                        invalidar: ['receitas'],
+                          tabela: 'receitas',
+                          id: r.id,
+                          nome: `"${r.nome}"`,
+                          motivoHistorico: 'Os projetos que usam esta receita',
+                          arquivado: Boolean(r.arquivado_em),
+                          invalidar: ['receitas'],
                         }),
                       ]}
                     />

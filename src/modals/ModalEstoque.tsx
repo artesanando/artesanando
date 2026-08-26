@@ -22,10 +22,10 @@ import { useSemestreAtivo } from '../lib/semestre'
 import { fetchIntegrantes } from '../features/integrantes/api'
 
 const CATS: [EstoqueCategoria, string][] = [
-  ['novelos', 'Novelo'],
-  ['agulhas', 'Agulha'],
+  ['novelos', 'Novelos'],
+  ['agulhas', 'Agulhas'],
   ['outros', 'Outros'],
-  ['feira', 'Feira'],
+  ['feira', 'Itens de feira'],
 ]
 
 /* Novo material, ou edição de um já cadastrado. Antes só existia o cadastro:
@@ -183,7 +183,12 @@ export function ModalMaterial() {
           FOTO
         </div>
         <div style={{ marginBottom: 24 }}>
-          <CampoCapa atual={item?.capa_path} blob={capa} aoEscolher={setCapa} vazio="Foto do material" />
+          <CampoCapa
+            atual={item?.capa_path}
+            blob={capa}
+            aoEscolher={setCapa}
+            vazio="Foto do material"
+          />
         </div>
 
         <div
@@ -341,8 +346,8 @@ export function ModalMovimentoEstoque() {
             marginBottom: 20,
           }}
         >
-          Fica com{' '}
-          <b>{item.quantidade + (saida ? -quantidade : quantidade)}</b> em posse do projeto.
+          Fica com <b>{item.quantidade + (saida ? -quantidade : quantidade)}</b> em posse do
+          projeto.
         </div>
 
         {(historico ?? []).length > 0 && (
@@ -372,7 +377,8 @@ export function ModalMovimentoEstoque() {
                     {h.obs ? ` · ${h.obs}` : ''}
                   </span>
                   <span style={{ color: 'var(--faint)', whiteSpace: 'nowrap' }}>
-                    {h.autor?.nome?.split(' ')[0] ?? '—'} · {fmtDataBarra(h.created_at.slice(0, 10))}
+                    {h.autor?.nome?.split(' ')[0] ?? '—'} ·{' '}
+                    {fmtDataBarra(h.created_at.slice(0, 10))}
                   </span>
                 </div>
               ))}
