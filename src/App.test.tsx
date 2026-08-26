@@ -4,7 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
-import { ADMIN_PROFILE, INTEGRANTE_PROFILE, __login, __reset } from './test/fakeSupabase'
+import {
+  ADMIN_PROFILE,
+  INTEGRANTE_PROFILE,
+  PROVISORIA_PROFILE,
+  __login,
+  __reset,
+} from './test/fakeSupabase'
 
 vi.mock('./lib/supabase', () => import('./test/fakeSupabase'))
 
@@ -57,6 +63,37 @@ describe('auth', () => {
   it('link de acesso pela metade avisa em vez de mostrar campo vazio', async () => {
     renderAt('/acesso')
     expect(await screen.findByText('Link incompleto')).toBeInTheDocument()
+  })
+
+  it('senha provisória barra o app até a integrante escolher a dela', async () => {
+    __login(PROVISORIA_PROFILE)
+    renderAt('/')
+    expect(await screen.findByText('Escolha sua senha')).toBeInTheDocument()
+  })
+
+  it('o modal da primeira senha não fecha no Esc', async () => {
+    __login(PROVISORIA_PROFILE)
+    renderAt('/')
+    await screen.findByText('Escolha sua senha')
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByText('Escolha sua senha')).toBeInTheDocument()
+  })
+
+  it('a primeira senha recusa confirmação diferente', async () => {
+    __login(PROVISORIA_PROFILE)
+    renderAt('/')
+    await screen.findByText('Escolha sua senha')
+    await userEvent.type(screen.getByLabelText('Nova senha'), 'senhanova1')
+    await userEvent.type(screen.getByLabelText('Confirmar senha'), 'outracoisa9')
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar e continuar' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('As senhas não coincidem.')
+  })
+
+  it('quem já escolheu a senha não vê o modal', async () => {
+    __login()
+    renderAt('/')
+    expect(await screen.findByText(/, Cândida$/)).toBeInTheDocument()
+    expect(screen.queryByText('Escolha sua senha')).not.toBeInTheDocument()
   })
 
   it('senha errada mostra erro e não loga', async () => {

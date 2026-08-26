@@ -43,7 +43,7 @@ export function AcessoPage() {
       </div>
 
       <Lbl style={{ marginBottom: 7 }}>SENHA PROVISÓRIA</Lbl>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 22, flexWrap: 'wrap' }}>
         <input
           className="field"
           readOnly
@@ -55,10 +55,6 @@ export function AcessoPage() {
         <button type="button" className="pill" onClick={copiar}>
           {copiado ? 'Copiado' : 'Copiar'}
         </button>
-      </div>
-
-      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 22 }}>
-        Dá para trocar usuário e senha em Meu perfil.
       </div>
 
       <button

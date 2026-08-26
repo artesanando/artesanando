@@ -51,6 +51,8 @@ export interface Profile {
   papel: Papel
   ativo: boolean
   desde: string | null
+  /** true entre a administradora gerar o acesso e a integrante escolher a senha dela */
+  senha_provisoria: boolean
   /** em qual turno ela vem — define o denominador da frequência total dela */
   turno: Turno
   nivel: Nivel

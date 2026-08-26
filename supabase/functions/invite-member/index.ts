@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
         console.error('updateUserById', error)
         return json({ error: 'Não foi possível gerar o acesso. Tente de novo.' }, 400)
       }
+      await admin.from('profiles').update({ senha_provisoria: true }).eq('id', profileId)
       return json({ ok: true, usuario, senha })
     }
 
@@ -130,6 +131,10 @@ Deno.serve(async (req) => {
       console.error('createUser', error)
       return json({ error: 'Não foi possível criar o acesso. Tente de novo.' }, 400)
     }
+
+    /* O perfil nasce no trigger, dentro do createUser — depois desta linha ele
+       já existe e dá para marcar que a senha ainda é a provisória. */
+    await admin.from('profiles').update({ senha_provisoria: true }).eq('user_id', data.user!.id)
 
     return json({ ok: true, usuario, senha, userId: data.user?.id })
   } catch (e) {

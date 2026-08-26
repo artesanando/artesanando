@@ -79,6 +79,8 @@ Deno.serve(async (req) => {
       return json({ error: 'Não foi possível gerar a senha. Tente de novo.' }, 400)
     }
 
+    await admin.from('profiles').update({ senha_provisoria: true }).eq('id', profileId)
+
     return json({ ok: true, usuario: target.usuario, senha })
   } catch (e) {
     console.error(e)

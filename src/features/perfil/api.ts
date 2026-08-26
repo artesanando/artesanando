@@ -18,6 +18,15 @@ export async function atualizarPerfil(
   if (error) throw error
 }
 
+/** Baixa a marca da senha provisória: a integrante já escolheu a dela. */
+export async function senhaEscolhida(perfilId: string) {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ senha_provisoria: false })
+    .eq('id', perfilId)
+  if (error) throw error
+}
+
 /* O RA mora em `perfis_academico`, não em `profiles`: a policy de lá só devolve
    a linha para a própria dona ou para administradora, e o PostgREST não sabe
    esconder coluna. Assim nenhum `select('*')` de outra tela vaza RA de ninguém. */

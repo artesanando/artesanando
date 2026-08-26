@@ -13,6 +13,7 @@ export const ADMIN_PROFILE: Profile = {
   nome: 'Cândida Nunes',
   usuario: 'candida.prof',
   telefone: null,
+  senha_provisoria: false,
   preferencia: 'ambos',
   avatar_color: '#C4798A',
   avatar_url: null,
@@ -30,6 +31,7 @@ export const ADMIN2_PROFILE: Profile = {
   nome: 'Sahudy Montenegro',
   usuario: 'sahudy.prof',
   telefone: null,
+  senha_provisoria: false,
   preferencia: 'ambos',
   avatar_color: '#7D9B76',
   avatar_url: null,
@@ -48,6 +50,7 @@ export const INTEGRANTE_PROFILE: Profile = {
   nome: 'Ada Lovelace',
   usuario: 'ada.lovelace',
   telefone: null,
+  senha_provisoria: false,
   preferencia: 'croche',
   avatar_color: '#A9BFA3',
   avatar_url: null,
@@ -65,6 +68,7 @@ export const SEM_CONTA_PROFILE: Profile = {
   nome: 'Hedy Lamarr',
   usuario: 'hedy.lamarr',
   telefone: null,
+  senha_provisoria: false,
   preferencia: 'trico',
   avatar_color: '#B99BC4',
   avatar_url: null,
@@ -486,10 +490,20 @@ const REGRAS_FAKE = [
   },
 ]
 
+/* quem acabou de receber o acesso: entra e cai no modal de trocar a senha */
+export const PROVISORIA_PROFILE: Profile = {
+  ...INTEGRANTE_PROFILE,
+  id: 'u9',
+  user_id: 'u9',
+  nome: 'Grace Hopper',
+  usuario: 'grace.hopper',
+  senha_provisoria: true,
+}
+
 const TABLES: Record<string, { single: unknown; list: unknown[] }> = {
   profiles: {
     single: ADMIN_PROFILE,
-    list: [ADMIN_PROFILE, ADMIN2_PROFILE, INTEGRANTE_PROFILE, SEM_CONTA_PROFILE],
+    list: [ADMIN_PROFILE, ADMIN2_PROFILE, INTEGRANTE_PROFILE, SEM_CONTA_PROFILE, PROVISORIA_PROFILE],
   },
   estoque_itens: { single: ESTOQUE_FAKE[0], list: ESTOQUE_FAKE },
   emprestimos: { single: EMPRESTIMOS_FAKE[0], list: EMPRESTIMOS_FAKE },

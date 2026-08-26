@@ -16,7 +16,7 @@ import {
   type Preferencia,
   type Turno,
 } from '../../types/database'
-import { atualizarPerfil, fetchMeuRa, salvarRa, subirAvatar } from './api'
+import { atualizarPerfil, fetchMeuRa, salvarRa, senhaEscolhida, subirAvatar } from './api'
 import { RecorteImagem } from '../../components/ui/RecorteImagem'
 import { MinhaMeta } from './MinhaMeta'
 import { IconChevron } from '../../components/ui/icons'
@@ -160,6 +160,8 @@ export function PerfilPage() {
     }
     try {
       await updatePassword(novaSenha)
+      await senhaEscolhida(profile.id)
+      await refreshProfile()
       setNovaSenha('')
       setSenhaAberta(false)
       toast('Senha alterada')

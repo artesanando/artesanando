@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar, useMenuEncolhido } from './Sidebar'
 import { ModalRoot } from '../../modals/ModalRoot'
+import { ModalPrimeiraSenha } from '../../modals/ModalPrimeiraSenha'
+import { useAuth } from '../../state/auth'
 import { IconMenu } from '../ui/icons'
 
 export function AppShell() {
+  const { profile } = useAuth()
   const [encolhido, alternarEncolhido] = useMenuEncolhido()
   const [gaveta, setGaveta] = useState(false)
   const { pathname } = useLocation()
@@ -53,6 +56,7 @@ export function AppShell() {
         </main>
       </div>
       <ModalRoot />
+      {profile?.senha_provisoria && <ModalPrimeiraSenha />}
     </>
   )
 }
