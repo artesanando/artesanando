@@ -16,10 +16,7 @@ export function NovaSenhaPage({ modo }: { modo: 'redefinir' | 'definir' }) {
   const [enviando, setEnviando] = useState(false)
 
   const titulo = modo === 'definir' ? 'Defina sua senha' : 'Redefinir senha'
-  const sub =
-    modo === 'definir'
-      ? 'Bem-vinda! Crie a senha do seu acesso ao Artesanando'
-      : 'Escolha uma nova senha para a sua conta'
+  const sub = modo === 'definir' ? 'Crie a senha do seu acesso' : 'Escolha uma senha nova'
 
   const salvar = async (e: FormEvent) => {
     e.preventDefault()
@@ -61,8 +58,7 @@ export function NovaSenhaPage({ modo }: { modo: 'redefinir' | 'definir' }) {
               marginBottom: 18,
             }}
           >
-            Abra esta página pelo link que a administradora te mandou — sem ele não dá para
-            validar quem você é.
+            Abra esta página pelo link que a administradora te mandou.
           </div>
         )}
         <Lbl style={{ marginBottom: 7 }}>NOVA SENHA</Lbl>

@@ -119,9 +119,6 @@ export function LoginPage() {
           {enviando ? 'Entrando…' : 'Entrar'}
         </button>
       </form>
-      <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', marginTop: 20 }}>
-        Não tem acesso? Fale com uma <b style={{ color: 'var(--accent)' }}>administradora</b>.
-      </div>
     </AuthShell>
   )
 }

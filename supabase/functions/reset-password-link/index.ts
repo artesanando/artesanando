@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     const {
       data: { user },
     } = await caller.auth.getUser()
-    if (!user) return json({ error: 'não autenticada' }, 401)
+    if (!user) return json({ error: 'Sua sessão expirou. Entre de novo.' }, 401)
 
     const admin = createClient(supabaseUrl, serviceRole)
     // `profiles.id` deixou de ser o id do auth na migration 130000 — quem
@@ -44,38 +44,43 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .maybeSingle()
     if (!profile || profile.papel !== 'admin' || !profile.ativo) {
-      return json({ error: 'apenas administradoras geram links de senha' }, 403)
+      return json({ error: 'Só administradoras podem gerar o link.' }, 403)
     }
 
     const { profileId, redirectTo } = await req.json()
-    if (!profileId) return json({ error: 'profileId é obrigatório' }, 400)
+    if (!profileId) return json({ error: 'Escolha a integrante.' }, 400)
 
     // De quem é o link sai do perfil, nunca do corpo da requisição — senão
     // qualquer conta autenticada poderia pedir o link de outra pessoa.
     const { data: target } = await admin
       .from('profiles')
-      .select('user_id')
+      .select('user_id, nome')
       .eq('id', profileId)
       .maybeSingle()
-    if (!target) return json({ error: 'integrante não encontrada' }, 404)
+    if (!target) return json({ error: 'Integrante não encontrada.' }, 404)
     if (!target.user_id) {
-      return json({ error: 'esta integrante ainda não tem conta — use o convite' }, 400)
+      return json({ error: `${target.nome} ainda não tem conta. Use "Convidar para o app".` }, 400)
     }
 
     /* O `generateLink` só aceita a conta pelo identificador interno do Auth, e
        ele não fica mais espelhado em profiles — vem do próprio Auth. */
     const { data: conta } = await admin.auth.admin.getUserById(target.user_id)
-    if (!conta.user?.email) return json({ error: 'conta sem identificador no Auth' }, 400)
+    if (!conta.user?.email)
+      return json({ error: 'Não foi possível gerar o link para essa conta.' }, 400)
 
     const gerado = await admin.auth.admin.generateLink({
       type: 'recovery',
       email: conta.user.email,
       options: { redirectTo },
     })
-    if (gerado.error) return json({ error: gerado.error.message }, 400)
+    if (gerado.error) {
+      console.error('generateLink', gerado.error)
+      return json({ error: 'Não foi possível gerar o link. Tente de novo.' }, 400)
+    }
 
     return json({ ok: true, link: gerado.data.properties?.action_link ?? null })
   } catch (e) {
-    return json({ error: e instanceof Error ? e.message : 'erro inesperado' }, 500)
+    console.error(e)
+    return json({ error: 'Não foi possível concluir. Tente de novo.' }, 500)
   }
 })

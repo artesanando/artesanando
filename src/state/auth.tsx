@@ -99,12 +99,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error: erroLookup } = await supabase.rpc('login_por_usuario', {
       usuario_input: usuario.trim(),
     })
-    if (erroLookup || !data) throw new Error('Usuário ou senha incorretos')
+    if (erroLookup || !data) throw new Error('Usuário ou senha incorretos.')
     const { error } = await supabase.auth.signInWithPassword({
       email: data as string,
       password: senha,
     })
-    if (error) throw new Error('Usuário ou senha incorretos')
+    if (error) throw new Error('Usuário ou senha incorretos.')
   }
 
   const logout = async () => {

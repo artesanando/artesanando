@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     const {
       data: { user },
     } = await caller.auth.getUser()
-    if (!user) return json({ error: 'não autenticada' }, 401)
+    if (!user) return json({ error: 'Sua sessão expirou. Entre de novo.' }, 401)
 
     const admin = createClient(supabaseUrl, serviceRole)
     // `profiles.id` deixou de ser o id do auth na migration 130000 — quem
@@ -48,13 +48,13 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .maybeSingle()
     if (!profile || profile.papel !== 'admin' || !profile.ativo) {
-      return json({ error: 'apenas administradoras convidam integrantes' }, 403)
+      return json({ error: 'Só administradoras podem convidar.' }, 403)
     }
 
     const { nome, usuario, telefone, preferencia, turno, papel, redirectTo, profileId } =
       await req.json()
     if (!nome || !usuario) {
-      return json({ error: 'nome e usuario são obrigatórios' }, 400)
+      return json({ error: 'Informe o nome e o usuário.' }, 400)
     }
 
     /* Convite de quem já entrou pela chamada: o perfil existe e o que falta é a
@@ -66,8 +66,8 @@ Deno.serve(async (req) => {
         .select('id, user_id')
         .eq('id', profileId)
         .maybeSingle()
-      if (!alvo) return json({ error: 'integrante não encontrada' }, 404)
-      if (alvo.user_id) return json({ error: 'esta integrante já tem conta' }, 409)
+      if (!alvo) return json({ error: 'Integrante não encontrada.' }, 404)
+      if (alvo.user_id) return json({ error: `${nome} já tem conta no app.` }, 409)
     }
 
     const { data: existing } = await admin
@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
       .eq('usuario', usuario)
       .maybeSingle()
     if (existing && existing.id !== profileId) {
-      return json({ error: 'já existe uma integrante com esse usuário' }, 409)
+      return json({ error: 'Já existe uma integrante com esse usuário.' }, 409)
     }
 
     const metadata = {
@@ -96,7 +96,10 @@ Deno.serve(async (req) => {
       email: identificador(usuario),
       options: { data: metadata, redirectTo },
     })
-    if (error) return json({ error: error.message }, 400)
+    if (error) {
+      console.error('generateLink', error)
+      return json({ error: 'Não foi possível criar o convite. Tente de novo.' }, 400)
+    }
 
     return json({
       ok: true,
@@ -104,6 +107,7 @@ Deno.serve(async (req) => {
       link: data.properties?.action_link ?? null,
     })
   } catch (e) {
-    return json({ error: e instanceof Error ? e.message : 'erro inesperado' }, 500)
+    console.error(e)
+    return json({ error: 'Não foi possível concluir. Tente de novo.' }, 500)
   }
 })
