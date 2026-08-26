@@ -13,7 +13,12 @@ import {
   fetchEstoque,
   saldoEmprestimo,
 } from '../features/estoque/api'
-import { atualizarReceita, criarReceita, fetchReceitas, uploadPdf } from '../features/biblioteca/api'
+import {
+  atualizarReceita,
+  criarReceita,
+  fetchReceitas,
+  uploadPdf,
+} from '../features/biblioteca/api'
 import { CampoMedida } from '../components/ui/CampoMedida'
 import type { Receita } from '../types/database'
 import { CampoCapa } from '../components/ui/CampoCapa'
@@ -162,7 +167,7 @@ function FormReceita({ atual, editando }: { atual?: Receita; editando: boolean }
         </Campo>
 
         <div className="lbl" style={{ marginBottom: 7 }}>
-          COMO A RECEITA VEM
+          FORMATO
         </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
           {(['pdf', 'video'] as const).map((f) => (
@@ -249,7 +254,7 @@ function FormReceita({ atual, editando }: { atual?: Receita; editando: boolean }
           value={obs}
           aria-label="Observações"
           onChange={(e) => setObs(e.target.value)}
-          placeholder="Ex.: usar fio 4mm, olhos de segurança 9mm…"
+          placeholder="usar fio 4mm, olhos de segurança 9mm…"
         />
         {erro && <ErroBox>{erro}</ErroBox>}
         <div
@@ -322,11 +327,14 @@ export function ModalEmprestimo() {
 
   return (
     <ModalBox maxWidth={520}>
-      <ModalHeader
-        title="Registrar empréstimo"
-      />
+      <ModalHeader title="Registrar empréstimo" />
       <form onSubmit={submit}>
-        <Campo label="INTEGRANTE" obrigatorio erro={form.erros.integrante} style={{ marginBottom: 18 }}>
+        <Campo
+          label="INTEGRANTE"
+          obrigatorio
+          erro={form.erros.integrante}
+          style={{ marginBottom: 18 }}
+        >
           {() => (
             <Select
               ariaLabel="Integrante"
@@ -354,7 +362,8 @@ export function ModalEmprestimo() {
               options={[
                 ['', 'Escolher…'],
                 ...emprestaveis.map(
-                  (i) => [i.id, `${i.nome}${i.detalhe ? ` · ${i.detalhe}` : ''}`] as [string, string],
+                  (i) =>
+                    [i.id, `${i.nome}${i.detalhe ? ` · ${i.detalhe}` : ''}`] as [string, string],
                 ),
               ]}
             />
@@ -363,7 +372,13 @@ export function ModalEmprestimo() {
         <div className="grid2" style={{ marginBottom: 24 }}>
           <Campo label="QUANTIDADE">
             {() => (
-              <Stepper value={quantidade} onChange={setQuantidade} min={1} max={99} ariaLabel="Quantidade" />
+              <Stepper
+                value={quantidade}
+                onChange={setQuantidade}
+                min={1}
+                max={99}
+                ariaLabel="Quantidade"
+              />
             )}
           </Campo>
           <Campo label="PROJETO">
@@ -515,7 +530,13 @@ export function ModalDevolucao() {
           })}
           <Lbl style={{ margin: '10px 0 7px' }}>QUANTIDADE DEVOLVIDA</Lbl>
           <div style={{ marginBottom: 24 }}>
-            <Stepper value={devolvendo} onChange={setQtd} min={1} max={saldo} suffix={`de ${saldo}`} />
+            <Stepper
+              value={devolvendo}
+              onChange={setQtd}
+              min={1}
+              max={saldo}
+              suffix={`de ${saldo}`}
+            />
           </div>
         </>
       )}
@@ -680,7 +701,9 @@ function FormEncontro({ encontro }: { encontro?: Encontro }) {
                 <b style={{ color: 'var(--accent)' }}>
                   {' '}
                   — {previstas}{' '}
-                  {previstas === 1 ? 'encontro até o fim do semestre' : 'encontros até o fim do semestre'}
+                  {previstas === 1
+                    ? 'encontro até o fim do semestre'
+                    : 'encontros até o fim do semestre'}
                 </b>
               )}
             </span>

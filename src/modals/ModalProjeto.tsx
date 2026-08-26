@@ -236,7 +236,11 @@ export function ModalProjeto() {
       <ModalHeader title="Novo projeto" />
       <form onSubmit={submit}>
         <div className="grid2" style={{ gap: 10, marginBottom: 20 }}>
-          <button type="button" onClick={() => setProjCat('manta')} style={manta ? cardOn : cardOff}>
+          <button
+            type="button"
+            onClick={() => setProjCat('manta')}
+            style={manta ? cardOn : cardOff}
+          >
             <div style={{ fontWeight: 800, fontSize: 14 }}>Manta</div>
             <div style={{ fontSize: 11.5, marginTop: 2 }}>dividida entre integrantes</div>
           </button>
@@ -437,7 +441,7 @@ export function ModalProjeto() {
             {tamanho && (
               <div style={{ marginTop: 12 }}>
                 <div className="lbl" style={{ marginBottom: 7 }}>
-                  OU MANDE O TAMANHO FINAL
+                  OU O TAMANHO FINAL
                 </div>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                   <span style={{ flex: 1, minWidth: 190 }}>

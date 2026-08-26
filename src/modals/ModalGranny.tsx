@@ -82,9 +82,7 @@ export function ModalGranny() {
   const nameOf = (i: number) => (i === 0 ? ' · miolo' : i === rings.length - 1 ? ' · borda' : '')
   // prévia: quadrados concêntricos, borda (última) por fora → miolo (primeira) no centro
   const n = rings.length
-  const preview = rings
-    .map((r, i) => ({ c: r.c, sz: 128 - (n - 1 - i) * (104 / n) }))
-    .reverse()
+  const preview = rings.map((r, i) => ({ c: r.c, sz: 128 - (n - 1 - i) * (104 / n) })).reverse()
 
   return (
     <ModalBox maxWidth={580}>
@@ -100,7 +98,7 @@ export function ModalGranny() {
       <div style={{ display: 'flex', gap: 22, alignItems: 'flex-start' }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span className="lbl">COR · DO CENTRO P/ FORA</span>
+            <span className="lbl">CORES · DO CENTRO PARA FORA</span>
             <span className="lbl">CARREIRAS</span>
           </div>
           {rings.map((r, i) => (
@@ -226,14 +224,14 @@ export function ModalGranny() {
             {preview.map((ring, i) => (
               <div
                 key={i}
-                style={{ position: 'absolute', width: ring.sz, height: ring.sz, background: ring.c }}
+                style={{
+                  position: 'absolute',
+                  width: ring.sz,
+                  height: ring.sz,
+                  background: ring.c,
+                }}
               />
             ))}
-          </div>
-          <div
-            style={{ fontSize: 10.5, color: 'var(--muted)', textAlign: 'center', marginTop: 8 }}
-          >
-            anéis do centro → borda
           </div>
         </div>
       </div>

@@ -595,9 +595,7 @@ export function IntegrantesPage() {
                 }}
               >
                 <span style={{ width: 12, height: 12, borderRadius: 3, background: '#C4798A' }} />
-                <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>
-                  Granny squares (metades contam meio)
-                </span>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>Granny squares</span>
                 <b style={{ fontSize: 15 }}>{fmtEntrega(selEntregas.grannies)}</b>
               </div>
             </div>

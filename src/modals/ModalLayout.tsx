@@ -449,7 +449,7 @@ export function ModalLayout() {
 
       {!tecnica ? (
         <>
-          <Lbl style={{ marginBottom: 10 }}>DE QUE TÉCNICA É A MANTA?</Lbl>
+          <Lbl style={{ marginBottom: 10 }}>TÉCNICA</Lbl>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 22 }}>
             {TECNICAS.map(([t, label]) => (
               <button

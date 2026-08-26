@@ -109,7 +109,7 @@ describe('navegação', () => {
     await userEvent.click(await screen.findByRole('button', { name: '+ Novo projeto' }))
     await userEvent.click(screen.getByRole('button', { name: '+ Criar esquema' }))
     // o editor só abre depois de dizer a técnica
-    expect(screen.getByText('DE QUE TÉCNICA É A MANTA?')).toBeInTheDocument()
+    expect(screen.getByText('TÉCNICA')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Crochê' }))
     expect(screen.getByLabelText('Nome do esquema')).toBeInTheDocument()
   })
@@ -427,7 +427,7 @@ describe('integrantes (M4)', () => {
   it('as entregas passam a contar granny squares', async () => {
     __login()
     renderAt('/integrantes')
-    expect(await screen.findByText('Granny squares (metades contam meio)')).toBeInTheDocument()
+    expect(await screen.findByText('Granny squares')).toBeInTheDocument()
   })
 
   it('avisa quem ainda precisa ser vinculada a um perfil', async () => {
