@@ -3,10 +3,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Lbl, PasswordField } from '../components/ui/bits'
 import { useAuth } from '../state/auth'
 import { senhaEscolhida } from '../features/perfil/api'
+import { ModalBox } from './shared'
 
 /* Não passa pelo ModalRoot de propósito: lá todo modal fecha no Esc e no clique
-   fora, e este não fecha. A senha que ela tem é a que a administradora digitou e
-   leu — enquanto não trocar, duas pessoas sabem entrar na conta dela. */
+   fora, e este não fecha — a senha atual é a que a administradora gerou e leu.
+   O ModalBox entra mesmo assim, porque é ele que traz o padding de celular, o
+   foco preso e o scroll travado no fundo. */
 export function ModalPrimeiraSenha() {
   const { profile, updatePassword, refreshProfile } = useAuth()
   const qc = useQueryClient()
@@ -39,12 +41,9 @@ export function ModalPrimeiraSenha() {
 
   return (
     <div className="ov ov-entrando">
-      <div className="card" style={{ width: '100%', maxWidth: 420, padding: '30px 32px' }}>
-        <div className="h" style={{ fontWeight: 500, fontSize: 20, marginBottom: 4 }}>
+      <ModalBox maxWidth={420} titulo="Escolha sua senha">
+        <div className="h" style={{ fontSize: 22, marginBottom: 20 }}>
           Escolha sua senha
-        </div>
-        <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>
-          A senha provisória foi vista por quem criou seu acesso.
         </div>
 
         <Lbl style={{ marginBottom: 7 }}>NOVA SENHA</Lbl>
@@ -59,7 +58,7 @@ export function ModalPrimeiraSenha() {
         <PasswordField
           value={confirma}
           onChange={setConfirma}
-          style={{ marginBottom: 14 }}
+          style={{ marginBottom: 16 }}
           autoComplete="new-password"
           ariaLabel="Confirmar senha"
         />
@@ -88,9 +87,9 @@ export function ModalPrimeiraSenha() {
           disabled={salvando}
           style={{ width: '100%', padding: 13, fontSize: 14, opacity: salvando ? 0.7 : 1 }}
         >
-          {salvando ? 'Salvando…' : 'Salvar e continuar'}
+          {salvando ? 'Salvando…' : 'Salvar'}
         </button>
-      </div>
+      </ModalBox>
     </div>
   )
 }
