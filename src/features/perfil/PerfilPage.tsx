@@ -354,7 +354,6 @@ export function PerfilPage() {
           >
             <div>
               <div style={{ fontWeight: 700, fontSize: 13.5 }}>Senha</div>
-              <div style={{ fontSize: 12, color: 'var(--muted)' }}>Troque quando quiser</div>
             </div>
             <button type="button" className="pill ghost" onClick={() => setSenhaAberta((a) => !a)}>
               Alterar senha

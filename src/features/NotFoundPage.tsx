@@ -7,9 +7,6 @@ export function NotFoundPage() {
       <div className="h" style={{ fontSize: 34, marginBottom: 8 }}>
         Página não encontrada
       </div>
-      <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>
-        O endereço que você tentou abrir não existe.
-      </div>
       <Link to="/" style={{ fontWeight: 800, fontSize: 13 }}>
         <IconChevron size={12} para="esquerda" /> Voltar ao Dashboard
       </Link>

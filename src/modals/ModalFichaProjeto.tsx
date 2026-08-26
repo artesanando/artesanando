@@ -71,7 +71,7 @@ function Form({ projeto }: { projeto: Projeto }) {
 
   return (
     <ModalBox maxWidth={520}>
-      <ModalHeader title="Editar ficha" sub={`${projeto.nome} — o que dá para mudar depois`} />
+      <ModalHeader title="Editar ficha" sub={projeto.nome} />
       <form onSubmit={submit}>
         <Campo label="NOME" obrigatorio erro={form.erros.nome} style={{ marginBottom: 18 }}>
           {(p) => (
@@ -104,9 +104,7 @@ function Form({ projeto }: { projeto: Projeto }) {
         {amigurumi && (
           <div className="grid2" style={{ marginBottom: 22 }}>
             <Campo label="META DE UNIDADES">
-              {() => (
-                <Stepper value={meta} onChange={setMeta} min={1} max={999} ariaLabel="Meta" />
-              )}
+              {() => <Stepper value={meta} onChange={setMeta} min={1} max={999} ariaLabel="Meta" />}
             </Campo>
             <Campo label="RECEITA">
               {() => (

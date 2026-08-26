@@ -60,7 +60,7 @@ export function ConfigPage() {
 
   return (
     <div className="pagina">
-      <CabecalhoPagina titulo="Ajustes" sub="Permissões e semestre" />
+      <CabecalhoPagina titulo="Ajustes" />
       <div className="pgrid" style={{ '--cols': '180px 1fr', '--gap': '34px' } as CSSProperties}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <button style={item(secao === 'permissoes')} onClick={() => setSecao('permissoes')}>

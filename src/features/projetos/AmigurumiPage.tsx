@@ -141,12 +141,11 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
   return (
     <div className="pagina">
       <div className="crumb" onClick={() => navigate('/projetos')} style={{ marginBottom: 8 }}>
-        <IconChevron size={11} para="esquerda" /> Projetos / <span style={{ color: 'var(--ink)' }}>Amigurumi {projeto.nome}</span>
+        <IconChevron size={11} para="esquerda" /> Projetos /{' '}
+        <span style={{ color: 'var(--ink)' }}>Amigurumi {projeto.nome}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-        <div className="h titulo-pagina">
-          Amigurumi {projeto.nome}
-        </div>
+        <div className="h titulo-pagina">Amigurumi {projeto.nome}</div>
         {projeto.status === 'entregue' && (
           <span
             className="tag"
@@ -160,12 +159,19 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
         </span>
       </div>
       <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 22 }}>
-        Cada unidade é feita integralmente por uma integrante
-        {projeto.destino ? ` · destino: ${projeto.destino}` : ''}
+        {[
+          projeto.destino ? `Destino: ${projeto.destino}` : null,
+          projeto.meta ? `meta ${projeto.meta} unidades` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
       </div>
       <AvisoArquivado projeto={projeto} />
       <ProgressoProjeto done={prog.done} total={prog.total} unidade="unidades" />
-      <div className="pgrid" style={{ '--cols': '1.3fr 1fr', '--gap': '32px' } as React.CSSProperties}>
+      <div
+        className="pgrid"
+        style={{ '--cols': '1.3fr 1fr', '--gap': '32px' } as React.CSSProperties}
+      >
         <div>
           <div className="h" style={{ fontSize: 16, marginBottom: 12 }}>
             Unidades por integrante
@@ -183,7 +189,10 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
                  peças são, não qual é o número de cada uma. */
               const rotulo = `${g.ids.length} ${g.ids.length === 1 ? 'unidade' : 'unidades'}`
               return (
-                <div key={chave} style={{ borderTop: i > 0 ? '1px solid var(--border)' : undefined }}>
+                <div
+                  key={chave}
+                  style={{ borderTop: i > 0 ? '1px solid var(--border)' : undefined }}
+                >
                   <div className="linha-grupo-und">
                     <b>
                       {rotulo} · {g.nome}
@@ -273,9 +282,7 @@ export function AmigurumiPage({ projeto }: { projeto: Projeto }) {
                         className="pill"
                         disabled={concluir.isPending}
                         onClick={() =>
-                          concluir.mutate(
-                            g.ids.slice(0, Math.min(quantasProntas, g.ids.length)),
-                          )
+                          concluir.mutate(g.ids.slice(0, Math.min(quantasProntas, g.ids.length)))
                         }
                       >
                         Concluir

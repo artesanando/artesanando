@@ -122,7 +122,6 @@ export function ExtensaoPage() {
     <div className="pagina">
       <CabecalhoPagina
         titulo="Atividade de extensão"
-        sub="Créditos, frequência, entregas e comprovação do semestre"
         acoes={
           (semestres ?? []).length > 0 ? (
             <span style={{ width: 150 }}>
