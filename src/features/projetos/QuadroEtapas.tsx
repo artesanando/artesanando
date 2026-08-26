@@ -193,11 +193,11 @@ export function QuadroEtapas({
 
   return (
     <>
-      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
-        {podeEditar
-          ? 'Arraste uma peça para a etapa em que ela está. Ao chegar em “aguardando borda” e em “pronto”, o quadro pergunta quem fez a metade.'
-          : 'Você não tem permissão para registrar progresso — fale com a administradora.'}
-      </div>
+      {!podeEditar && (
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
+          Você não tem permissão para registrar progresso — fale com a administradora.
+        </div>
+      )}
 
       <div {...propsArea} className="quadro-etapas" style={{ touchAction: 'pan-x' }}>
         {ETAPAS.map((etapa) => {

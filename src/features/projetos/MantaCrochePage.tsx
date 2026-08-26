@@ -29,8 +29,8 @@ import {
    no todo. Quem anda com a produção é o quadro de etapas — misturar as duas
    coisas fazia a mesma peça ser editável de dois jeitos diferentes. */
 const MODOS: [ModoGrade, string, string][] = [
-  ['mover', 'Mover', 'arraste um square sobre outro para trocarem de lugar'],
-  ['pintar', 'Pintar', 'escolha um padrão e arraste pela grade'],
+  ['mover', 'Mover', 'arraste um square sobre outro'],
+  ['pintar', 'Pintar', 'arraste pela grade'],
 ]
 
 /* Vista e ferramenta eram duas fileiras da mesma pílula preenchida em cor de
@@ -167,7 +167,13 @@ function Mapa({
 
       {modo === 'pintar' && (
         <div
-          style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 14 }}
+          style={{
+            display: 'flex',
+            gap: 8,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            marginBottom: 14,
+          }}
         >
           <span className="lbl">PINCEL</span>
           {modelos.map((m) => (
@@ -187,7 +193,12 @@ function Mapa({
                 boxShadow: m.id === pincel ? '0 0 0 2px var(--ink)' : undefined,
               }}
             >
-              <SquareGranny cores={coresDoModelo(m)} tamanho={22} radius={3} style={{ flex: 'none' }} />
+              <SquareGranny
+                cores={coresDoModelo(m)}
+                tamanho={22}
+                radius={3}
+                style={{ flex: 'none' }}
+              />
               <span style={{ fontSize: 12, fontWeight: 700 }}>{m.letra}</span>
             </button>
           ))}
@@ -250,7 +261,9 @@ function Mapa({
                         ? '2px dashed var(--primary)'
                         : 'none',
                     outlineOffset: -1,
-                    boxShadow: naSelecao ? '0 0 0 2px var(--card), 0 2px 8px rgba(0,0,0,.25)' : undefined,
+                    boxShadow: naSelecao
+                      ? '0 0 0 2px var(--card), 0 2px 8px rgba(0,0,0,.25)'
+                      : undefined,
                     transform: ehAlvo ? 'scale(1.14)' : 'scale(1)',
                     zIndex: ehAlvo || naSelecao ? 1 : 0,
                     transition:
@@ -320,8 +333,6 @@ function Mapa({
           )}
         </div>
       </div>
-
-
     </>
   )
 }
@@ -355,7 +366,8 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
   return (
     <div className="pagina">
       <div className="crumb" onClick={() => navigate('/projetos')} style={{ marginBottom: 8 }}>
-        <IconChevron size={11} para="esquerda" /> Projetos / <span style={{ color: 'var(--ink)' }}>{projeto.nome}</span>
+        <IconChevron size={11} para="esquerda" /> Projetos /{' '}
+        <span style={{ color: 'var(--ink)' }}>{projeto.nome}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
         <div className="h titulo-pagina">{projeto.nome}</div>
@@ -385,12 +397,7 @@ export function MantaCrochePage({ projeto }: { projeto: Projeto }) {
         </button>
       </div>
       {view === 'mapa' ? (
-        <Mapa
-          projeto={projeto}
-          squares={lista}
-          modelos={modelos ?? []}
-          colunas={colunas}
-        />
+        <Mapa projeto={projeto} squares={lista} modelos={modelos ?? []} colunas={colunas} />
       ) : (
         <QuadroEtapas projeto={projeto} squares={lista} modelos={modelos ?? []} />
       )}

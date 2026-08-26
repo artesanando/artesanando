@@ -60,8 +60,8 @@ const TECNICAS: [Tecnica, string][] = [
 ]
 
 const MODOS: [ModoGrade, string, string][] = [
-  ['pintar', 'Pintar', 'escolha um modelo e arraste pela grade'],
-  ['mover', 'Mover', 'arraste um square sobre outro para trocarem de lugar'],
+  ['pintar', 'Pintar', 'arraste pela grade'],
+  ['mover', 'Mover', 'arraste um square sobre outro'],
 ]
 
 const seg = (on: boolean): CSSProperties => ({
@@ -110,7 +110,11 @@ export function ModalLayout() {
   const [colunas, setColunas] = useState(8)
   const [linhas, setLinhas] = useState(6)
   const [celulas, setCelulas] = useState<string[][]>(() =>
-    gradePadrao(8, 6, MODELOS_INICIAIS.map((m) => m.letra)),
+    gradePadrao(
+      8,
+      6,
+      MODELOS_INICIAIS.map((m) => m.letra),
+    ),
   )
   const [modo, setModo] = useState<ModoGrade>('pintar')
   const zoom = useZoomGrade(26)
@@ -364,16 +368,21 @@ export function ModalLayout() {
     setModelos(restantes)
     if (pincel === fora) setPincel(restantes[0].letra)
     // as células do modelo que saiu voltam para o padrão diagonal
-    const padrao = gradePadrao(colunas, linhas, restantes.map((m) => m.letra))
+    const padrao = gradePadrao(
+      colunas,
+      linhas,
+      restantes.map((m) => m.letra),
+    )
     setCelulas((atual) =>
       atual.map((linha, l) => linha.map((letra, c) => (letra === fora ? padrao[l][c] : letra))),
     )
   }
 
   const contagem = new Map<string, number>()
-  for (const linha of celulas) for (const letra of linha) {
-    contagem.set(letra, (contagem.get(letra) ?? 0) + 1)
-  }
+  for (const linha of celulas)
+    for (const letra of linha) {
+      contagem.set(letra, (contagem.get(letra) ?? 0) + 1)
+    }
 
   const salvar = useMutation({
     mutationFn: () =>
@@ -462,625 +471,650 @@ export function ModalLayout() {
         </>
       ) : (
         <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <Lbl style={{ marginBottom: 7 }}>NOME</Lbl>
-          <input
-            className="field"
-            value={nome}
-            aria-label="Nome do esquema"
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Manta Ada"
-          />
-        </span>
-        <span style={{ alignSelf: 'flex-end' }}>
-          <button
-            type="button"
-            className="crumb"
-            onClick={() => trocarTecnica()}
-            style={{ whiteSpace: 'nowrap' }}
-          >
-            {TECNICAS.find(([t]) => t === tecnica)?.[1]}
-          </button>
-        </span>
-      </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <Lbl style={{ marginBottom: 7 }}>NOME</Lbl>
+              <input
+                className="field"
+                value={nome}
+                aria-label="Nome do esquema"
+                onChange={(e) => setNome(e.target.value)}
+                placeholder="Manta Ada"
+              />
+            </span>
+            <span style={{ alignSelf: 'flex-end' }}>
+              <button
+                type="button"
+                className="crumb"
+                onClick={() => trocarTecnica()}
+                style={{ whiteSpace: 'nowrap' }}
+              >
+                {TECNICAS.find(([t]) => t === tecnica)?.[1]}
+              </button>
+            </span>
+          </div>
 
-      {croche ? (
-        <>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-        {MODOS.map(([m, label]) => (
-          <button key={m} type="button" onClick={() => setModo(m)} style={seg(modo === m)}>
-            {label}
-          </button>
-        ))}
-        <span style={{ marginLeft: 'auto' }}>{zoom.controles}</span>
-      </div>
-      <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>
-        {MODOS.find(([m]) => m === modo)?.[2]}
-      </div>
+          {croche ? (
+            <>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                {MODOS.map(([m, label]) => (
+                  <button key={m} type="button" onClick={() => setModo(m)} style={seg(modo === m)}>
+                    {label}
+                  </button>
+                ))}
+                <span style={{ marginLeft: 'auto' }}>{zoom.controles}</span>
+              </div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>
+                {MODOS.find(([m]) => m === modo)?.[2]}
+              </div>
 
-      {modo === 'pintar' && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-          <span className="lbl" style={{ alignSelf: 'center' }}>
-            PINCEL
-          </span>
-          {modelos.map((m) => (
-            <button
-              key={m.letra}
-              type="button"
-              onClick={() => setPincel(m.letra)}
-              aria-pressed={pincel === m.letra}
-              aria-label={`Pincel do modelo ${m.letra}`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 7,
-                border: '1px solid var(--field-border)',
-                borderRadius: 99,
-                padding: '5px 12px 5px 6px',
-                cursor: 'pointer',
-                background: 'transparent',
-                fontFamily: 'inherit',
-                boxShadow: m.letra === pincel ? '0 0 0 2px var(--ink)' : undefined,
-              }}
-            >
-              <SquareGranny cores={carreiras(m)} tamanho={22} radius={3} style={{ flex: 'none' }} />
-              <span style={{ fontSize: 12, fontWeight: 700 }}>{m.letra}</span>
-            </button>
-          ))}
-        </div>
-      )}
+              {modo === 'pintar' && (
+                <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+                  <span className="lbl" style={{ alignSelf: 'center' }}>
+                    PINCEL
+                  </span>
+                  {modelos.map((m) => (
+                    <button
+                      key={m.letra}
+                      type="button"
+                      onClick={() => setPincel(m.letra)}
+                      aria-pressed={pincel === m.letra}
+                      aria-label={`Pincel do modelo ${m.letra}`}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 7,
+                        border: '1px solid var(--field-border)',
+                        borderRadius: 99,
+                        padding: '5px 12px 5px 6px',
+                        cursor: 'pointer',
+                        background: 'transparent',
+                        fontFamily: 'inherit',
+                        boxShadow: m.letra === pincel ? '0 0 0 2px var(--ink)' : undefined,
+                      }}
+                    >
+                      <SquareGranny
+                        cores={carreiras(m)}
+                        tamanho={22}
+                        radius={3}
+                        style={{ flex: 'none' }}
+                      />
+                      <span style={{ fontSize: 12, fontWeight: 700 }}>{m.letra}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
 
-      <div
-        className="pgrid"
-        style={{ '--cols': 'auto 1fr', '--gap': '22px', marginBottom: 18 } as CSSProperties}
-      >
-        <div className="rolagem-grade">
-          <div style={{ display: 'inline-block', position: 'relative', paddingRight: 14, paddingBottom: 14 }}>
-            <div
-              {...propsGrade}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: `repeat(${colunas}, ${zoom.celula}px)`,
-                gap: 1,
-                background: 'var(--sand)',
-                padding: 5,
-                borderRadius: 8,
-                touchAction: 'none',
-                width: 'max-content',
-              }}
-            >
-              {Array.from({ length: colunas * linhas }, (_, pos) => {
-                const letra = letraEm(pos) ?? letras[0]
-                const m = porLetra.get(letra)
-                return (
-                  <button
-                    key={pos}
-                    data-pos={pos}
-                    type="button"
-                    aria-label={`Linha ${Math.floor(pos / colunas) + 1}, coluna ${(pos % colunas) + 1} · modelo ${letra}`}
-                    aria-pressed={arrastado === pos}
-                    onClick={() => aoClicar(pos)}
+              <div
+                className="pgrid"
+                style={{ '--cols': 'auto 1fr', '--gap': '22px', marginBottom: 18 } as CSSProperties}
+              >
+                <div className="rolagem-grade">
+                  <div
                     style={{
-                      width: zoom.celula,
-                      height: zoom.celula,
-                      padding: 0,
-                      border: 'none',
-                      borderRadius: 2,
-                      background: 'var(--sand)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: modo === 'mover' ? 'grab' : 'pointer',
-                      opacity: arrastado === pos ? 0.35 : 1,
-                      outline: alvo === pos ? '2px dashed var(--ink)' : 'none',
-                      outlineOffset: -2,
-                      transform: alvo === pos ? 'scale(1.14)' : 'scale(1)',
-                      zIndex: alvo === pos ? 1 : 0,
-                      transition: 'transform var(--dur-media) var(--ease-mola)',
+                      display: 'inline-block',
+                      position: 'relative',
+                      paddingRight: 14,
+                      paddingBottom: 14,
                     }}
                   >
-                    {m && <SquareGranny cores={carreiras(m)} tamanho={zoom.celula} />}
-                  </button>
-                )
-              })}
-            </div>
+                    <div
+                      {...propsGrade}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: `repeat(${colunas}, ${zoom.celula}px)`,
+                        gap: 1,
+                        background: 'var(--sand)',
+                        padding: 5,
+                        borderRadius: 8,
+                        touchAction: 'none',
+                        width: 'max-content',
+                      }}
+                    >
+                      {Array.from({ length: colunas * linhas }, (_, pos) => {
+                        const letra = letraEm(pos) ?? letras[0]
+                        const m = porLetra.get(letra)
+                        return (
+                          <button
+                            key={pos}
+                            data-pos={pos}
+                            type="button"
+                            aria-label={`Linha ${Math.floor(pos / colunas) + 1}, coluna ${(pos % colunas) + 1} · modelo ${letra}`}
+                            aria-pressed={arrastado === pos}
+                            onClick={() => aoClicar(pos)}
+                            style={{
+                              width: zoom.celula,
+                              height: zoom.celula,
+                              padding: 0,
+                              border: 'none',
+                              borderRadius: 2,
+                              background: 'var(--sand)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: modo === 'mover' ? 'grab' : 'pointer',
+                              opacity: arrastado === pos ? 0.35 : 1,
+                              outline: alvo === pos ? '2px dashed var(--ink)' : 'none',
+                              outlineOffset: -2,
+                              transform: alvo === pos ? 'scale(1.14)' : 'scale(1)',
+                              zIndex: alvo === pos ? 1 : 0,
+                              transition: 'transform var(--dur-media) var(--ease-mola)',
+                            }}
+                          >
+                            {m && <SquareGranny cores={carreiras(m)} tamanho={zoom.celula} />}
+                          </button>
+                        )
+                      })}
+                    </div>
 
-            {/* alças de redimensionar: direita muda colunas, baixo muda linhas,
+                    {/* alças de redimensionar: direita muda colunas, baixo muda linhas,
                 o canto muda os dois. O botão é o caminho de teclado. */}
-            <button
-              type="button"
-              className="alca-grade alca-x"
-              aria-label={`Largura da grade: ${colunas} colunas`}
-              onKeyDown={(e) => {
-                if (e.key === 'ArrowRight') redimensionar(colunas + 1, linhas)
-                if (e.key === 'ArrowLeft') redimensionar(colunas - 1, linhas)
-              }}
-              {...alca('x')}
-            />
-            <button
-              type="button"
-              className="alca-grade alca-y"
-              aria-label={`Altura da grade: ${linhas} linhas`}
-              onKeyDown={(e) => {
-                if (e.key === 'ArrowDown') redimensionar(colunas, linhas + 1)
-                if (e.key === 'ArrowUp') redimensionar(colunas, linhas - 1)
-              }}
-              {...alca('y')}
-            />
-            <button
-              type="button"
-              className="alca-grade alca-xy"
-              aria-label={`Tamanho da grade: ${colunas} por ${linhas}`}
-              {...alca('xy')}
-            />
-          </div>
-          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>
-            {colunas} × {linhas} · {colunas * linhas} squares
-            {daManta && (
-              <>
-                {' · '}
-                <b style={{ color: 'var(--accent)' }}>{fmtMedida(daManta)}</b>
-              </>
-            )}
-          </div>
-        </div>
+                    <button
+                      type="button"
+                      className="alca-grade alca-x"
+                      aria-label={`Largura da grade: ${colunas} colunas`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'ArrowRight') redimensionar(colunas + 1, linhas)
+                        if (e.key === 'ArrowLeft') redimensionar(colunas - 1, linhas)
+                      }}
+                      {...alca('x')}
+                    />
+                    <button
+                      type="button"
+                      className="alca-grade alca-y"
+                      aria-label={`Altura da grade: ${linhas} linhas`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'ArrowDown') redimensionar(colunas, linhas + 1)
+                        if (e.key === 'ArrowUp') redimensionar(colunas, linhas - 1)
+                      }}
+                      {...alca('y')}
+                    />
+                    <button
+                      type="button"
+                      className="alca-grade alca-xy"
+                      aria-label={`Tamanho da grade: ${colunas} por ${linhas}`}
+                      {...alca('xy')}
+                    />
+                  </div>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>
+                    {colunas} × {linhas} · {colunas * linhas} squares
+                    {daManta && (
+                      <>
+                        {' · '}
+                        <b style={{ color: 'var(--accent)' }}>{fmtMedida(daManta)}</b>
+                      </>
+                    )}
+                  </div>
+                </div>
 
-        <div style={{ minWidth: 200 }}>
-          <Lbl style={{ marginBottom: 8 }}>MODELOS</Lbl>
-          {modelos.map((m, i) => (
-            <div
-              key={m.letra}
-              style={{
-                border: '1px solid var(--field-border)',
-                borderRadius: 12,
-                padding: '9px 11px',
-                marginBottom: 8,
-                background: 'var(--card)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <b style={{ flex: 'none' }}>{m.letra}</b>
-                <input
-                  className="field"
-                  style={{ flex: 1, minWidth: 0, padding: '6px 10px', fontSize: 12.5 }}
-                  value={m.nome}
-                  aria-label={`Nome do modelo ${m.letra}`}
-                  onChange={(e) => mudarModelo(i, { nome: e.target.value })}
-                />
-                <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--accent)' }}>
-                  {contagem.get(m.letra) ?? 0}
-                </span>
-                {modelos.length > 1 && (
-                  <button
-                    type="button"
-                    className="kebab"
-                    aria-label={`Remover modelo ${m.letra}`}
-                    onClick={() => removerModelo(i)}
-                  >
-                    <IconX size={12} />
-                  </button>
-                )}
-              </div>
-              {/* O padrão vem primeiro: é dele que as carreiras nascem. Antes o
+                <div style={{ minWidth: 200 }}>
+                  <Lbl style={{ marginBottom: 8 }}>MODELOS</Lbl>
+                  {modelos.map((m, i) => (
+                    <div
+                      key={m.letra}
+                      style={{
+                        border: '1px solid var(--field-border)',
+                        borderRadius: 12,
+                        padding: '9px 11px',
+                        marginBottom: 8,
+                        background: 'var(--card)',
+                      }}
+                    >
+                      <div
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}
+                      >
+                        <b style={{ flex: 'none' }}>{m.letra}</b>
+                        <input
+                          className="field"
+                          style={{ flex: 1, minWidth: 0, padding: '6px 10px', fontSize: 12.5 }}
+                          value={m.nome}
+                          aria-label={`Nome do modelo ${m.letra}`}
+                          onChange={(e) => mudarModelo(i, { nome: e.target.value })}
+                        />
+                        <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--accent)' }}>
+                          {contagem.get(m.letra) ?? 0}
+                        </span>
+                        {modelos.length > 1 && (
+                          <button
+                            type="button"
+                            className="kebab"
+                            aria-label={`Remover modelo ${m.letra}`}
+                            onClick={() => removerModelo(i)}
+                          >
+                            <IconX size={12} />
+                          </button>
+                        )}
+                      </div>
+                      {/* O padrão vem primeiro: é dele que as carreiras nascem. Antes o
                   dropdown ficava embaixo de duas cores soltas, e não dava para
                   entender que uma coisa preenchia a outra. */}
-              {grannies.length > 0 && (
-                <div style={{ marginBottom: 8 }}>
+                      {grannies.length > 0 && (
+                        <div style={{ marginBottom: 8 }}>
+                          <Select
+                            value={m.receita_id ?? ''}
+                            onChange={(id) => puxarGranny(i, id)}
+                            options={grannies.map((r) => [r.id, r.nome] as [string, string])}
+                            ariaLabel={`Padrão do modelo ${m.letra}`}
+                            placeholder="Padrão da biblioteca…"
+                          />
+                          {m.receita_id && (
+                            <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 4 }}>
+                              {m.ajustado
+                                ? `ajustado a partir de ${grannies.find((r) => r.id === m.receita_id)?.nome ?? 'um padrão'}`
+                                : 'as carreiras vieram deste padrão'}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}
+                      >
+                        <SquareGranny cores={carreiras(m)} tamanho={30} style={{ flex: 'none' }} />
+                        <span className="lbl">CARREIRAS</span>
+                      </div>
+                      {carreiras(m).map((c, j) => (
+                        <div
+                          key={j}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}
+                        >
+                          <span style={{ fontSize: 10.5, color: 'var(--muted)', width: 34 }}>
+                            {j === 0
+                              ? 'miolo'
+                              : j === carreiras(m).length - 1
+                                ? 'borda'
+                                : `${j + 1}ª`}
+                          </span>
+                          <span style={{ flex: 1, minWidth: 0 }}>
+                            <ColorPicker
+                              fios={fios}
+                              value={c}
+                              ariaLabel={`Carreira ${j + 1} do modelo ${m.letra}`}
+                              onChange={(cor) => mudarCarreira(i, j, cor)}
+                            />
+                          </span>
+                          {carreiras(m).length > 2 && (
+                            <button
+                              type="button"
+                              className="kebab"
+                              aria-label={`Remover a carreira ${j + 1} do modelo ${m.letra}`}
+                              onClick={() =>
+                                mudarCarreiras(
+                                  i,
+                                  carreiras(m).filter((_, k) => k !== j),
+                                )
+                              }
+                            >
+                              <IconX size={11} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        className="pill ghost"
+                        style={{ padding: '5px 12px', fontSize: 11.5 }}
+                        onClick={() =>
+                          mudarCarreiras(i, [
+                            ...carreiras(m),
+                            PALETTE[carreiras(m).length % PALETTE.length][0],
+                          ])
+                        }
+                      >
+                        + Carreira
+                      </button>
+                    </div>
+                  ))}
+                  {modelos.length < LETRAS.length && (
+                    <button
+                      type="button"
+                      className="pill ghost"
+                      style={{ padding: '6px 14px', fontSize: 12 }}
+                      onClick={adicionarModelo}
+                    >
+                      + Modelo
+                    </button>
+                  )}
+
+                  {/* a medida do square dá o tamanho da manta inteira */}
+                  <div style={{ marginTop: 16 }}>
+                    <CampoMedida
+                      largura={medida.largura}
+                      altura={medida.altura}
+                      rotuloLargura="LARGURA DO SQUARE (CM)"
+                      rotuloAltura="ALTURA DO SQUARE (CM)"
+                      aoMudar={(patch) => setMedida((m) => ({ ...m, ...patch }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <Lbl style={{ marginBottom: 9 }}>FAIXA MODELO</Lbl>
+              {padroesFaixa.length > 0 && (
+                <div style={{ marginBottom: 10 }}>
                   <Select
-                    value={m.receita_id ?? ''}
-                    onChange={(id) => puxarGranny(i, id)}
-                    options={grannies.map((r) => [r.id, r.nome] as [string, string])}
-                    ariaLabel={`Padrão do modelo ${m.letra}`}
-                    placeholder="Padrão da biblioteca…"
+                    value={faixaReceitaId}
+                    onChange={puxarFaixa}
+                    options={padroesFaixa.map((r) => [r.id, r.nome] as [string, string])}
+                    ariaLabel="Puxar padrão de faixa da biblioteca"
+                    placeholder="Puxar da biblioteca…"
                   />
-                  {m.receita_id && (
+                  {faixaReceitaId && (
                     <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 4 }}>
-                      {m.ajustado
-                        ? `ajustado a partir de ${grannies.find((r) => r.id === m.receita_id)?.nome ?? 'um padrão'}`
-                        : 'as carreiras vieram deste padrão'}
+                      {faixaAjustada
+                        ? `ajustado a partir de ${padroesFaixa.find((r) => r.id === faixaReceitaId)?.nome ?? 'um padrão'}`
+                        : 'as cores, as faixas e a medida vieram deste padrão'}
                     </div>
                   )}
                 </div>
               )}
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <SquareGranny cores={carreiras(m)} tamanho={30} style={{ flex: 'none' }} />
-                <span className="lbl">CARREIRAS</span>
-              </div>
-              {carreiras(m).map((c, j) => (
-                <div
-                  key={j}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}
-                >
-                  <span style={{ fontSize: 10.5, color: 'var(--muted)', width: 34 }}>
-                    {j === 0 ? 'miolo' : j === carreiras(m).length - 1 ? 'borda' : `${j + 1}ª`}
-                  </span>
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <ColorPicker
-                      fios={fios}
-                      value={c}
-                      ariaLabel={`Carreira ${j + 1} do modelo ${m.letra}`}
-                      onChange={(cor) => mudarCarreira(i, j, cor)}
-                    />
-                  </span>
-                  {carreiras(m).length > 2 && (
+              <div style={{ marginBottom: 16 }}>
+                {seq.map((c, i) => (
+                  <div
+                    key={i}
+                    data-i={i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      marginBottom: 7,
+                      opacity: ordemSeq.arrastado === i ? 0.4 : 1,
+                      outline:
+                        ordemSeq.alvo === i && ordemSeq.arrastado !== i
+                          ? '2px dashed var(--ink)'
+                          : 'none',
+                      outlineOffset: 2,
+                      borderRadius: 8,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      aria-label={`Mover a cor ${i + 1} da faixa modelo`}
+                      {...ordemSeq.alca(i)}
+                      style={arrastarStyle}
+                    >
+                      <IconArrastar size={13} />
+                    </button>
+                    <span
+                      style={{ fontSize: 11, color: 'var(--muted)', width: 16, fontWeight: 800 }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span style={{ flex: 1, minWidth: 130 }}>
+                      <ColorPicker
+                        fios={fios}
+                        value={c}
+                        ariaLabel={`Cor ${i + 1} da faixa`}
+                        onChange={(nova) => mudarSeq(seq.map((x, j) => (j === i ? nova : x)))}
+                      />
+                    </span>
                     <button
                       type="button"
                       className="kebab"
-                      aria-label={`Remover a carreira ${j + 1} do modelo ${m.letra}`}
-                      onClick={() =>
-                        mudarCarreiras(
-                          i,
-                          carreiras(m).filter((_, k) => k !== j),
-                        )
-                      }
+                      aria-label={`Remover a cor ${i + 1}`}
+                      disabled={seq.length <= 2}
+                      onClick={() => mudarSeq(seq.filter((_, j) => j !== i))}
                     >
-                      <IconX size={11} />
+                      <IconX size={12} />
                     </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                className="pill ghost"
-                style={{ padding: '5px 12px', fontSize: 11.5 }}
-                onClick={() =>
-                  mudarCarreiras(i, [
-                    ...carreiras(m),
-                    PALETTE[carreiras(m).length % PALETTE.length][0],
-                  ])
-                }
-              >
-                + Carreira
-              </button>
-            </div>
-          ))}
-          {modelos.length < LETRAS.length && (
-            <button
-              type="button"
-              className="pill ghost"
-              style={{ padding: '6px 14px', fontSize: 12 }}
-              onClick={adicionarModelo}
-            >
-              + Modelo
-            </button>
-          )}
-
-          {/* a medida do square dá o tamanho da manta inteira */}
-          <div style={{ marginTop: 16 }}>
-            <CampoMedida
-              largura={medida.largura}
-              altura={medida.altura}
-              rotuloLargura="LARGURA DO SQUARE (CM)"
-              rotuloAltura="ALTURA DO SQUARE (CM)"
-              aoMudar={(patch) => setMedida((m) => ({ ...m, ...patch }))}
-            />
-          </div>
-        </div>
-      </div>
-        </>
-      ) : (
-        <>
-          <Lbl style={{ marginBottom: 9 }}>FAIXA MODELO</Lbl>
-          {padroesFaixa.length > 0 && (
-            <div style={{ marginBottom: 10 }}>
-              <Select
-                value={faixaReceitaId}
-                onChange={puxarFaixa}
-                options={padroesFaixa.map((r) => [r.id, r.nome] as [string, string])}
-                ariaLabel="Puxar padrão de faixa da biblioteca"
-                placeholder="Puxar da biblioteca…"
-              />
-              {faixaReceitaId && (
-                <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 4 }}>
-                  {faixaAjustada
-                    ? `ajustado a partir de ${padroesFaixa.find((r) => r.id === faixaReceitaId)?.nome ?? 'um padrão'}`
-                    : 'as cores, as faixas e a medida vieram deste padrão'}
-                </div>
-              )}
-            </div>
-          )}
-          <div style={{ marginBottom: 16 }}>
-            {seq.map((c, i) => (
-              <div
-                key={i}
-                data-i={i}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  marginBottom: 7,
-                  opacity: ordemSeq.arrastado === i ? 0.4 : 1,
-                  outline:
-                    ordemSeq.alvo === i && ordemSeq.arrastado !== i
-                      ? '2px dashed var(--ink)'
-                      : 'none',
-                  outlineOffset: 2,
-                  borderRadius: 8,
-                }}
-              >
-                <button
-                  type="button"
-                  aria-label={`Mover a cor ${i + 1} da faixa modelo`}
-                  {...ordemSeq.alca(i)}
-                  style={arrastarStyle}
-                >
-                  <IconArrastar size={13} />
-                </button>
-                <span style={{ fontSize: 11, color: 'var(--muted)', width: 16, fontWeight: 800 }}>
-                  {i + 1}
-                </span>
-                <span style={{ flex: 1, minWidth: 130 }}>
-                  <ColorPicker
-                    fios={fios}
-                    value={c}
-                    ariaLabel={`Cor ${i + 1} da faixa`}
-                    onChange={(nova) => mudarSeq(seq.map((x, j) => (j === i ? nova : x)))}
-                  />
-                </span>
-                <button
-                  type="button"
-                  className="kebab"
-                  aria-label={`Remover a cor ${i + 1}`}
-                  disabled={seq.length <= 2}
-                  onClick={() => mudarSeq(seq.filter((_, j) => j !== i))}
-                >
-                  <IconX size={12} />
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              className="pill ghost"
-              style={{ padding: '6px 14px', fontSize: 12 }}
-              onClick={() => mudarSeq([...seq, PALETTE[seq.length % PALETTE.length][0]])}
-            >
-              + Cor
-            </button>
-          </div>
-
-          <Lbl style={{ marginBottom: 7 }}>QUANTAS FAIXAS</Lbl>
-          <div style={{ marginBottom: 18, maxWidth: 140 }}>
-            <Stepper
-              value={faixas}
-              onChange={mudarQuantidade}
-              min={MIN_FAIXAS}
-              max={MAX_FAIXAS}
-              ariaLabel="Faixas"
-            />
-          </div>
-
-          <div style={{ marginBottom: 18 }}>
-            <CampoMedida
-              largura={medida.largura}
-              altura={medida.altura}
-              rotuloLargura="LARGURA DA FAIXA (CM)"
-              rotuloAltura="ALTURA DA FAIXA (CM)"
-              aoMudar={(patch) => setMedida((m) => ({ ...m, ...patch }))}
-            />
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'baseline',
-              marginBottom: 9,
-              gap: 10,
-              flexWrap: 'wrap',
-            }}
-          >
-            <Lbl>A MANTA</Lbl>
-            <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-              clique numa faixa para editar; puxe a borda de baixo para mudar a quantidade
-            </span>
-            {daManta && (
-              <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--accent)' }}>
-                {fmtMedida(daManta)}
-              </span>
-            )}
-          </div>
-          <div style={{ position: 'relative', paddingBottom: 14, marginBottom: 14 }}>
-            <PreviaFaixas
-              seq={seq}
-              faixas={faixas}
-              livres={faixasLivres ?? undefined}
-              sel={faixaSel}
-              aoSelecionar={setFaixaSel}
-              altura={Math.min(300, faixas * 16)}
-            />
-            <button
-              type="button"
-              className="alca-grade alca-y"
-              aria-label={`Quantidade de faixas: ${faixas}`}
-              onKeyDown={(e) => {
-                if (e.key === 'ArrowDown') mudarQuantidade(faixas + 1)
-                if (e.key === 'ArrowUp') mudarQuantidade(faixas - 1)
-              }}
-              {...alcaFaixas}
-            />
-          </div>
-
-          {/* Edição livre: a faixa escolhida vale por si, sem seguir o
-              deslocamento da faixa modelo. É o que faltava para mudar só uma
-              faixa do meio da manta sem refazer o esquema inteiro. */}
-          <div
-            style={{
-              background: 'var(--sand-soft)',
-              border: '1px solid var(--border)',
-              borderRadius: 12,
-              padding: '12px 14px',
-              marginBottom: 22,
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8,
-                marginBottom: 10,
-                flexWrap: 'wrap',
-              }}
-            >
-              <Lbl>FAIXA {faixaSel + 1}</Lbl>
-              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                <button
-                  type="button"
-                  className="kebab"
-                  aria-label={`Mover a faixa ${faixaSel + 1} para cima`}
-                  disabled={faixaSel === 0}
-                  onClick={() => moverFaixa(faixaSel, faixaSel - 1)}
-                >
-                  <IconChevron size={11} para="cima" />
-                </button>
-                <button
-                  type="button"
-                  className="kebab"
-                  aria-label={`Mover a faixa ${faixaSel + 1} para baixo`}
-                  disabled={faixaSel >= faixas - 1}
-                  onClick={() => moverFaixa(faixaSel, faixaSel + 1)}
-                >
-                  <IconChevron size={11} para="baixo" />
-                </button>
-                <button
-                  type="button"
-                  className="pill ghost"
-                  style={{ padding: '4px 11px', fontSize: 11.5 }}
-                  disabled={faixas >= MAX_FAIXAS}
-                  onClick={() => duplicarFaixa(faixaSel)}
-                >
-                  Duplicar
-                </button>
-                <button
-                  type="button"
-                  className="pill ghost"
-                  style={{ padding: '4px 11px', fontSize: 11.5 }}
-                  disabled={faixas <= MIN_FAIXAS}
-                  onClick={() => removerFaixa(faixaSel)}
-                >
-                  Remover
-                </button>
-              </div>
-            </div>
-
-            {coresSel.map((c, i) => (
-              <div
-                key={i}
-                data-cor={i}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  marginBottom: 6,
-                  opacity: ordemFaixa.arrastado === i ? 0.4 : 1,
-                  outline:
-                    ordemFaixa.alvo === i && ordemFaixa.arrastado !== i
-                      ? '2px dashed var(--ink)'
-                      : 'none',
-                  outlineOffset: 2,
-                  borderRadius: 8,
-                }}
-              >
-                <button
-                  type="button"
-                  aria-label={`Mover a cor ${i + 1} da faixa ${faixaSel + 1}`}
-                  {...ordemFaixa.alca(i)}
-                  style={arrastarStyle}
-                >
-                  <IconArrastar size={13} />
-                </button>
-                <span style={{ flex: 1, minWidth: 130 }}>
-                  <ColorPicker
-                    fios={fios}
-                    value={c}
-                    ariaLabel={`Cor ${i + 1} da faixa ${faixaSel + 1}`}
-                    onChange={(nova) =>
-                      editarFaixa(
-                        faixaSel,
-                        coresSel.map((x, j) => (j === i ? nova : x)),
-                      )
-                    }
-                  />
-                </span>
-                <button
-                  type="button"
-                  className="kebab"
-                  aria-label={`Remover a cor ${i + 1} da faixa ${faixaSel + 1}`}
-                  disabled={coresSel.length <= 2}
-                  onClick={() =>
-                    editarFaixa(
-                      faixaSel,
-                      coresSel.filter((_, j) => j !== i),
-                    )
-                  }
-                >
-                  <IconX size={12} />
-                </button>
-              </div>
-            ))}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
-              <button
-                type="button"
-                className="pill ghost"
-                style={{ padding: '6px 14px', fontSize: 12 }}
-                onClick={() =>
-                  editarFaixa(faixaSel, [...coresSel, PALETTE[coresSel.length % PALETTE.length][0]])
-                }
-              >
-                + Cor
-              </button>
-              {faixasLivres && (
+                  </div>
+                ))}
                 <button
                   type="button"
                   className="pill ghost"
                   style={{ padding: '6px 14px', fontSize: 12 }}
-                  onClick={redesenharFaixas}
+                  onClick={() => mudarSeq([...seq, PALETTE[seq.length % PALETTE.length][0]])}
                 >
-                  Redesenhar pela faixa modelo
+                  + Cor
                 </button>
-              )}
-            </div>
-            {faixasLivres && (
-              <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 8 }}>
-                as faixas foram editadas à mão e não seguem mais o deslocamento automático
               </div>
-            )}
+
+              <Lbl style={{ marginBottom: 7 }}>QUANTAS FAIXAS</Lbl>
+              <div style={{ marginBottom: 18, maxWidth: 140 }}>
+                <Stepper
+                  value={faixas}
+                  onChange={mudarQuantidade}
+                  min={MIN_FAIXAS}
+                  max={MAX_FAIXAS}
+                  ariaLabel="Faixas"
+                />
+              </div>
+
+              <div style={{ marginBottom: 18 }}>
+                <CampoMedida
+                  largura={medida.largura}
+                  altura={medida.altura}
+                  rotuloLargura="LARGURA DA FAIXA (CM)"
+                  rotuloAltura="ALTURA DA FAIXA (CM)"
+                  aoMudar={(patch) => setMedida((m) => ({ ...m, ...patch }))}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'baseline',
+                  marginBottom: 9,
+                  gap: 10,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <Lbl>A MANTA</Lbl>
+                <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+                  puxe a borda de baixo para mudar a quantidade
+                </span>
+                {daManta && (
+                  <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--accent)' }}>
+                    {fmtMedida(daManta)}
+                  </span>
+                )}
+              </div>
+              <div style={{ position: 'relative', paddingBottom: 14, marginBottom: 14 }}>
+                <PreviaFaixas
+                  seq={seq}
+                  faixas={faixas}
+                  livres={faixasLivres ?? undefined}
+                  sel={faixaSel}
+                  aoSelecionar={setFaixaSel}
+                  altura={Math.min(300, faixas * 16)}
+                />
+                <button
+                  type="button"
+                  className="alca-grade alca-y"
+                  aria-label={`Quantidade de faixas: ${faixas}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown') mudarQuantidade(faixas + 1)
+                    if (e.key === 'ArrowUp') mudarQuantidade(faixas - 1)
+                  }}
+                  {...alcaFaixas}
+                />
+              </div>
+
+              {/* Edição livre: a faixa escolhida vale por si, sem seguir o
+              deslocamento da faixa modelo. É o que faltava para mudar só uma
+              faixa do meio da manta sem refazer o esquema inteiro. */}
+              <div
+                style={{
+                  background: 'var(--sand-soft)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 12,
+                  padding: '12px 14px',
+                  marginBottom: 22,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    marginBottom: 10,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <Lbl>FAIXA {faixaSel + 1}</Lbl>
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      className="kebab"
+                      aria-label={`Mover a faixa ${faixaSel + 1} para cima`}
+                      disabled={faixaSel === 0}
+                      onClick={() => moverFaixa(faixaSel, faixaSel - 1)}
+                    >
+                      <IconChevron size={11} para="cima" />
+                    </button>
+                    <button
+                      type="button"
+                      className="kebab"
+                      aria-label={`Mover a faixa ${faixaSel + 1} para baixo`}
+                      disabled={faixaSel >= faixas - 1}
+                      onClick={() => moverFaixa(faixaSel, faixaSel + 1)}
+                    >
+                      <IconChevron size={11} para="baixo" />
+                    </button>
+                    <button
+                      type="button"
+                      className="pill ghost"
+                      style={{ padding: '4px 11px', fontSize: 11.5 }}
+                      disabled={faixas >= MAX_FAIXAS}
+                      onClick={() => duplicarFaixa(faixaSel)}
+                    >
+                      Duplicar
+                    </button>
+                    <button
+                      type="button"
+                      className="pill ghost"
+                      style={{ padding: '4px 11px', fontSize: 11.5 }}
+                      disabled={faixas <= MIN_FAIXAS}
+                      onClick={() => removerFaixa(faixaSel)}
+                    >
+                      Remover
+                    </button>
+                  </div>
+                </div>
+
+                {coresSel.map((c, i) => (
+                  <div
+                    key={i}
+                    data-cor={i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      marginBottom: 6,
+                      opacity: ordemFaixa.arrastado === i ? 0.4 : 1,
+                      outline:
+                        ordemFaixa.alvo === i && ordemFaixa.arrastado !== i
+                          ? '2px dashed var(--ink)'
+                          : 'none',
+                      outlineOffset: 2,
+                      borderRadius: 8,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      aria-label={`Mover a cor ${i + 1} da faixa ${faixaSel + 1}`}
+                      {...ordemFaixa.alca(i)}
+                      style={arrastarStyle}
+                    >
+                      <IconArrastar size={13} />
+                    </button>
+                    <span style={{ flex: 1, minWidth: 130 }}>
+                      <ColorPicker
+                        fios={fios}
+                        value={c}
+                        ariaLabel={`Cor ${i + 1} da faixa ${faixaSel + 1}`}
+                        onChange={(nova) =>
+                          editarFaixa(
+                            faixaSel,
+                            coresSel.map((x, j) => (j === i ? nova : x)),
+                          )
+                        }
+                      />
+                    </span>
+                    <button
+                      type="button"
+                      className="kebab"
+                      aria-label={`Remover a cor ${i + 1} da faixa ${faixaSel + 1}`}
+                      disabled={coresSel.length <= 2}
+                      onClick={() =>
+                        editarFaixa(
+                          faixaSel,
+                          coresSel.filter((_, j) => j !== i),
+                        )
+                      }
+                    >
+                      <IconX size={12} />
+                    </button>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                  <button
+                    type="button"
+                    className="pill ghost"
+                    style={{ padding: '6px 14px', fontSize: 12 }}
+                    onClick={() =>
+                      editarFaixa(faixaSel, [
+                        ...coresSel,
+                        PALETTE[coresSel.length % PALETTE.length][0],
+                      ])
+                    }
+                  >
+                    + Cor
+                  </button>
+                  {faixasLivres && (
+                    <button
+                      type="button"
+                      className="pill ghost"
+                      style={{ padding: '6px 14px', fontSize: 12 }}
+                      onClick={redesenharFaixas}
+                    >
+                      Redesenhar pela faixa modelo
+                    </button>
+                  )}
+                </div>
+                {faixasLivres && (
+                  <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 8 }}>
+                    as faixas foram editadas à mão e não seguem mais o deslocamento automático
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {erro && (
+            <div
+              role="alert"
+              style={{
+                background: 'var(--chip-soft)',
+                border: '1px solid var(--chip-rose-border)',
+                borderRadius: 10,
+                padding: '9px 13px',
+                fontSize: 12.5,
+                color: 'var(--primary-dark)',
+                marginBottom: 14,
+              }}
+            >
+              {erro}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button type="button" className="pill ghost" onClick={backToProjeto}>
+              Voltar
+            </button>
+            <button
+              type="button"
+              className="pill"
+              disabled={salvar.isPending}
+              onClick={() => salvar.mutate()}
+            >
+              {salvar.isPending ? 'Salvando…' : 'Salvar esquema'}
+            </button>
           </div>
-        </>
-      )}
-
-      {erro && (
-        <div
-          role="alert"
-          style={{
-            background: 'var(--chip-soft)',
-            border: '1px solid var(--chip-rose-border)',
-            borderRadius: 10,
-            padding: '9px 13px',
-            fontSize: 12.5,
-            color: 'var(--primary-dark)',
-            marginBottom: 14,
-          }}
-        >
-          {erro}
-        </div>
-      )}
-
-      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-        <button type="button" className="pill ghost" onClick={backToProjeto}>
-          Voltar
-        </button>
-        <button
-          type="button"
-          className="pill"
-          disabled={salvar.isPending}
-          onClick={() => salvar.mutate()}
-        >
-          {salvar.isPending ? 'Salvando…' : 'Salvar esquema'}
-        </button>
-      </div>
         </>
       )}
     </ModalBox>
