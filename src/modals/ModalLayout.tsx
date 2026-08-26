@@ -1078,7 +1078,7 @@ export function ModalLayout() {
                 </div>
                 {faixasLivres && (
                   <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 8 }}>
-                    as faixas foram editadas à mão e não seguem mais o deslocamento automático
+                    as faixas foram editadas à mão e não seguem mais a faixa modelo
                   </div>
                 )}
               </div>

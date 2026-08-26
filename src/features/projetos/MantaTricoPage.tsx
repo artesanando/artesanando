@@ -49,9 +49,7 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
   // a query revalida depois de pegar/concluir faixa: cores ainda não salvas
   // continuam valendo, o resto acompanha o banco
   useEffect(() => {
-    setRows((atual) =>
-      Object.fromEntries(faixas.map((f) => [f.id, atual[f.id] ?? f.cores])),
-    )
+    setRows((atual) => Object.fromEntries(faixas.map((f) => [f.id, atual[f.id] ?? f.cores])))
   }, [faixas])
 
   const indice = Math.min(sel, faixas.length - 1)
@@ -239,7 +237,9 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
             )
           })}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, maxWidth: 360 }}>
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, maxWidth: 360 }}
+        >
           <Progress pct={pctStr} style={{ flex: 1, height: 7 }} />
           <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--accent)' }}>
             {prog.done}/{prog.total}
@@ -295,12 +295,22 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
                   : { background: 'var(--chip-rose)', color: 'var(--accent)' }
             }
           >
-            {feita ? (travada ? 'FEITA · SOMENTE LEITURA' : 'FEITA') : faixaSel.status === 'fazendo' ? 'EM ANDAMENTO' : 'A FAZER'}
+            {feita
+              ? travada
+                ? 'FEITA · TRAVADA'
+                : 'FEITA'
+              : faixaSel.status === 'fazendo'
+                ? 'EM ANDAMENTO'
+                : 'A FAZER'}
           </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <Avatar color={faixaSel.responsavel?.avatar_color ?? 'var(--fill)'} size={22} fontSize={9}>
+          <Avatar
+            color={faixaSel.responsavel?.avatar_color ?? 'var(--fill)'}
+            size={22}
+            fontSize={9}
+          >
             {ini(faixaSel.responsavel?.nome ?? '?')}
           </Avatar>
           <span style={{ fontSize: 12.5, fontWeight: 700 }}>
@@ -417,8 +427,10 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
                 borderRadius: 10,
                 padding: '7px 11px',
                 opacity: arrastando === i ? 0.4 : 1,
-                transform: sobre === i && arrastando !== null && arrastando !== i ? 'scale(1.02)' : 'none',
-                transition: 'transform var(--dur-media) var(--ease-mola), opacity var(--dur-rapida)',
+                transform:
+                  sobre === i && arrastando !== null && arrastando !== i ? 'scale(1.02)' : 'none',
+                transition:
+                  'transform var(--dur-media) var(--ease-mola), opacity var(--dur-rapida)',
                 touchAction: 'none',
               }}
             >
@@ -452,7 +464,15 @@ function Editor({ projeto, faixas }: { projeto: Projeto; faixas: Faixa[] }) {
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 {travada ? (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12.5, fontWeight: 700 }}>
+                  <span
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 9,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                    }}
+                  >
                     <span
                       style={{
                         width: 22,
@@ -570,7 +590,8 @@ export function MantaTricoPage({ projeto }: { projeto: Projeto }) {
   return (
     <div className="pagina">
       <div className="crumb" onClick={() => navigate('/projetos')} style={{ marginBottom: 8 }}>
-        <IconChevron size={11} para="esquerda" /> Projetos / <span style={{ color: 'var(--ink)' }}>{projeto.nome}</span>
+        <IconChevron size={11} para="esquerda" /> Projetos /{' '}
+        <span style={{ color: 'var(--ink)' }}>{projeto.nome}</span>
       </div>
       <div
         style={{
@@ -583,9 +604,7 @@ export function MantaTricoPage({ projeto }: { projeto: Projeto }) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div className="h titulo-pagina">
-            {projeto.nome}
-          </div>
+          <div className="h titulo-pagina">{projeto.nome}</div>
           <span
             className="tag"
             style={{ border: '1px solid var(--chip-green-border)', color: 'var(--green-dark)' }}

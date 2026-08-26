@@ -308,7 +308,7 @@ function SecaoProjeto() {
       invalidar()
       toast('Semestre criado')
     },
-    onError: () => toast('Não foi possível criar — o rótulo já existe?', 'erro'),
+    onError: () => toast('Não foi possível criar. Confira se o rótulo já existe.', 'erro'),
   })
 
   const ativar = useMutation({

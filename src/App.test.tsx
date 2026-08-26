@@ -201,7 +201,7 @@ describe('projetos (M3)', () => {
   it('faixa feita fica somente-leitura para quem não pode reabrir', async () => {
     __login(INTEGRANTE_PROFILE)
     renderAt('/projetos/p2')
-    expect(await screen.findByText('FEITA · SOMENTE LEITURA')).toBeInTheDocument()
+    expect(await screen.findByText('FEITA · TRAVADA')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Embaralhar ordem' })).toBeDisabled()
   })
 
@@ -233,7 +233,7 @@ describe('projetos (M3)', () => {
   it('integrante não mexe na estrutura da manta de tricô', async () => {
     __login(INTEGRANTE_PROFILE)
     renderAt('/projetos/p2')
-    await screen.findByText('FEITA · SOMENTE LEITURA')
+    await screen.findByText('FEITA · TRAVADA')
     expect(screen.queryByRole('button', { name: 'Inserir abaixo' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '+ Faixa no fim' })).not.toBeInTheDocument()
   })
@@ -242,7 +242,9 @@ describe('projetos (M3)', () => {
     __login()
     renderAt('/projetos/p1')
     // "a fazer" e "pronto" agregam: quem pega um square pega um do padrão
-    expect(await screen.findByRole('button', { name: /peças? do padrão A em a fazer/i })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: /peças? do padrão A em a fazer/i }),
+    ).toBeInTheDocument()
   })
 
   it('o mapa não mexe mais em etapa — só move e pinta', async () => {
@@ -346,7 +348,9 @@ describe('presença (M4)', () => {
   it('dá para editar e cancelar um encontro, e arquivar deixou de existir', async () => {
     __login()
     renderAt('/presenca/en1')
-    await userEvent.click(await screen.findByRole('button', { name: /Ações do encontro de 07 jul/ }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Ações do encontro de 07 jul/ }),
+    )
     expect(screen.getByRole('menuitem', { name: 'Editar encontro' })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: 'Cancelar encontro' })).toBeInTheDocument()
     expect(screen.queryByRole('menuitem', { name: 'Arquivar' })).not.toBeInTheDocument()
@@ -388,9 +392,7 @@ describe('mural', () => {
     __login(INTEGRANTE_PROFILE)
     renderAt('/mural')
     // "Mural" aparece no menu e no título — a caixa de subir prova que a página abriu
-    expect(
-      await screen.findByRole('button', { name: /clique para escolher/ }),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /clique para escolher/ })).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: /^Feira de junho/ })).toBeInTheDocument()
   })
 
@@ -732,8 +734,12 @@ describe('atividade de extensão', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Frequência' }))
     expect(screen.getByLabelText('Buscar integrante')).toBeInTheDocument()
     // o total não é a soma dos turnos, e a entrega virou fracionária
-    expect(screen.getByRole('button', { name: /Não é a soma de diurno e noturno/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /o miolo vale 0,5 e a borda 0,5/ })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Não é a soma de diurno e noturno/ }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /o miolo vale 0,5 e a borda 0,5/ }),
+    ).toBeInTheDocument()
   })
 
   it('integrante não entra na área de extensão', async () => {

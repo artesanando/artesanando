@@ -67,8 +67,8 @@ export function useAcoesArquivo() {
         if (!(await podeExcluir(tabela, id))) {
           await confirmar({
             titulo: `Não dá para excluir ${nome}`,
-            descricao: `${motivoHistorico} ficaria sem referência. Arquive no lugar.`,
-            okLabel: 'Entendi',
+            descricao: `Isso apagaria ${motivoHistorico}. Arquive no lugar.`,
+            okLabel: 'Fechar',
             cancelarLabel: 'Fechar',
           })
           return

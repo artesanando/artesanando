@@ -77,10 +77,6 @@ export function RegrasDoSemestre({ semestreId }: { semestreId: string | null }) 
       <div className="h" style={{ fontSize: 17, marginBottom: 4 }}>
         Regras do semestre
       </div>
-      <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 26, maxWidth: 620 }}>
-        Cada exigência precisa ser cumprida. Dentro de uma exigência, basta um dos caminhos
-        listados.
-      </div>
 
       {NIVEIS.map((nivel) => (
         <NivelRegra
