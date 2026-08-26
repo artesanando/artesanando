@@ -19,7 +19,7 @@ import {
 import { atualizarPerfil, fetchMeuRa, salvarRa, subirAvatar } from './api'
 import { RecorteImagem } from '../../components/ui/RecorteImagem'
 import { MinhaMeta } from './MinhaMeta'
-import { IconCadeado, IconChevron } from '../../components/ui/icons'
+import { IconChevron } from '../../components/ui/icons'
 
 const PREFS: [Preferencia, string][] = [
   ['croche', 'Crochê'],
@@ -37,16 +37,8 @@ const NIVEIS: [Nivel, string][] = (['iniciante', 'experiente'] as Nivel[]).map((
   NIVEL_LABEL[n],
 ])
 
-const campoTravado = {
-  background: '#F1EAE4',
-  color: 'var(--muted)',
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: 8,
-} as const
-
 export function PerfilPage() {
-  const { profile, session, refreshProfile, updatePassword } = useAuth()
+  const { profile, refreshProfile, updatePassword } = useAuth()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const toast = useToast()
@@ -93,10 +85,6 @@ export function PerfilPage() {
   const [senhaMsg, setSenhaMsg] = useState<string | null>(null)
 
   if (!profile) return null
-
-  // o email mora no auth; a coluna em profiles é o espelho dele, para as outras
-  // telas poderem mostrar sem consultar o auth
-  const email = profile.email ?? session?.user.email ?? '—'
 
   const salvar = async (e: FormEvent) => {
     e.preventDefault()
@@ -298,18 +286,6 @@ export function PerfilPage() {
         )}
 
         <div className="grid2" style={{ marginBottom: 18 }}>
-          <Campo label="EMAIL">
-            {(p) => (
-              <div {...p} className="field" style={campoTravado}>
-                <span
-                  style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                >
-                  {email}
-                </span>
-                <IconCadeado size={12} />
-              </div>
-            )}
-          </Campo>
           <Campo label="TELEFONE / WHATSAPP">
             {(p) => (
               <input

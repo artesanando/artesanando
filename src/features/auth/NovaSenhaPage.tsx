@@ -7,8 +7,8 @@ import { RA_VALIDO } from '../../types/database'
 import { AuthShell } from './AuthShell'
 
 /* Usada tanto em /redefinir-senha (link do "esqueci") quanto em
-   /definir-senha (primeiro acesso via convite) — o link do email
-   autentica a sessão e aqui só gravamos a nova senha. */
+   /definir-senha (primeiro acesso via convite) — o link que a administradora
+   mandou autentica a sessão e aqui só gravamos a nova senha. */
 export function NovaSenhaPage({ modo }: { modo: 'redefinir' | 'definir' }) {
   const { session, profile, updatePassword } = useAuth()
   const navigate = useNavigate()
@@ -73,8 +73,8 @@ export function NovaSenhaPage({ modo }: { modo: 'redefinir' | 'definir' }) {
               marginBottom: 18,
             }}
           >
-            Abra esta página pelo link enviado ao seu email — sem ele não dá para validar quem
-            você é.
+            Abra esta página pelo link que a administradora te mandou — sem ele não dá para
+            validar quem você é.
           </div>
         )}
         {pedeRa && (

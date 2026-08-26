@@ -44,7 +44,6 @@ export interface Profile {
   user_id: string | null
   nome: string
   usuario: string
-  email: string | null
   telefone: string | null
   preferencia: Preferencia
   avatar_color: string

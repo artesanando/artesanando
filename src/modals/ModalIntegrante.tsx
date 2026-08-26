@@ -21,7 +21,7 @@ const PREFS: [Preferencia, string][] = [
 
 export function ModalIntegrante() {
   const { close, integranteId } = useStore()
-  const form = useFormulario<'nome' | 'usuario' | 'email'>()
+  const form = useFormulario<'nome' | 'usuario'>()
 
   /* Convite de quem já entrou pela chamada: o perfil existe e só falta a conta.
      O id vai junto para o banco ligar a conta a ESTE perfil — sem ele nascia
@@ -36,7 +36,6 @@ export function ModalIntegrante() {
 
   const [nome, setNome] = useState('')
   const [usuario, setUsuario] = useState('')
-  const [email, setEmail] = useState('')
   const [telefone, setTelefone] = useState('')
   const [preferencia, setPreferencia] = useState<Preferencia>('croche')
   const [turno, setTurno] = useState<Turno>('ambos')
@@ -53,7 +52,6 @@ export function ModalIntegrante() {
     const valido = form.checar({
       nome: convidando || nome.trim() ? undefined : 'Informe o nome completo.',
       usuario: convidando || usuario.trim() ? undefined : 'Escolha um nome de usuário.',
-      email: email.includes('@') ? undefined : 'Informe um email válido.',
     })
     if (!valido) return
 
@@ -63,7 +61,6 @@ export function ModalIntegrante() {
         profileId: integranteId,
         nome: convidando ? alvo!.nome : nome.trim(),
         usuario: (convidando ? alvo!.usuario : usuario).trim().toLowerCase(),
-        email: email.trim(),
         telefone: (convidando ? (alvo!.telefone ?? '') : telefone).trim() || null,
         preferencia: convidando ? alvo!.preferencia : preferencia,
         turno: convidando ? alvo!.turno : turno,
@@ -108,11 +105,11 @@ export function ModalIntegrante() {
               marginBottom: 16,
             }}
           >
-            Convite criado para <b>{email}</b>.
+            Convite criado para <b>{convidando ? (alvo?.nome ?? '') : nome.trim()}</b>.
           </div>
 
-          {/* O email só sai se o SMTP estiver configurado no Supabase. Com o link
-              copiável o convite funciona de qualquer jeito — por WhatsApp, na mão. */}
+          {/* Não sai mensagem nenhuma daqui: o convite é o link, copiado e
+              mandado na mão — por WhatsApp, do jeito que a turma já conversa. */}
           {link && (
             <>
               <div className="lbl" style={{ marginBottom: 7 }}>
@@ -191,22 +188,6 @@ export function ModalIntegrante() {
               </Campo>
             </div>
           )}
-
-          <Campo label="EMAIL" obrigatorio erro={form.erros.email} style={{ marginBottom: 18 }}>
-            {(p) => (
-              <input
-                {...p}
-                className="field"
-                type="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value)
-                  form.aoMudar('email')
-                }}
-                placeholder="ada@email.com"
-              />
-            )}
-          </Campo>
 
           {!convidando && (
             <>

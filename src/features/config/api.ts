@@ -6,7 +6,7 @@ export type PermCol = 'progresso' | 'devolucoes' | 'financeiro' | 'presenca'
 export interface PermissaoRow
   extends Pick<
     Profile,
-    'id' | 'nome' | 'avatar_color' | 'avatar_url' | 'email' | 'user_id' | 'papel'
+    'id' | 'nome' | 'usuario' | 'avatar_color' | 'avatar_url' | 'user_id' | 'papel'
   > {
   permissoes: Permissoes | null
 }
@@ -17,7 +17,7 @@ export interface PermissaoRow
 export async function fetchPermissoes(): Promise<PermissaoRow[]> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, nome, avatar_color, avatar_url, email, user_id, papel, permissoes(*)')
+    .select('id, nome, usuario, avatar_color, avatar_url, user_id, papel, permissoes(*)')
     .eq('ativo', true)
     .order('papel')
     .order('nome')

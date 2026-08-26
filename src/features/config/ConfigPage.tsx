@@ -214,7 +214,11 @@ function Permissoes() {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {admin ? 'administradora — acesso total' : (p.email ?? 'ainda sem conta')}
+                  {admin
+                    ? 'administradora — acesso total'
+                    : p.user_id
+                      ? `@${p.usuario}`
+                      : 'ainda sem conta'}
                 </div>
               </div>
             </div>

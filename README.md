@@ -6,7 +6,7 @@ Aplicativo de gestão do projeto de extensão de crochê e tricô — mantas, am
 
 ## Funcionalidades
 
-- **Login** por usuário ou email, com "manter conectada" e recuperação de senha por email; integrantes entram por convite.
+- **Login** por usuário, com "manter conectada"; sem email em lugar nenhum — integrantes entram por um link de convite que a administradora manda na mão, e a nova senha sai do mesmo jeito.
 - **Dashboard** derivado do banco: KPIs, projetos em produção e feed de atividades.
 - **Projetos** — mantas (crochê e tricô) e amigurumis, cada um com a própria tela:
   - **Manta de crochê** — fluxo por lotes (miolo → aguardando borda → borda → pronto), "pegar lote" e mapa dos squares.

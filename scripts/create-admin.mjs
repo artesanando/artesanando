@@ -9,19 +9,22 @@ if (!url || !key) {
   process.exit(1)
 }
 
-const email = process.env.ADMIN_EMAIL
 const senha = process.env.ADMIN_PASSWORD
 const nome = process.env.ADMIN_NOME
 const usuario = process.env.ADMIN_USUARIO
-if (!email || !senha || !nome || !usuario) {
-  console.error('Defina ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NOME e ADMIN_USUARIO no ambiente.')
+if (!senha || !nome || !usuario) {
+  console.error('Defina ADMIN_PASSWORD, ADMIN_NOME e ADMIN_USUARIO no ambiente.')
   process.exit(1)
 }
+
+// O Auth exige um email por conta; aqui ele é só o identificador interno, num
+// domínio que não existe. Ninguém escreve para ele — o projeto não usa email.
+const identificador = `${usuario.toLowerCase()}@artesanando.local`
 
 const supabase = createClient(url, key)
 
 const { data, error } = await supabase.auth.admin.createUser({
-  email,
+  email: identificador,
   password: senha,
   email_confirm: true,
   user_metadata: {
@@ -38,4 +41,4 @@ if (error) {
   process.exit(1)
 }
 
-console.log(`✓ ${usuario} (${email}) · id ${data.user.id}`)
+console.log(`✓ ${usuario} · id ${data.user.id}`)

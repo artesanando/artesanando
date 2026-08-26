@@ -34,7 +34,6 @@ Nada de rodar SQL na mão no painel.
    ```powershell
    $env:SUPABASE_URL="https://xxx.supabase.co"
    $env:SUPABASE_SERVICE_ROLE_KEY="..."
-   $env:ADMIN_EMAIL="voce@exemplo.com"
    $env:ADMIN_PASSWORD="..."
    $env:ADMIN_NOME="Seu Nome"
    $env:ADMIN_USUARIO="seu.usuario"
@@ -61,9 +60,10 @@ Nada de rodar SQL na mão no painel.
    Vercel; adicione `/redefinir-senha` e `/definir-senha` às Redirect URLs. O `site_url`
    do `config.toml` aponta para o dev local e não substitui esta configuração.
 
-9. **Emails** — o SMTP padrão limita ~2 emails/hora; para uso real configure um SMTP
-   próprio (Resend/Brevo) em *Authentication → SMTP Settings* antes de convidar as
-   integrantes.
+9. **Nada de email** — o projeto não manda mensagem nenhuma, então não há SMTP para
+   configurar. O Auth exige um email por conta, e ele é só o identificador interno
+   (`usuario@artesanando.local`, domínio que não existe): não aparece em tela e não
+   recebe nada. Convite e nova senha saem como link, copiados e mandados na mão.
 
 ## Apagar os dados de teste
 

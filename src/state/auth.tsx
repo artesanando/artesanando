@@ -13,7 +13,7 @@ interface AuthCtx {
   isAdmin: boolean
   /** permissão efetiva: admin sempre pode; integrante depende da flag */
   can: (perm: Perm) => boolean
-  login: (usuarioOuEmail: string, senha: string, manter: boolean) => Promise<void>
+  login: (usuario: string, senha: string, manter: boolean) => Promise<void>
   logout: () => Promise<void>
   updatePassword: (senha: string) => Promise<void>
   refreshProfile: () => Promise<void>
@@ -91,17 +91,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loading = !sessaoLida || (Boolean(userId) && carregandoPerfil)
 
-  const login = async (usuarioOuEmail: string, senha: string, manter: boolean) => {
+  /* Entra-se pelo nome de usuário. O Auth exige um email para achar a conta,
+     mas ele é só o identificador interno dela — o banco devolve qual é, e nem
+     a tela nem quem entra precisa saber que existe. */
+  const login = async (usuario: string, senha: string, manter: boolean) => {
     setKeepConnected(manter)
-    let email = usuarioOuEmail.trim()
-    if (!email.includes('@')) {
-      const { data, error } = await supabase.rpc('email_por_usuario', {
-        usuario_input: email,
-      })
-      if (error || !data) throw new Error('Usuário ou senha incorretos')
-      email = data as string
-    }
-    const { error } = await supabase.auth.signInWithPassword({ email, password: senha })
+    const { data, error: erroLookup } = await supabase.rpc('login_por_usuario', {
+      usuario_input: usuario.trim(),
+    })
+    if (erroLookup || !data) throw new Error('Usuário ou senha incorretos')
+    const { error } = await supabase.auth.signInWithPassword({
+      email: data as string,
+      password: senha,
+    })
     if (error) throw new Error('Usuário ou senha incorretos')
   }
 

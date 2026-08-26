@@ -44,7 +44,7 @@ export function LoginPage() {
           value={usuario}
           onChange={(e) => setUsuario(e.target.value)}
           autoComplete="username"
-          aria-label="Usuário ou email"
+          aria-label="Usuário"
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 7 }}>
           <span className="lbl">SENHA</span>

@@ -1,7 +1,12 @@
-// Edge Function: convida uma integrante por email (só admin).
+// Edge Function: cria o acesso de uma integrante e devolve o link (só admin).
 // Usa a service role no servidor; o front chama via supabase.functions.invoke.
 // Deploy: supabase functions deploy invite-member
 import { createClient } from 'npm:@supabase/supabase-js@2'
+
+/* O Auth exige um email por conta. Como o projeto não manda mensagem nenhuma,
+   ele é só um identificador interno num domínio que não existe. Ninguém digita
+   nem vê isto: o convite viaja pelo link, na mão. */
+const identificador = (usuario: string) => `${usuario.toLowerCase()}@artesanando.local`
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,15 +51,15 @@ Deno.serve(async (req) => {
       return json({ error: 'apenas administradoras convidam integrantes' }, 403)
     }
 
-    const { email, nome, usuario, telefone, preferencia, turno, papel, redirectTo, profileId } =
+    const { nome, usuario, telefone, preferencia, turno, papel, redirectTo, profileId } =
       await req.json()
-    if (!email || !nome || !usuario) {
-      return json({ error: 'email, nome e usuario são obrigatórios' }, 400)
+    if (!nome || !usuario) {
+      return json({ error: 'nome e usuario são obrigatórios' }, 400)
     }
 
     /* Convite de quem já entrou pela chamada: o perfil existe e o que falta é a
        conta. O id vai no metadata para o trigger ligar exatamente nele, em vez
-       de tentar adivinhar por usuário/email e acabar criando ficha duplicada. */
+       de tentar adivinhar pelo usuário e acabar criando ficha duplicada. */
     if (profileId) {
       const { data: alvo } = await admin
         .from('profiles')
@@ -84,23 +89,20 @@ Deno.serve(async (req) => {
       perfil_id: profileId ?? null,
     }
 
-    const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
-      data: metadata,
-      redirectTo,
+    /* `generateLink` cria a conta e devolve o link sem mandar mensagem nenhuma
+       — é o convite inteiro. A admin copia e manda pelo WhatsApp. */
+    const { data, error } = await admin.auth.admin.generateLink({
+      type: 'invite',
+      email: identificador(usuario),
+      options: { data: metadata, redirectTo },
     })
     if (error) return json({ error: error.message }, 400)
 
-    // O email depende do SMTP estar configurado; o link vai junto na resposta
-    // para a admin poder mandar pelo WhatsApp quando o email não sair.
-    let link: string | null = null
-    const gerado = await admin.auth.admin.generateLink({
-      type: 'invite',
-      email,
-      options: { data: metadata, redirectTo },
+    return json({
+      ok: true,
+      userId: data.user?.id,
+      link: data.properties?.action_link ?? null,
     })
-    if (!gerado.error) link = gerado.data.properties?.action_link ?? null
-
-    return json({ ok: true, userId: data.user?.id, link })
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : 'erro inesperado' }, 500)
   }

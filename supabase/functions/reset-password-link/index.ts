@@ -1,6 +1,6 @@
 // Edge Function: gera um link de nova senha para uma integrante que já tem
-// conta (só admin). Mesmo motivo do invite-member: sem SMTP configurado, o
-// link sai na resposta para a admin mandar na mão.
+// conta (só admin). Mesmo motivo do invite-member: nada sai por email, o link
+// vem na resposta para a admin mandar na mão.
 // Deploy: supabase functions deploy reset-password-link
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -50,22 +50,26 @@ Deno.serve(async (req) => {
     const { profileId, redirectTo } = await req.json()
     if (!profileId) return json({ error: 'profileId é obrigatório' }, 400)
 
-    // O email vem do perfil, nunca do corpo da requisição — senão qualquer
-    // conta autenticada poderia pedir o link de outra pessoa.
+    // De quem é o link sai do perfil, nunca do corpo da requisição — senão
+    // qualquer conta autenticada poderia pedir o link de outra pessoa.
     const { data: target } = await admin
       .from('profiles')
-      .select('user_id, email')
+      .select('user_id')
       .eq('id', profileId)
       .maybeSingle()
     if (!target) return json({ error: 'integrante não encontrada' }, 404)
     if (!target.user_id) {
       return json({ error: 'esta integrante ainda não tem conta — use o convite' }, 400)
     }
-    if (!target.email) return json({ error: 'esta integrante não tem email cadastrado' }, 400)
+
+    /* O `generateLink` só aceita a conta pelo identificador interno do Auth, e
+       ele não fica mais espelhado em profiles — vem do próprio Auth. */
+    const { data: conta } = await admin.auth.admin.getUserById(target.user_id)
+    if (!conta.user?.email) return json({ error: 'conta sem identificador no Auth' }, 400)
 
     const gerado = await admin.auth.admin.generateLink({
       type: 'recovery',
-      email: target.email,
+      email: conta.user.email,
       options: { redirectTo },
     })
     if (gerado.error) return json({ error: gerado.error.message }, 400)

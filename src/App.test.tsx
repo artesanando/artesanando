@@ -36,7 +36,7 @@ describe('auth', () => {
 
   it('entra pelo login e mostra a pagina inicial', async () => {
     renderAt('/login')
-    await userEvent.type(screen.getByLabelText('Usuário ou email'), 'candida.prof')
+    await userEvent.type(screen.getByLabelText('Usuário'), 'candida.prof')
     await userEvent.type(screen.getByLabelText('Senha'), '12345678')
     await userEvent.click(screen.getByRole('button', { name: 'Entrar' }))
     expect(await screen.findByText(/, Cândida$/)).toBeInTheDocument()
@@ -44,7 +44,7 @@ describe('auth', () => {
 
   it('senha errada mostra erro e não loga', async () => {
     renderAt('/login')
-    await userEvent.type(screen.getByLabelText('Usuário ou email'), 'candida.prof')
+    await userEvent.type(screen.getByLabelText('Usuário'), 'candida.prof')
     await userEvent.type(screen.getByLabelText('Senha'), 'senha-errada')
     await userEvent.click(screen.getByRole('button', { name: 'Entrar' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Usuário ou senha incorretos')
@@ -492,10 +492,11 @@ describe('configurações', () => {
 })
 
 describe('perfil', () => {
-  it('mostra o email da conta, que antes não aparecia em lugar nenhum', async () => {
+  it('não pede nem mostra email — o projeto não usa email para nada', async () => {
     __login()
     renderAt('/perfil')
-    expect(await screen.findByText('candida@example.com')).toBeInTheDocument()
+    await screen.findByLabelText(/NOME COMPLETO/)
+    expect(screen.queryByText(/EMAIL/)).not.toBeInTheDocument()
   })
 
   it('oferece adicionar foto quando ainda não há nenhuma', async () => {
