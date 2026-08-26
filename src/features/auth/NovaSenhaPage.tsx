@@ -4,12 +4,28 @@ import { useAuth } from '../../state/auth'
 import { Lbl, PasswordField } from '../../components/ui/bits'
 import { AuthShell } from './AuthShell'
 
+/* Quando o link não vale mais, o Supabase devolve o motivo no fragmento da URL
+   e nenhuma sessão. Sem ler isto a tela só mostrava um aviso genérico e o botão
+   ficava travado — no celular a leitura era "cliquei e não aconteceu nada". */
+function motivoDoLink(): string | null {
+  const hash = window.location.hash.replace(/^#/, '')
+  if (!hash) return null
+  const p = new URLSearchParams(hash)
+  if (!p.get('error') && !p.get('error_code')) return null
+  const codigo = p.get('error_code') ?? ''
+  if (codigo.includes('expired')) {
+    return 'Este link expirou. Peça um novo à administradora — cada link vale uma vez só.'
+  }
+  return 'Este link não vale mais: ou já foi aberto uma vez, ou expirou. Peça outro à administradora.'
+}
+
 /* Usada tanto em /redefinir-senha (link do "esqueci") quanto em
    /definir-senha (primeiro acesso via convite) — o link que a administradora
    mandou autentica a sessão e aqui só gravamos a nova senha. */
 export function NovaSenhaPage({ modo }: { modo: 'redefinir' | 'definir' }) {
-  const { session, updatePassword } = useAuth()
+  const { session, profile, updatePassword } = useAuth()
   const navigate = useNavigate()
+  const [linkMorto] = useState(motivoDoLink)
   const [senha, setSenha] = useState('')
   const [confirma, setConfirma] = useState('')
   const [erro, setErro] = useState<string | null>(null)
@@ -58,7 +74,26 @@ export function NovaSenhaPage({ modo }: { modo: 'redefinir' | 'definir' }) {
               marginBottom: 18,
             }}
           >
-            Abra esta página pelo link que a administradora te mandou.
+            {linkMorto ?? 'Abra esta página pelo link que a administradora te mandou.'}
+          </div>
+        )}
+
+        {/* Sem isto ninguém sai daqui sabendo com o que entrar depois: o convite
+            não passa por email, então o usuário só aparece nesta tela. */}
+        {modo === 'definir' && profile && (
+          <div
+            style={{
+              background: 'var(--sand-soft)',
+              border: '1px solid var(--border)',
+              borderRadius: 10,
+              padding: '10px 13px',
+              fontSize: 12.5,
+              marginBottom: 18,
+            }}
+          >
+            Daqui em diante você entra com o usuário{' '}
+            <b style={{ color: 'var(--accent)' }}>{profile.usuario}</b> e a senha que criar
+            agora. Anote.
           </div>
         )}
         <Lbl style={{ marginBottom: 7 }}>NOVA SENHA</Lbl>
@@ -102,7 +137,7 @@ export function NovaSenhaPage({ modo }: { modo: 'redefinir' | 'definir' }) {
             opacity: enviando || !session ? 0.7 : 1,
           }}
         >
-          {enviando ? 'Salvando…' : 'Salvar senha'}
+          {enviando ? 'Salvando…' : !session ? 'Link inválido' : 'Salvar senha'}
         </button>
       </form>
     </AuthShell>
