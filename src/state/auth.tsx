@@ -11,6 +11,8 @@ interface AuthCtx {
   profile: Profile | null
   loading: boolean
   isAdmin: boolean
+  /** sessão de pé, mas o perfil dela não veio — estado sem saída se ninguém tratar */
+  semPerfil: boolean
   /** permissão efetiva: admin sempre pode; integrante depende da flag */
   can: (perm: Perm) => boolean
   login: (usuario: string, senha: string, manter: boolean) => Promise<void>
@@ -30,7 +32,10 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
     .select('*')
     .eq('user_id', userId)
     .maybeSingle()
-  if (error) return null
+  /* Engolir o erro aqui devolvia perfil nulo, e o RequireAuth trata nulo como
+     "ainda carregando" — a falha virava splash eterna, sem saída a não ser
+     limpar os dados do site. Agora sobe, e quem chama decide o que mostrar. */
+  if (error) throw error
   const perfil = (data as Profile | null) ?? null
   // o perfil circula pelo app inteiro: entra sempre com turno e nível válidos
   return (
@@ -90,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const perms = profile ? (permissoes ?? null) : null
 
   const loading = !sessaoLida || (Boolean(userId) && carregandoPerfil)
+  const semPerfil = Boolean(userId) && !carregandoPerfil && !profile
 
   /* Entra-se pelo nome de usuário. O Auth exige um email para achar a conta,
      mas ele é só o identificador interno dela — o banco devolve qual é, e nem
@@ -129,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         loading,
         isAdmin,
+        semPerfil,
         can: (perm) => isAdmin || Boolean(perms?.[perm]),
         login,
         logout,

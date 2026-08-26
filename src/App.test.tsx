@@ -85,7 +85,7 @@ describe('auth', () => {
     await screen.findByText('Escolha sua senha')
     await userEvent.type(screen.getByLabelText('Nova senha'), 'senhanova1')
     await userEvent.type(screen.getByLabelText('Confirmar senha'), 'outracoisa9')
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar e continuar' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('As senhas não coincidem.')
   })
 
@@ -94,6 +94,13 @@ describe('auth', () => {
     renderAt('/')
     expect(await screen.findByText(/, Cândida$/)).toBeInTheDocument()
     expect(screen.queryByText('Escolha sua senha')).not.toBeInTheDocument()
+  })
+
+  it('perfil que não carrega mostra saída, e não carregando para sempre', async () => {
+    __login({ ...INTEGRANTE_PROFILE, id: 'fantasma', user_id: 'fantasma' })
+    renderAt('/')
+    expect(await screen.findByText('Não foi possível abrir seu perfil')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sair' })).toBeInTheDocument()
   })
 
   it('senha errada mostra erro e não loga', async () => {

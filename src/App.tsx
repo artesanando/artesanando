@@ -9,6 +9,7 @@ import { ConfirmProvider } from './components/ui/Confirm'
 import { AppShell } from './components/layout/AppShell'
 import { LoginPage } from './features/auth/LoginPage'
 import { AcessoPage } from './features/auth/AcessoPage'
+import { AuthShell } from './features/auth/AuthShell'
 import { InicioPage } from './features/inicio/InicioPage'
 import { ProjetosPage } from './features/projetos/ProjetosPage'
 import { ProjetoDetalhePage } from './features/projetos/ProjetoDetalhePage'
@@ -59,11 +60,35 @@ function SetupPage() {
   )
 }
 
+/* Sessão de pé e perfil que não veio era `<Splash />` para sempre: recarregar
+   caía na mesma tela, porque a sessão fica guardada. A saída é sair. */
+function SemPerfil() {
+  const { logout } = useAuth()
+  return (
+    <AuthShell>
+      <div className="h" style={{ fontWeight: 500, fontSize: 22, marginBottom: 4 }}>
+        Não foi possível abrir seu perfil
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>
+        Fale com a administradora.
+      </div>
+      <button
+        type="button"
+        className="pill"
+        onClick={logout}
+        style={{ width: '100%', padding: 13, fontSize: 14 }}
+      >
+        Sair
+      </button>
+    </AuthShell>
+  )
+}
+
 function RequireAuth({ children }: { children: ReactNode }) {
-  const { session, profile, loading } = useAuth()
+  const { session, loading, semPerfil } = useAuth()
   if (loading) return <Splash />
   if (!session) return <Navigate to="/login" replace />
-  if (!profile) return <Splash />
+  if (semPerfil) return <SemPerfil />
   return children
 }
 
