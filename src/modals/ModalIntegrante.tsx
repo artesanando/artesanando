@@ -41,7 +41,7 @@ export function ModalIntegrante() {
   const [turno, setTurno] = useState<Turno>('ambos')
   const [papel, setPapel] = useState<Papel>('integrante')
   const [erro, setErro] = useState<string | null>(null)
-  const [link, setLink] = useState<string | null>(null)
+  const [acesso, setAcesso] = useState<{ usuario: string; senha: string } | null>(null)
   const [ok, setOk] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [copiado, setCopiado] = useState(false)
@@ -65,23 +65,22 @@ export function ModalIntegrante() {
         preferencia: convidando ? alvo!.preferencia : preferencia,
         turno: convidando ? alvo!.turno : turno,
         papel: convidando ? alvo!.papel : papel,
-        redirectTo: window.location.origin + '/definir-senha',
       },
     })
     setEnviando(false)
 
-    const corpo = data as { error?: string; link?: string | null } | null
-    if (error || corpo?.error) {
-      setErro(corpo?.error ?? 'Não foi possível enviar o convite. Tente novamente.')
+    const corpo = data as { error?: string; usuario?: string; senha?: string } | null
+    if (error || corpo?.error || !corpo?.senha) {
+      setErro(corpo?.error ?? 'Não foi possível criar o acesso. Tente novamente.')
       return
     }
-    setLink(corpo?.link ?? null)
+    setAcesso({ usuario: corpo.usuario ?? '', senha: corpo.senha })
     setOk(true)
   }
 
   const copiar = async () => {
-    if (!link) return
-    await navigator.clipboard?.writeText(link)
+    if (!acesso) return
+    await navigator.clipboard?.writeText(acesso.senha)
     setCopiado(true)
     setTimeout(() => setCopiado(false), 2500)
   }
@@ -105,31 +104,39 @@ export function ModalIntegrante() {
               marginBottom: 16,
             }}
           >
-            Convite criado para <b>{convidando ? (alvo?.nome ?? '') : nome.trim()}</b>.
+            Acesso criado para <b>{convidando ? (alvo?.nome ?? '') : nome.trim()}</b>.
           </div>
 
-          {/* Não sai mensagem nenhuma daqui: o convite é o link, copiado e
-              mandado na mão — por WhatsApp, do jeito que a turma já conversa. */}
-          {link && (
+          {/* Era um link de uso único, e o preview do WhatsApp gastava o token
+              antes de a pessoa tocar nele — o convite chegava expirado. Usuário
+              e senha atravessam qualquer conversa sem se gastar. */}
+          {acesso && (
             <>
               <div className="lbl" style={{ marginBottom: 7 }}>
-                LINK DE ACESSO
+                USUÁRIO
+              </div>
+              <div className="field" style={{ marginBottom: 12, fontWeight: 700 }}>
+                {acesso.usuario}
+              </div>
+              <div className="lbl" style={{ marginBottom: 7 }}>
+                SENHA PROVISÓRIA
               </div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
                 <input
                   className="field"
                   readOnly
-                  value={link}
-                  aria-label="Link de convite"
+                  value={acesso.senha}
+                  aria-label="Senha provisória"
                   onFocus={(e) => e.currentTarget.select()}
-                  style={{ flex: 1, minWidth: 180, fontSize: 12 }}
+                  style={{ flex: 1, minWidth: 180, fontWeight: 700, letterSpacing: 1 }}
                 />
                 <button type="button" className="pill" onClick={copiar}>
                   {copiado ? 'Copiado' : 'Copiar'}
                 </button>
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--gold-dark)', marginBottom: 20 }}>
-                Vale como senha. Mande só em conversa privada.
+                Mande os dois só em conversa privada. Ela troca a senha em Meu perfil depois de
+                entrar.
               </div>
             </>
           )}

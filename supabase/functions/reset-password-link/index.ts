@@ -1,8 +1,18 @@
-// Edge Function: gera um link de nova senha para uma integrante que já tem
-// conta (só admin). Mesmo motivo do invite-member: nada sai por email, o link
-// vem na resposta para a admin mandar na mão.
+// Edge Function: gera uma senha provisória para quem já tem conta (só admin).
+// Mesmo motivo do invite-member: nada sai por email, e link de uso único não
+// sobrevive ao preview do WhatsApp — a senha vem na resposta, para a admin
+// mandar na mão. O nome da function ficou do tempo do link.
 // Deploy: supabase functions deploy reset-password-link
 import { createClient } from 'npm:@supabase/supabase-js@2'
+
+/* Sem i, l, o, 0 e 1: a senha é ditada no WhatsApp e copiada à mão. */
+const ALFABETO = 'abcdefghjkmnpqrstuvwxyz23456789'
+
+function senhaProvisoria() {
+  const n = new Uint32Array(10)
+  crypto.getRandomValues(n)
+  return Array.from(n, (x) => ALFABETO[x % ALFABETO.length]).join('')
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,17 +54,17 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .maybeSingle()
     if (!profile || profile.papel !== 'admin' || !profile.ativo) {
-      return json({ error: 'Só administradoras podem gerar o link.' }, 403)
+      return json({ error: 'Só administradoras podem gerar a senha.' }, 403)
     }
 
-    const { profileId, redirectTo } = await req.json()
+    const { profileId } = await req.json()
     if (!profileId) return json({ error: 'Escolha a integrante.' }, 400)
 
-    // De quem é o link sai do perfil, nunca do corpo da requisição — senão
-    // qualquer conta autenticada poderia pedir o link de outra pessoa.
+    // De quem é a senha sai do perfil, nunca do corpo da requisição — senão
+    // qualquer conta autenticada poderia pedir a senha de outra pessoa.
     const { data: target } = await admin
       .from('profiles')
-      .select('user_id, nome')
+      .select('user_id, nome, usuario')
       .eq('id', profileId)
       .maybeSingle()
     if (!target) return json({ error: 'Integrante não encontrada.' }, 404)
@@ -62,23 +72,14 @@ Deno.serve(async (req) => {
       return json({ error: `${target.nome} ainda não tem conta. Use "Convidar para o app".` }, 400)
     }
 
-    /* O `generateLink` só aceita a conta pelo identificador interno do Auth, e
-       ele não fica mais espelhado em profiles — vem do próprio Auth. */
-    const { data: conta } = await admin.auth.admin.getUserById(target.user_id)
-    if (!conta.user?.email)
-      return json({ error: 'Não foi possível gerar o link para essa conta.' }, 400)
-
-    const gerado = await admin.auth.admin.generateLink({
-      type: 'recovery',
-      email: conta.user.email,
-      options: { redirectTo },
-    })
-    if (gerado.error) {
-      console.error('generateLink', gerado.error)
-      return json({ error: 'Não foi possível gerar o link. Tente de novo.' }, 400)
+    const senha = senhaProvisoria()
+    const { error } = await admin.auth.admin.updateUserById(target.user_id, { password: senha })
+    if (error) {
+      console.error('updateUserById', error)
+      return json({ error: 'Não foi possível gerar a senha. Tente de novo.' }, 400)
     }
 
-    return json({ ok: true, link: gerado.data.properties?.action_link ?? null })
+    return json({ ok: true, usuario: target.usuario, senha })
   } catch (e) {
     console.error(e)
     return json({ error: 'Não foi possível concluir. Tente de novo.' }, 500)

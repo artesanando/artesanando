@@ -361,34 +361,29 @@ export function IntegrantesPage() {
                             ...(p.user_id
                               ? [
                                   {
-                                    label: 'Gerar link de nova senha',
+                                    label: 'Gerar senha provisória',
                                     onSelect: async () => {
                                       setLinkSenha(null)
                                       setLinkSenhaPara(p.id)
                                       setGerandoLink(true)
                                       const { data, error } = await supabase.functions.invoke(
                                         'reset-password-link',
-                                        {
-                                          body: {
-                                            profileId: p.id,
-                                            redirectTo: window.location.origin + '/redefinir-senha',
-                                          },
-                                        },
+                                        { body: { profileId: p.id } },
                                       )
                                       setGerandoLink(false)
                                       const corpo = data as {
                                         error?: string
-                                        link?: string | null
+                                        senha?: string
                                       } | null
-                                      if (error || corpo?.error) {
+                                      if (error || corpo?.error || !corpo?.senha) {
                                         toast(
-                                          corpo?.error ?? 'Não foi possível gerar o link.',
+                                          corpo?.error ?? 'Não foi possível gerar a senha.',
                                           'erro',
                                         )
                                         setLinkSenhaPara(null)
                                         return
                                       }
-                                      setLinkSenha(corpo?.link ?? null)
+                                      setLinkSenha(corpo.senha)
                                     },
                                   },
                                 ]
@@ -416,7 +411,7 @@ export function IntegrantesPage() {
                       style={{ padding: '10px 8px 14px', borderBottom: '1px solid var(--border)' }}
                     >
                       {gerandoLink && (
-                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>Gerando link…</div>
+                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>Gerando senha…</div>
                       )}
                       {linkSenha && (
                         <>
@@ -427,9 +422,9 @@ export function IntegrantesPage() {
                               className="field"
                               readOnly
                               value={linkSenha}
-                              aria-label={`Link de nova senha de ${p.nome}`}
+                              aria-label={`Senha provisória de ${p.nome}`}
                               onFocus={(e) => e.currentTarget.select()}
-                              style={{ flex: 1, minWidth: 180, fontSize: 12 }}
+                              style={{ flex: 1, minWidth: 180, fontWeight: 700, letterSpacing: 1 }}
                             />
                             <button
                               type="button"
@@ -454,7 +449,8 @@ export function IntegrantesPage() {
                             </button>
                           </div>
                           <div style={{ fontSize: 11.5, color: 'var(--gold-dark)' }}>
-                            Vale como senha. Mande só em conversa privada.
+                            Mande com o usuário <b>{p.usuario}</b>, só em conversa privada. Ela
+                            troca a senha em Meu perfil.
                           </div>
                         </>
                       )}

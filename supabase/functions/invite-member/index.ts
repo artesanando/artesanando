@@ -8,6 +8,16 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
    nem vê isto: o convite viaja pelo link, na mão. */
 const identificador = (usuario: string) => `${usuario.toLowerCase()}@artesanando.local`
 
+/* Sem i, l, o, 0 e 1: a senha é ditada no WhatsApp e copiada à mão, então o que
+   se confunde na leitura vira chamado de "não consigo entrar". */
+const ALFABETO = 'abcdefghjkmnpqrstuvwxyz23456789'
+
+function senhaProvisoria() {
+  const n = new Uint32Array(10)
+  crypto.getRandomValues(n)
+  return Array.from(n, (x) => ALFABETO[x % ALFABETO.length]).join('')
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -51,8 +61,7 @@ Deno.serve(async (req) => {
       return json({ error: 'Só administradoras podem convidar.' }, 403)
     }
 
-    const { nome, usuario, telefone, preferencia, turno, papel, redirectTo, profileId } =
-      await req.json()
+    const { nome, usuario, telefone, preferencia, turno, papel, profileId } = await req.json()
     if (!nome || !usuario) {
       return json({ error: 'Informe o nome e o usuário.' }, 400)
     }
@@ -60,6 +69,7 @@ Deno.serve(async (req) => {
     /* Convite de quem já entrou pela chamada: o perfil existe e o que falta é a
        conta. O id vai no metadata para o trigger ligar exatamente nele, em vez
        de tentar adivinhar pelo usuário e acabar criando ficha duplicada. */
+    let contaExistente: string | null = null
     if (profileId) {
       const { data: alvo } = await admin
         .from('profiles')
@@ -67,7 +77,10 @@ Deno.serve(async (req) => {
         .eq('id', profileId)
         .maybeSingle()
       if (!alvo) return json({ error: 'Integrante não encontrada.' }, 404)
-      if (alvo.user_id) return json({ error: `${nome} já tem conta no app.` }, 409)
+      /* Já ter conta não barra mais. Antes barrava, e quem perdeu a senha
+         provisória antes de entrar ficava sem saída nenhuma: nem por aqui, nem
+         pelo cadastro, que recusa usuário repetido. Reemitir é o caso normal. */
+      contaExistente = alvo.user_id
     }
 
     const { data: existing } = await admin
@@ -76,7 +89,10 @@ Deno.serve(async (req) => {
       .eq('usuario', usuario)
       .maybeSingle()
     if (existing && existing.id !== profileId) {
-      return json({ error: 'Já existe uma integrante com esse usuário.' }, 409)
+      return json(
+        { error: 'Já existe uma integrante com esse usuário. Gere o acesso pela ficha dela.' },
+        409,
+      )
     }
 
     const metadata = {
@@ -89,23 +105,33 @@ Deno.serve(async (req) => {
       perfil_id: profileId ?? null,
     }
 
-    /* `generateLink` cria a conta e devolve o link sem mandar mensagem nenhuma
-       — é o convite inteiro. A admin copia e manda pelo WhatsApp. */
-    const { data, error } = await admin.auth.admin.generateLink({
-      type: 'invite',
-      email: identificador(usuario),
-      options: { data: metadata, redirectTo },
-    })
-    if (error) {
-      console.error('generateLink', error)
-      return json({ error: 'Não foi possível criar o convite. Tente de novo.' }, 400)
+    /* O acesso viaja como usuário + senha provisória, ditos pela admin. Link de
+       uso único não servia: o preview do WhatsApp busca a URL para montar o
+       cartãozinho e gasta o token antes de a pessoa tocar nele — o convite
+       chegava do outro lado já expirado. */
+    const senha = senhaProvisoria()
+
+    if (contaExistente) {
+      const { error } = await admin.auth.admin.updateUserById(contaExistente, { password: senha })
+      if (error) {
+        console.error('updateUserById', error)
+        return json({ error: 'Não foi possível gerar o acesso. Tente de novo.' }, 400)
+      }
+      return json({ ok: true, usuario, senha })
     }
 
-    return json({
-      ok: true,
-      userId: data.user?.id,
-      link: data.properties?.action_link ?? null,
+    const { data, error } = await admin.auth.admin.createUser({
+      email: identificador(usuario),
+      password: senha,
+      email_confirm: true,
+      user_metadata: metadata,
     })
+    if (error) {
+      console.error('createUser', error)
+      return json({ error: 'Não foi possível criar o acesso. Tente de novo.' }, 400)
+    }
+
+    return json({ ok: true, usuario, senha, userId: data.user?.id })
   } catch (e) {
     console.error(e)
     return json({ error: 'Não foi possível concluir. Tente de novo.' }, 500)
