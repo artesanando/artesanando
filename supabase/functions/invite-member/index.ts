@@ -101,6 +101,13 @@ Deno.serve(async (req) => {
       telefone: telefone ?? null,
       preferencia: preferencia ?? 'ambos',
       turno: turno ?? 'ambos',
+    }
+
+    /* Papel e ficha de destino viajam no app_metadata, não no user_metadata: o
+       navegador escreve o segundo no `signUp` do cadastro público, e o trigger
+       tem de saber distinguir o que veio daqui — de dentro da service role — do
+       que veio de quem está se cadastrando. */
+    const confianca = {
       papel: papel === 'admin' ? 'admin' : 'integrante',
       perfil_id: profileId ?? null,
     }
@@ -126,6 +133,7 @@ Deno.serve(async (req) => {
       password: senha,
       email_confirm: true,
       user_metadata: metadata,
+      app_metadata: confianca,
     })
     if (error) {
       console.error('createUser', error)
