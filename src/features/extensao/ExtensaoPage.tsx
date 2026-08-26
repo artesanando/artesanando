@@ -90,21 +90,6 @@ const AJUDA_SQUARES = 'O square costuma ser dividido: o miolo vale 0,5 e a borda
 const AJUDA_FEIRA =
   'Peças que ela fez e foram para a feira, na caixa ou já vendidas. Item de feira arquivado sai da conta.'
 
-const item = (on: boolean): CSSProperties => ({
-  padding: '9px 12px',
-  borderRadius: 10,
-  border: 'none',
-  width: '100%',
-  textAlign: 'left',
-  fontFamily: 'inherit',
-  fontSize: 13,
-  cursor: 'pointer',
-  background: on ? 'var(--chip-rose)' : 'transparent',
-  color: on ? 'var(--accent)' : 'var(--muted)',
-  fontWeight: on ? 800 : 700,
-  transition: 'background var(--dur-rapida) var(--ease-suave)',
-})
-
 /* Tudo que a coordenação precisa para prestar contas do semestre num lugar só.
    Não é configuração do app — é o produto do trabalho — e por isso tem tela
    própria em vez de virar mais uma aba de Ajustes. */
@@ -142,7 +127,13 @@ export function ExtensaoPage() {
           celular; lá o menu vira uma faixa que rola de lado */}
         <div className="menu-extensao">
           {SECOES.map(([k, label]) => (
-            <button key={k} style={item(secao === k)} onClick={() => setSecao(k)}>
+            <button
+              key={k}
+              type="button"
+              className="item-secao"
+              aria-pressed={secao === k}
+              onClick={() => setSecao(k)}
+            >
               {label}
             </button>
           ))}

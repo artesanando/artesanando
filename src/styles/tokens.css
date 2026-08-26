@@ -77,6 +77,11 @@
   /* respiro das páginas */
   --pagina-x: clamp(16px, 4vw, 40px);
   --pagina-y: clamp(20px, 3vw, 30px);
+
+  /* toque — o mínimo que um dedo acerta sem mirar (iOS e Android pedem 44px).
+     Onde o desenho não pode crescer, cresce só a área clicável. */
+  --toque: 44px;
+  --toque-lista: 52px;
 }
 
 /* Quem pediu menos movimento no sistema recebe o app inteiro instantâneo. */

@@ -148,17 +148,6 @@ export function Progress({
 
 /* Controles reais (M2) — o Select vive em ./controles porque abre pop-up próprio */
 
-const passo: CSSProperties = {
-  border: 'none',
-  background: 'none',
-  fontFamily: 'inherit',
-  fontWeight: 800,
-  fontSize: 15,
-  padding: '0 8px',
-  cursor: 'pointer',
-  lineHeight: 1,
-}
-
 export function Stepper({
   value,
   onChange,
@@ -186,7 +175,8 @@ export function Stepper({
         aria-label="Diminuir"
         disabled={value <= min}
         onClick={() => onChange(Math.max(min, value - 1))}
-        style={{ ...passo, color: 'var(--faint)', opacity: value <= min ? 0.4 : 1 }}
+        className="passo"
+        style={{ color: 'var(--faint)', opacity: value <= min ? 0.4 : 1 }}
       >
         −
       </button>
@@ -211,7 +201,8 @@ export function Stepper({
         aria-label="Aumentar"
         disabled={value >= max}
         onClick={() => onChange(Math.min(max, value + 1))}
-        style={{ ...passo, color: 'var(--accent)', opacity: value >= max ? 0.4 : 1 }}
+        className="passo"
+        style={{ color: 'var(--accent)', opacity: value >= max ? 0.4 : 1 }}
       >
         +
       </button>

@@ -64,18 +64,6 @@ export function ProjetosPage() {
   const pct = ({ done, total }: { done: number; total: number }) =>
     total === 0 ? 0 : Math.round((done / total) * 100)
 
-  const tabStyle = (on: boolean): React.CSSProperties => ({
-    padding: '8px 2px',
-    border: 'none',
-    background: 'none',
-    fontFamily: 'inherit',
-    fontSize: 13,
-    fontWeight: 700,
-    cursor: 'pointer',
-    borderBottom: on ? '2px solid var(--primary)' : '2px solid transparent',
-    color: on ? 'var(--ink)' : 'var(--muted)',
-  })
-
   const mostraMantas = aba !== 'amigurumis'
   const mostraAmigs = aba !== 'mantas'
 
@@ -123,7 +111,7 @@ export function ProjetosPage() {
             role="tab"
             aria-selected={aba === k}
             onClick={() => setAba(k)}
-            style={tabStyle(aba === k)}
+            className="aba"
           >
             {label}
             {n !== null && <span style={{ color: cor ?? undefined }}> {n}</span>}

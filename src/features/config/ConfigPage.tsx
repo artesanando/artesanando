@@ -40,21 +40,6 @@ const COLS: [PermCol, string, string][] = [
    decidir quem pode o quê. */
 const COL_ADMIN = 'ADMINISTRADORA'
 
-const item = (on: boolean): CSSProperties => ({
-  padding: '9px 12px',
-  borderRadius: 10,
-  border: 'none',
-  width: '100%',
-  textAlign: 'left',
-  fontFamily: 'inherit',
-  fontSize: 13,
-  cursor: 'pointer',
-  background: on ? 'var(--chip-rose)' : 'transparent',
-  color: on ? 'var(--accent)' : 'var(--muted)',
-  fontWeight: on ? 800 : 700,
-  transition: 'background var(--dur-rapida) var(--ease-suave)',
-})
-
 export function ConfigPage() {
   const [secao, setSecao] = useState<Secao>('permissoes')
 
@@ -63,10 +48,20 @@ export function ConfigPage() {
       <CabecalhoPagina titulo="Ajustes" />
       <div className="pgrid" style={{ '--cols': '180px 1fr', '--gap': '34px' } as CSSProperties}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <button style={item(secao === 'permissoes')} onClick={() => setSecao('permissoes')}>
+          <button
+            type="button"
+            className="item-secao"
+            aria-pressed={secao === 'permissoes'}
+            onClick={() => setSecao('permissoes')}
+          >
             Permissões
           </button>
-          <button style={item(secao === 'projeto')} onClick={() => setSecao('projeto')}>
+          <button
+            type="button"
+            className="item-secao"
+            aria-pressed={secao === 'projeto'}
+            onClick={() => setSecao('projeto')}
+          >
             Semestre
           </button>
         </div>

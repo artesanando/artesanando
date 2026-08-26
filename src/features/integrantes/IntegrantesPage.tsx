@@ -535,7 +535,9 @@ export function IntegrantesPage() {
                       style={{
                         border: 'none',
                         background: 'none',
-                        padding: 0,
+                        padding: '4px 0',
+                        minHeight: 'var(--toque)',
+                        textAlign: 'left',
                         fontFamily: 'inherit',
                         fontSize: 11.5,
                         fontWeight: 700,

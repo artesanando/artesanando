@@ -203,6 +203,7 @@ export function Calendario({
               onClick={() => onChange(dia)}
               aria-label={`${nun} de ${MESES[mes]} de ${ano}`}
               aria-pressed={ativo}
+              className="dia-cal"
               style={{
                 position: 'relative',
                 border: dia === hoje && !ativo ? '1px solid var(--field-border)' : 'none',

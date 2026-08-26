@@ -130,6 +130,9 @@ a:hover {
   line-height: 1;
   background: none;
   border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .seg {
   padding: 7px 16px;
@@ -161,6 +164,24 @@ a:hover {
   border-radius: 50%;
   background: #fff;
 }
+/* o − e o + do Stepper */
+.passo {
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 15px;
+  padding: 0 8px;
+  line-height: 1;
+  cursor: pointer;
+  position: relative;
+}
+/* dia do calendário */
+.dia-cal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 input.field,
 textarea.field {
   font-family: inherit;
@@ -177,7 +198,9 @@ textarea.field::placeholder {
 
 .shell {
   display: flex;
-  min-height: 100vh;
+  /* dvh e nao vh: a barra do navegador do celular entra e sai, e com 100vh o
+     rodape da tela ficava sempre por baixo dela */
+  min-height: 100dvh;
 }
 .sidebar {
   width: 212px;
@@ -188,7 +211,7 @@ textarea.field::placeholder {
   border-right: 1px dashed var(--border-dashed);
   position: sticky;
   top: 0;
-  height: 100vh;
+  height: 100dvh;
   background: var(--bg);
   transition: width var(--dur-lenta) var(--ease-suave);
 }
@@ -292,6 +315,11 @@ textarea.field::placeholder {
   padding: 8px 11px;
   cursor: pointer;
   color: var(--ink-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--toque);
+  min-width: var(--toque);
 }
 .gaveta-fundo {
   position: fixed;
@@ -378,6 +406,44 @@ textarea.field::placeholder {
   background: var(--primary);
   border-color: var(--primary);
   color: #fff;
+}
+
+/* aba sublinhada de página (Projetos) */
+.aba {
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 8px 2px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.aba[aria-selected='true'] {
+  color: var(--ink);
+  border-bottom-color: var(--primary);
+}
+
+/* item de menu de seção (Ajustes, Atividade de extensão) */
+.item-secao {
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 9px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background var(--dur-rapida) var(--ease-suave);
+}
+.item-secao[aria-pressed='true'] {
+  background: var(--chip-rose);
+  color: var(--accent);
+  font-weight: 800;
 }
 
 /* ---------- Pop-ups próprios (substituem os controles do navegador) ---------- */
@@ -1135,6 +1201,22 @@ textarea.field::placeholder {
   .kpi-numero {
     font-size: 26px;
   }
+  /* Nada abaixo de --toque: era tudo entre 15 e 40px, e no dedo isso vira erro
+     de alvo. Onde o desenho não pode crescer (a chave, o − e o + do Stepper), a
+     área clicável cresce por fora com ::after. */
+  .pill,
+  .seg,
+  .chip,
+  .aba,
+  .item-secao,
+  .opcao,
+  .nav,
+  .dia-cal {
+    min-height: var(--toque);
+  }
+  .aba {
+    min-width: var(--toque);
+  }
   .pill {
     padding: 11px 18px;
   }
@@ -1143,10 +1225,25 @@ textarea.field::placeholder {
   }
   .kebab {
     padding: 8px 11px;
+    min-height: var(--toque);
+    min-width: var(--toque);
+  }
+  .x {
+    min-height: var(--toque);
+    min-width: var(--toque);
+    margin: -10px -10px -10px 0;
+  }
+  .sw::after,
+  .passo::after {
+    content: '';
+    position: absolute;
+    inset: -13px -10px;
   }
   .field {
     padding: 12px 14px;
-    font-size: 15px; /* < 16px faz o iOS dar zoom ao focar */
+    /* 16px é o piso: abaixo disso o Safari do iPhone dá zoom ao focar o campo e
+       a tela fica torta até sair dele. */
+    font-size: 16px;
   }
   .tabela-cartao {
     display: block;

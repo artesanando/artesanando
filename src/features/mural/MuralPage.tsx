@@ -464,8 +464,10 @@ function BotaoAlbum({
         style={{
           flex: 1,
           minWidth: 0,
+          minHeight: 'var(--toque)',
           display: 'flex',
           justifyContent: 'space-between',
+          alignItems: 'center',
           gap: 8,
           border: 'none',
           background: 'none',

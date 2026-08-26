@@ -23,20 +23,6 @@ import {
 
 type Atalho = 'mes' | 'semestre' | 'tudo' | 'livre'
 
-const chip = (on: boolean): CSSProperties => ({
-  padding: '6px 14px',
-  borderRadius: 99,
-  fontSize: 12,
-  fontWeight: on ? 800 : 700,
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
-  fontFamily: 'inherit',
-  border: on ? '1px solid var(--primary)' : '1px solid var(--field-border)',
-  background: on ? 'var(--primary)' : 'transparent',
-  color: on ? '#fff' : 'var(--ink-soft)',
-  transition: 'background var(--dur-rapida) var(--ease-suave)',
-})
-
 export function FinanceiroPage() {
   const { openFin } = useStore()
   const { can } = useAuth()
@@ -162,16 +148,36 @@ export function FinanceiroPage() {
         }}
       >
         <span className="lbl">PERÍODO</span>
-        <button style={chip(atalho === 'mes')} onClick={() => setAtalho('mes')}>
+        <button
+          type="button"
+          className="chip"
+          aria-pressed={atalho === 'mes'}
+          onClick={() => setAtalho('mes')}
+        >
           Este mês
         </button>
-        <button style={chip(atalho === 'semestre')} onClick={() => setAtalho('semestre')}>
+        <button
+          type="button"
+          className="chip"
+          aria-pressed={atalho === 'semestre'}
+          onClick={() => setAtalho('semestre')}
+        >
           {semestre?.label ?? 'Semestre'}
         </button>
-        <button style={chip(atalho === 'tudo')} onClick={() => setAtalho('tudo')}>
+        <button
+          type="button"
+          className="chip"
+          aria-pressed={atalho === 'tudo'}
+          onClick={() => setAtalho('tudo')}
+        >
           Tudo
         </button>
-        <button style={chip(atalho === 'livre')} onClick={() => setAtalho('livre')}>
+        <button
+          type="button"
+          className="chip"
+          aria-pressed={atalho === 'livre'}
+          onClick={() => setAtalho('livre')}
+        >
           Intervalo
         </button>
         {atalho === 'livre' && (

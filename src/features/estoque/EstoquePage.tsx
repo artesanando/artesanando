@@ -47,20 +47,6 @@ const UNIT: Record<EstoqueCategoria, string> = {
   feira: 'itens de feira',
 }
 
-const tabStyle = (on: boolean): CSSProperties => ({
-  padding: '7px 15px',
-  borderRadius: 99,
-  fontSize: 12.5,
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
-  fontFamily: 'inherit',
-  border: on ? '1px solid var(--primary)' : '1px solid var(--field-border)',
-  background: on ? 'var(--primary)' : 'transparent',
-  color: on ? '#fff' : 'var(--ink-soft)',
-  fontWeight: on ? 800 : 700,
-  transition: 'background var(--dur-rapida) var(--ease-suave)',
-})
-
 function fmtData(iso: string) {
   const [, m, d] = iso.split('-')
   return `${d}/${m}`
@@ -192,7 +178,13 @@ export function EstoquePage() {
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {ESTO_TABS.map(([k, label]) => (
-          <button key={k} onClick={() => setEstoTab(k)} style={tabStyle(k === estoTab)}>
+          <button
+            key={k}
+            type="button"
+            className="chip"
+            aria-pressed={k === estoTab}
+            onClick={() => setEstoTab(k)}
+          >
             {label}
           </button>
         ))}
