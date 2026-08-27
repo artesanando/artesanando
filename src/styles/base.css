@@ -1381,6 +1381,14 @@ textarea.field::placeholder {
     position: absolute;
     inset: -14px;
   }
+  /* O círculo da chamada é 30px por desenho — é o alvo mais tocado do app no
+     celular, e crescer o desenho estouraria a linha da lista. -7px de cada
+     lado dão os 44px de área. */
+  .marca-presenca::after {
+    content: '';
+    position: absolute;
+    inset: -7px;
+  }
   .campo-senha {
     font-size: 16px; /* mesmo motivo do .field: menos que isso, o iOS dá zoom */
   }

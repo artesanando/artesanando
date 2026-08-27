@@ -15,7 +15,8 @@ const LARGURAS = [320, 360, 390]
 
 const ROTAS = [
   '/', '/mural', '/projetos', '/integrantes', '/estoque', '/biblioteca',
-  '/presenca', '/financeiro', '/perfil', '/configuracoes', '/extensao',
+  '/presenca', '/presenca/en1', '/financeiro', '/perfil', '/configuracoes', '/extensao',
+  // en1 é um encontro do fake: é a chamada aberta, com os botões de montar a turma
 ]
 
 /* Conferidas ANTES de entrar: logada elas redirecionam para dentro do app, e
