@@ -7,6 +7,7 @@ import {
   presentesDe,
   proximoEncontro,
   proximosEncontros,
+  turmaDoSemestre,
   type Encontro,
   type Presenca,
 } from './api'
@@ -124,5 +125,43 @@ describe('frequência da integrante', () => {
 
   it('sem encontro nenhum a porcentagem é zero, não NaN', () => {
     expect(frequenciaDe('x', [], [], HOJE).total).toEqual({ presentes: 0, total: 0, pct: 0 })
+  })
+})
+
+describe('turmaDoSemestre', () => {
+  const encontros = [
+    { id: 'a', semestre_id: 's1' },
+    { id: 'b', semestre_id: 's1' },
+    { id: 'c', semestre_id: 's2' },
+  ] as Encontro[]
+
+  it('reúne quem entrou em qualquer chamada do semestre', () => {
+    const turma = turmaDoSemestre(
+      [
+        { encontro_id: 'a', integrante_id: 'u1', presente: true, marcado_por: null },
+        { encontro_id: 'b', integrante_id: 'u2', presente: true, marcado_por: null },
+      ] as Presenca[],
+      encontros,
+      's1',
+    )
+    expect([...turma].sort()).toEqual(['u1', 'u2'])
+  })
+
+  it('falta não tira da turma — é o que a faz reaparecer na próxima chamada', () => {
+    const turma = turmaDoSemestre(
+      [{ encontro_id: 'a', integrante_id: 'u1', presente: false, marcado_por: null }] as Presenca[],
+      encontros,
+      's1',
+    )
+    expect(turma.has('u1')).toBe(true)
+  })
+
+  it('ignora quem só apareceu em outro semestre', () => {
+    const turma = turmaDoSemestre(
+      [{ encontro_id: 'c', integrante_id: 'u9', presente: true, marcado_por: null }] as Presenca[],
+      encontros,
+      's1',
+    )
+    expect(turma.has('u9')).toBe(false)
   })
 })

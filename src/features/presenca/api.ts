@@ -186,6 +186,32 @@ export function proximosVisiveis(encontros: Encontro[], hoje: string): Encontro[
   )
 }
 
+/**
+ * A turma de um semestre: quem já entrou em alguma chamada dele.
+ *
+ * Entra quem tem linha em `presencas`, presente OU com falta — marcar falta não
+ * tira ninguém da turma. É diferente da vista `participacao_semestre`, que só
+ * conta presença porque serve à frequência.
+ *
+ * O cadastro em Integrantes guarda todo mundo que já passou pelo projeto; é
+ * aqui que se escolhe quem é deste semestre, e a escolha se propaga sozinha
+ * para as chamadas seguintes.
+ */
+export function turmaDoSemestre(
+  presencas: Presenca[],
+  encontros: Encontro[],
+  semestreId: string | null,
+): Set<string> {
+  const doSemestre = new Set(
+    encontros.filter((e) => e.semestre_id === semestreId).map((e) => e.id),
+  )
+  const turma = new Set<string>()
+  for (const p of presencas) {
+    if (doSemestre.has(p.encontro_id)) turma.add(p.integrante_id)
+  }
+  return turma
+}
+
 /** Quem preencheu a chamada daquele encontro, por último */
 export function ultimoAMarcar(presencas: Presenca[], encontroId: string): string | null {
   const marcou = presencas.filter((p) => p.encontro_id === encontroId && p.marcado_por)

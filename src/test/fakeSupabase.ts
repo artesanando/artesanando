@@ -460,6 +460,8 @@ const PRESENCAS_FAKE = [
   { encontro_id: 'en1', integrante_id: 'u1', presente: true, marcado_por: 'u1' },
   { encontro_id: 'en1', integrante_id: 'u7', presente: true, marcado_por: 'u7' },
   { encontro_id: 'en1', integrante_id: 'u2', presente: true, marcado_por: 'u7' },
+  /* anotada na chamada sem ter conta — é o que a põe na turma do semestre */
+  { encontro_id: 'en1', integrante_id: 'u8', presente: true, marcado_por: 'u1' },
 ]
 
 const MOVIMENTACOES_FAKE = [

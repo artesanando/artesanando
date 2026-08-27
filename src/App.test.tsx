@@ -484,6 +484,43 @@ describe('presença (M4)', () => {
     expect(screen.getByText('SEM PERFIL')).toBeInTheDocument()
   })
 
+  it('a chamada mostra a turma do semestre, e não o cadastro inteiro', async () => {
+    __login()
+    renderAt('/presenca/en1')
+    expect(await screen.findByLabelText('Marcar presença de Cândida Nunes')).toBeInTheDocument()
+    /* A Grace está no cadastro, mas nunca entrou numa chamada de 2026.2. Antes
+       daqui a chamada listava todas as ativas de todos os semestres. */
+    expect(screen.queryByLabelText('Marcar presença de Grace Hopper')).not.toBeInTheDocument()
+  })
+
+  it('quem levou falta continua na turma da próxima chamada', async () => {
+    __login()
+    renderAt('/presenca/en1')
+    const botao = await screen.findByLabelText('Marcar presença de Ada Lovelace')
+    await userEvent.click(botao)
+    // desmarcar é falta, não é tirar da turma: ela segue na lista
+    expect(screen.getByLabelText('Marcar presença de Ada Lovelace')).toBeInTheDocument()
+  })
+
+  it('dá para puxar alguém do cadastro para a chamada', async () => {
+    __login()
+    renderAt('/presenca/en1')
+    await userEvent.click(await screen.findByRole('button', { name: '+ Integrante da lista' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Integrante da lista' }))
+    expect(await screen.findByRole('option', { name: /Grace Hopper/ })).toBeInTheDocument()
+    // quem já está na chamada não aparece para ser adicionada de novo
+    expect(screen.queryByRole('option', { name: /Cândida Nunes/ })).not.toBeInTheDocument()
+  })
+
+  it('sem permissão de presença não há como mexer na turma', async () => {
+    __login(INTEGRANTE_PROFILE)
+    renderAt('/presenca/en1')
+    await screen.findByLabelText('Marcar presença de Cândida Nunes')
+    expect(
+      screen.queryByRole('button', { name: '+ Integrante da lista' }),
+    ).not.toBeInTheDocument()
+  })
+
   it('admin pode anotar alguém que ainda não tem perfil', async () => {
     __login()
     renderAt('/presenca/en1')
@@ -534,14 +571,6 @@ describe('integrantes (M4)', () => {
     __login()
     renderAt('/integrantes')
     expect(await screen.findByText('Granny squares')).toBeInTheDocument()
-  })
-
-  it('quem entrou neste semestre aparece antes de ir a encontro nenhum', async () => {
-    __login()
-    renderAt('/integrantes')
-    /* A Hedy entrou em 2026.2 e não consta na participação — sem isso, quem se
-       cadastra em /cadastro sumia da lista até alguém marcar presença nela. */
-    expect(await screen.findByText('Hedy Lamarr')).toBeInTheDocument()
   })
 
   it('avisa quem ainda precisa ser vinculada a um perfil', async () => {
@@ -628,6 +657,16 @@ describe('perfil', () => {
     await userEvent.clear(nome)
     await userEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }))
     expect(await screen.findByText('O nome não pode ficar vazio.')).toBeInTheDocument()
+  })
+})
+
+describe('integrantes — cadastro do projeto', () => {
+  it('lista integrante de semestre passado, para dar de onde escolher na chamada', async () => {
+    __login()
+    renderAt('/integrantes')
+    // Hedy é do semestre 2026.2 e não foi a encontro nenhum do ativo
+    expect(await screen.findByText('Hedy Lamarr')).toBeInTheDocument()
+    expect(screen.getByText('Ada Lovelace')).toBeInTheDocument()
   })
 })
 

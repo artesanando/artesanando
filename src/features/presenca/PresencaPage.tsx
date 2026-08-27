@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '../../state/store'
 import { useAuth } from '../../state/auth'
 import { AvatarPerfil } from '../../components/ui/AvatarPerfil'
-import { Calendario, MenuKebab, type MarcaDia } from '../../components/ui/controles'
+import { Calendario, MenuKebab, Select, type MarcaDia } from '../../components/ui/controles'
 import { useToast } from '../../components/ui/Toast'
 import { fmtDataCurta, fmtDataLonga, hojeIso } from '../../lib/format'
 import { TURNO_LABEL } from '../../types/database'
@@ -17,6 +17,7 @@ import {
   encontrosPassados,
   fetchEncontros,
   fetchIntegrantesAtivas,
+  turmaDoSemestre,
   fetchPresencas,
   marcarPresenca,
   mediaPresentes,
@@ -45,6 +46,8 @@ export function PresencaPage() {
 
   const [novoNome, setNovoNome] = useState('')
   const [addAberto, setAddAberto] = useState(false)
+  const [addLista, setAddLista] = useState(false)
+  const [escolhida, setEscolhida] = useState('')
 
   const { data: encontros, isLoading } = useQuery({
     queryKey: ['encontros'],
@@ -118,16 +121,49 @@ export function PresencaPage() {
     onError: () => toast('Não foi possível adicionar.', 'erro'),
   })
 
+  /* Puxa para a chamada alguém que já está no cadastro. Marcar presença é o que
+     a põe na turma: não existe "entrar na turma" separado de ter vindo um dia. */
+  const adicionarDaLista = useMutation({
+    mutationFn: (id: string) =>
+      marcarPresenca({
+        encontro_id: selecionado!.id,
+        integrante_id: id,
+        presente: true,
+        marcado_por: profile!.id,
+      }),
+    onSuccess: () => {
+      setEscolhida('')
+      setAddLista(false)
+      qc.invalidateQueries({ queryKey: ['presencas'] })
+      toast('Adicionada à chamada')
+    },
+    onError: () => toast('Não foi possível adicionar.', 'erro'),
+  })
+
   const presenteDe = (integranteId: string) =>
     (presencas ?? []).some(
       (p) => p.encontro_id === selecionado?.id && p.integrante_id === integranteId && p.presente,
     )
 
-  /* A chamada lista quem vem naquele turno — quem é do noturno não precisa
-     aparecer na lista de um encontro de manhã. */
+  /* A chamada é a turma do semestre, não o cadastro inteiro: Integrantes guarda
+     todo mundo que já passou pelo projeto, e a turma se monta aqui — quem entra
+     numa chamada segue nas seguintes. O turno continua filtrando: quem é do
+     noturno não precisa aparecer num encontro de manhã.
+
+     Quem já tem linha NESTE encontro aparece de todo jeito. Sem isso, puxar da
+     lista alguém de outro turno gravava a presença e sumia com ela da tela, sem
+     como desmarcar. */
+  const turma = turmaDoSemestre(presencas ?? [], todos, selecionado?.semestre_id ?? null)
+  const nesteEncontro = (id: string) =>
+    (presencas ?? []).some((p) => p.encontro_id === selecionado?.id && p.integrante_id === id)
+
   const daChamada = (integrantes ?? []).filter(
-    (p) => !selecionado || p.turno === 'ambos' || p.turno === selecionado.turno,
+    (p) =>
+      nesteEncontro(p.id) ||
+      (turma.has(p.id) &&
+        (!selecionado || p.turno === 'ambos' || p.turno === selecionado.turno)),
   )
+  const foraDaChamada = (integrantes ?? []).filter((p) => !daChamada.some((q) => q.id === p.id))
   const presentesSel = selecionado ? presentesDe(presencas ?? [], selecionado.id) : 0
 
   /* Não há arquivar encontro: cancelar já resolve, e o dia cancelado segue no
@@ -320,6 +356,12 @@ export function PresencaPage() {
                 </div>
               ) : (
                 <>
+                  {daChamada.length === 0 && (
+                    <div style={{ fontSize: 13, color: 'var(--muted)', padding: '4px 0 10px' }}>
+                      Ninguém na chamada ainda.
+                    </div>
+                  )}
+
                   <div style={{ borderTop: '1px solid var(--border)' }}>
                     {daChamada.map((p) => {
                       const presente = presenteDe(p.id)
@@ -356,6 +398,7 @@ export function PresencaPage() {
                           </div>
                           <button
                             type="button"
+                            className="marca-presenca"
                             aria-label={`Marcar presença de ${p.nome}`}
                             aria-pressed={presente}
                             disabled={!podeChamada}
@@ -374,6 +417,7 @@ export function PresencaPage() {
                               fontWeight: 800,
                               fontFamily: 'inherit',
                               flex: 'none',
+                              position: 'relative',
                               transition: 'background var(--dur-rapida) var(--ease-suave)',
                               ...(presente
                                 ? { background: 'var(--primary)', color: '#fff', border: 'none' }
@@ -393,14 +437,51 @@ export function PresencaPage() {
 
                   {podeChamada && (
                     <div style={{ marginTop: 14 }}>
-                      {!addAberto ? (
-                        <button
-                          className="pill ghost"
-                          onClick={() => setAddAberto(true)}
-                          style={{ fontSize: 12.5 }}
-                        >
-                          + Alguém que ainda não tem perfil
-                        </button>
+                      {addLista ? (
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <Select
+                            ariaLabel="Integrante da lista"
+                            value={escolhida}
+                            onChange={setEscolhida}
+                            options={foraDaChamada.map((p) => [p.id, p.nome] as [string, string])}
+                            style={{ flex: 1, minWidth: 180 }}
+                          />
+                          <button
+                            className="pill"
+                            disabled={!escolhida || adicionarDaLista.isPending}
+                            onClick={() => adicionarDaLista.mutate(escolhida)}
+                          >
+                            Adicionar
+                          </button>
+                          <button
+                            className="pill ghost"
+                            onClick={() => {
+                              setAddLista(false)
+                              setEscolhida('')
+                            }}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : !addAberto ? (
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {foraDaChamada.length > 0 && (
+                            <button
+                              className="pill ghost"
+                              onClick={() => setAddLista(true)}
+                              style={{ fontSize: 12.5 }}
+                            >
+                              + Integrante da lista
+                            </button>
+                          )}
+                          <button
+                            className="pill ghost"
+                            onClick={() => setAddAberto(true)}
+                            style={{ fontSize: 12.5 }}
+                          >
+                            + Alguém que ainda não tem perfil
+                          </button>
+                        </div>
                       ) : (
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                           <input
