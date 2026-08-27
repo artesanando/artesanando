@@ -19,18 +19,15 @@ export function useParticipantes(semestreId: string | null): Set<string> | null 
 /* Enquanto a lista não chega — ou sem semestre escolhido — mostra todas: some
    com gente da tela é pior do que mostrar alguém a mais por um instante.
  *
- * `semestreLabel` acrescenta quem entrou neste semestre e ainda não foi a
- * encontro nenhum — o caso de quem acabou de se cadastrar em /cadastro, que
- * sumiria de Integrantes até alguém marcar presença nela. O relatório de
- * extensão não passa o label: lá participação é presença, e só. */
-export function soDoSemestre<T extends Pick<Profile, 'id' | 'desde'>>(
+ * Só a Atividade de extensão usa isto. Integrantes mostra o cadastro inteiro, e
+ * a chamada monta a turma do semestre por conta própria — ver `turmaDoSemestre`
+ * em presenca/api.ts, que conta falta também, enquanto aqui participação é
+ * presença. */
+export function soDoSemestre<T extends Pick<Profile, 'id'>>(
   pessoas: T[],
   participantes: Set<string> | null,
   semestreId: string | null,
-  semestreLabel?: string | null,
 ): T[] {
   if (!semestreId || !participantes) return pessoas
-  return pessoas.filter(
-    (p) => participantes.has(p.id) || (Boolean(semestreLabel) && p.desde === semestreLabel),
-  )
+  return pessoas.filter((p) => participantes.has(p.id))
 }
