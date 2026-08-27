@@ -14,7 +14,6 @@ import { useSemestreAtivo } from '../../lib/semestre'
 import { fetchEmprestimosAtivos } from '../estoque/api'
 import { fetchEncontros, fetchPresencas, frequenciaDe } from '../presenca/api'
 import { CabecalhoPagina } from '../../components/layout/CabecalhoPagina'
-import { soDoSemestre, useParticipantes } from '../extensao/useParticipantes'
 import { IconChevron } from '../../components/ui/icons'
 import {
   definirAtivo,
@@ -84,19 +83,14 @@ export function IntegrantesPage() {
      começo do app, e a ficha dizia "no semestre" mostrando o acumulado de anos. */
   const doSemestre = (encontros ?? []).filter((e) => !semestre || e.semestre_id === semestre.id)
 
-  /* A lista também é do semestre ativo, como em Atividade de extensão. Antes
-     misturava quem só participou de semestres passados — aparecendo com 0% de
-     frequência ao lado de entregas de anos atrás.
-     O label entra junto para segurar quem se cadastrou agora e ainda não foi a
-     encontro nenhum: é aqui que se confere se o cadastro chegou. */
-  const participantes = useParticipantes(semestre?.id ?? null)
-  const doSemestreAtivo = soDoSemestre(
-    integrantes ?? [],
-    participantes,
-    semestre?.id ?? null,
-    semestre?.label,
-  )
-  const lista = filtraIntegrantes(doSemestreAtivo, busca)
+  /* Esta página é o cadastro do projeto, não o retrato do semestre: mostra
+     todas, de todos os semestres, sempre. É dela que sai quem se marca na
+     chamada — filtrar por semestre escondia justamente quem ainda não tinha
+     sido chamada, e não havia de onde selecioná-la.
+     Frequência e entregas continuam medidas no semestre ativo; quem é de
+     semestre passado aparece com 0%, que é a leitura correta. Atividade de
+     extensão segue filtrando, porque lá participação é presença. */
+  const lista = filtraIntegrantes(integrantes ?? [], busca)
   const sel = (integrantes ?? []).find((p) => p.id === id) ?? lista[0]
 
   const freqDe = (p: Profile) => frequenciaDe(p.id, doSemestre, presencas ?? [], hoje, p.turno)
@@ -151,7 +145,7 @@ export function IntegrantesPage() {
     <div className="pagina">
       <CabecalhoPagina
         titulo="Integrantes"
-        sub={`${lista.length} no semestre`}
+        sub={`${lista.length} no projeto`}
         acoes={
           isAdmin && (
             <button className="pill" onClick={() => openIntegrante(null)}>
@@ -291,7 +285,7 @@ export function IntegrantesPage() {
             )}
             {lista.length === 0 && !isLoading && (
               <div style={{ padding: '12px 8px', fontSize: 13, color: 'var(--muted)' }}>
-                {busca ? `Ninguém encontrado para "${busca}".` : 'Ninguém no semestre ativo ainda.'}
+                {busca ? `Ninguém encontrado para "${busca}".` : 'Ninguém cadastrada ainda.'}
               </div>
             )}
             {lista.map((p) => {
